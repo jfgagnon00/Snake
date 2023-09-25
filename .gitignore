@@ -5,3 +5,4 @@ __pycache__/
 
 # a ignorer dans le repertoire courant
 /models
+/sandbox/jfgagnon
