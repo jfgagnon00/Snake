@@ -1,8 +1,9 @@
-# a ignorer glboalement
+# a ignorer globalement
+models/
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 
+
 # a ignorer dans le repertoire courant
-/models
 /sandbox/jfgagnon
