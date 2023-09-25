@@ -1,0 +1,7 @@
+# a ignorer glboalement
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+
+# a ignorer dans le repertoire courant
+/models
