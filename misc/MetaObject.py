@@ -34,7 +34,30 @@ class MetaObject(object):
     @classmethod
     def override_from_dict(cls, instance, attributes):
         if isinstance(attributes, dict):
-            instance.__dict__.update(attributes)
+            if isinstance(instance, MetaObject):
+                # initialiser un MetaObject
+                instance.__dict__.update(attributes)
+            else:
+                # overrider objet complexe
+                attr_keys = set(attributes.keys())
+                inst_keys = set(instance.__dict__.keys())
+
+                new_keys = attr_keys.difference(inst_keys)
+                new_dict = {k:attributes[k] for k in new_keys}
+                instance.__dict__.update(new_dict)
+
+                # clefs communes
+                common_dict = {}
+                for k in attr_keys.intersection(inst_keys):
+                    inst_v = instance.__dict__[k]
+                    attr_v = attributes[k]
+                    if isinstance(inst_v, dict):
+                        # dict recursif
+                        inst_v.update(vars(attr_v))
+                    else:
+                        common_dict[k] = attr_v
+
+                instance.__dict__.update(common_dict)
         else:
             raise RuntimeError("MetaObject can only "
                                "be constructed from dict")
