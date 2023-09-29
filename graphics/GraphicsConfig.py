@@ -1,14 +1,20 @@
 class GraphicsConfig():
     """
-    Represente les configurations pour tout ce qui 
+    Represente les configurations pour tout ce qui
     correspond a l'affichage
     """
     def __init__(self):
-        self.window_width = 400
-        self.window_height = 400
-        
-        self.snakeSpritesPath = ""
-        self.snakeSpritesSheet = {}
+        # couleur de background
+        self.clearColor = (255, 0, 255)
 
+        # frames par seconde
+        # 0 signifie infinie
+        self.fps = 0
+
+        # coter le plus large de la fenetre en pixels
+        # le rapport d'aspect est deduit par la taille de la grille de simulation
+        self.windowSize = 512
+
+        # chemins pour les images
+        self.snakeSpritesPath = ""
         self.foodSpritesPath = ""
-        self.foodSpritesSheet = {}

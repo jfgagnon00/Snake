@@ -1,8 +1,8 @@
 {
     "environment": {
-        "grid_width": 15, 
+        "grid_width": 15,
         "grid_height": 15,
-        
+
         "rewards": {
             "move": -0.5,
             "eat": 10,
@@ -11,21 +11,10 @@
     },
 
     "graphics": {
-        "window_width": 400,
-        "window_height": 400,
-        
+        "clearColor": [0, 0, 0],
+        "fps": 60,
+        "windowSize": 800,
         "snakeSpritesPath": "assets/snake.png",
-        "snakeSpritesSheet": {
-        },
-
-        "foodSpritesPath": "assets/food.png",
-        "foodSpritesSheet": {
-            "apple": {
-                "x": 0,
-                "y": 0,
-                "w": 56,
-                "h": 62
-            }
-        }
+        "foodSpritesPath": "assets/food.png"
     }
 }
