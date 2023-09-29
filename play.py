@@ -20,7 +20,7 @@ class InteractiveApplication():
 
         self._quit = False
         self._environment = None
-        self._window = GraphicWindow((2, 10), configs.graphics)
+        self._window = GraphicWindow((15, 10), configs.graphics)
 
     def run(self):
         while not self._quit:
