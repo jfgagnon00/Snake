@@ -19,6 +19,10 @@ class GraphicsConfig():
         # le rapport d'aspect est deduit par la taille de la grille de simulation
         self.windowSize = 512
 
-        # chemins pour les images
+        # proprietes pour le serpents
         self.snakeSpritesPath = ""
+        self.snakeColor = (50, 50, 200)
+        self.snakeTileSize = (64, 64)
+
+        # proprietes pour la nouriture
         self.foodSpritePath = ""

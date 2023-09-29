@@ -19,7 +19,7 @@ class InteractiveApplication():
         pygame.init()
 
         self._quit = False
-        self._window = GraphicWindow((15, 10), configs.graphics)
+        self._window = GraphicWindow((10, 15), configs.graphics)
 
     def run(self):
         while not self._quit:
