@@ -7,6 +7,10 @@ class GraphicsConfig():
         # couleur de background
         self.clearColor = (255, 0, 255)
 
+        # couleur des tiles des background
+        self.backgroundTileColorLight = (0, 255, 0)
+        self.backgroundTileColorDark = (0, 128, 0)
+
         # frames par seconde
         # 0 signifie infinie
         self.fps = 0
