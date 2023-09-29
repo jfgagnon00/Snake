@@ -21,4 +21,4 @@ class GraphicsConfig():
 
         # chemins pour les images
         self.snakeSpritesPath = ""
-        self.foodSpritesPath = ""
+        self.foodSpritePath = ""

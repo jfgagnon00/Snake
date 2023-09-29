@@ -14,6 +14,6 @@
         "fps": 60,
         "windowSize": 800,
         "snakeSpritesPath": "assets/snake.png",
-        "foodSpritesPath": "assets/food.png"
+        "foodSpritePath": "assets/food.png"
     }
 }

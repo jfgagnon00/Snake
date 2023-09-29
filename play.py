@@ -19,14 +19,13 @@ class InteractiveApplication():
         pygame.init()
 
         self._quit = False
-        self._environment = None
         self._window = GraphicWindow((15, 10), configs.graphics)
 
     def run(self):
         while not self._quit:
             self._handleEvents()
 
-            self._window.render(self._environment)
+            self._window.render()
             self._window.flip()
 
         self._done()

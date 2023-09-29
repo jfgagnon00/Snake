@@ -17,34 +17,36 @@ class GraphicWindow():
         #               operations en nombres flotant
         aspectRatio = simulationGridShape[1] / simulationGridShape[0]
         if aspectRatio >= 1:
-            tileSize = int(graphicsConfig.windowSize / simulationGridShape[1])
+            self._tileSize = int(graphicsConfig.windowSize / simulationGridShape[1])
         else:
-            tileSize = int(graphicsConfig.windowSize / simulationGridShape[0])
-        self._initBackgroundTiles(tileSize,
-                                  simulationGridShape,
-                                  graphicsConfig)
+            self._tileSize = int(graphicsConfig.windowSize / simulationGridShape[0])
+        self._initBackgroundTiles(simulationGridShape, graphicsConfig)
 
-        w = simulationGridShape[1] * tileSize
-        h = simulationGridShape[0] * tileSize
-        self._window = pygame.display.set_mode((w, h))
+        w = simulationGridShape[1] * self._tileSize
+        h = simulationGridShape[0] * self._tileSize
+        self._canvas = pygame.display.set_mode((w, h))
 
-    def render(self, gameEnvironment):
-        self._window.fill(self._clearColor)
-        self._backgroundTiles.draw(self._window)
+        self._initFood(graphicsConfig)
+
+    def update(gameEnvironment):
+        pass
+
+    def render(self, ):
+        self._canvas.fill(self._clearColor)
+        self._backgroundTiles.draw(self._canvas)
+        self._food.draw(self._canvas)
 
     def flip(self):
         pygame.display.flip()
         self._clock.tick(self._fps)
 
-    def _initBackgroundTiles(self,
-                             tileSize,
-                             simulationGridShape,
-                             graphicsConfig):
+    def _initBackgroundTiles(self, simulationGridShape, graphicsConfig):
         self._backgroundTiles = pygame.sprite.Group()
 
-        tileLight = pygame.surface.Surface((tileSize, tileSize))
+        tileShape = (self._tileSize, self._tileSize)
+        tileLight = pygame.surface.Surface(tileShape)
         tileLight.fill(graphicsConfig.backgroundTileColorLight)
-        tileDark = pygame.surface.Surface((tileSize, tileSize))
+        tileDark = pygame.surface.Surface(tileShape)
         tileDark.fill(graphicsConfig.backgroundTileColorDark)
         tileSurfaces = (tileLight, tileDark)
 
@@ -54,14 +56,20 @@ class GraphicWindow():
             tileSurfaceIndex = rowTileSurfaceIndex
             x = 0
             for _ in range(simulationGridShape[1]):
-                sprite = Sprite(tileSurfaces[tileSurfaceIndex])
+                sprite = Sprite(image=tileSurfaces[tileSurfaceIndex])
                 sprite.rect.x = x
                 sprite.rect.y = y
 
                 self._backgroundTiles.add(sprite)
 
                 tileSurfaceIndex = 1 - tileSurfaceIndex
-                x += tileSize
+                x += self._tileSize
 
             rowTileSurfaceIndex = 1 - rowTileSurfaceIndex
-            y += tileSize
+            y += self._tileSize
+
+    def _initFood(self, graphicsConfig):
+        self._foodSprite = Sprite(filename=graphicsConfig.foodSpritePath)
+        self._foodSprite.resize((self._tileSize, self._tileSize))
+        self._food = pygame.sprite.Group(self._foodSprite)
+
