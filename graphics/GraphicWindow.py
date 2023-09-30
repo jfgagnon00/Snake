@@ -23,6 +23,7 @@ class GraphicWindow():
 
         _, fontHeight = self._font.size("DEFAULT")
         self._fontMargin = int(fontHeight / 4)
+        self._fontColor = graphicsConfig.fontColor
         self._textAreaStart = self._fontMargin
         self._gameAreaStart = fontHeight + 2 * self._fontMargin
 
@@ -53,6 +54,11 @@ class GraphicWindow():
         self._backgroundTiles.draw(self._window)
         self._food.draw(self._window)
         self._snake.draw(self._window)
+
+        if not message is None:
+            textImage = self._font.render(message, True, self._fontColor)
+            self._window.blit(textImage, (self._fontMargin, self._fontMargin))
+
 
     def flip(self):
         flip()
