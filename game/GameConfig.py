@@ -1,10 +1,10 @@
-from collections import namedtuple
+
 
 class GameConfig():
     MOVE = "move"
     EAT = "eat"
     COLLIDE = "collide"
-    point = namedtuple('Point', 'x, y')
+
 
     def __init__(self):
         self.grid_width = 10
