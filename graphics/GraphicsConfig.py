@@ -13,7 +13,11 @@ class GraphicsConfig():
 
         # frames par seconde
         # 0 signifie infinie
-        self.fps = 0
+        self.fps = 60
+
+        # rouler la simulation a un fps plus bas; diviseur de fps
+        # certains systemes ont besoin d'un update plus frequent
+        self.simulationFpsDivider = 10
 
         # dimension du cote le plus large de la fenetre en pixels
         # le rapport d'aspect est deduit par la taille de la grille de simulation

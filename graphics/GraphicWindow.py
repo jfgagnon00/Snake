@@ -6,6 +6,7 @@ from pygame.sprite import Group
 from pygame.surface import Surface
 from pygame.time import Clock
 
+from game.Vector import Vector
 from .Sprite import Sprite
 
 class GraphicWindow():
@@ -17,6 +18,7 @@ class GraphicWindow():
         self._clock = Clock()
         self._fps = graphicsConfig.fps
         self._clearColor = graphicsConfig.clearColor
+        self._message = None
 
         self._font = Font(graphicsConfig.fontPath,
                           size=graphicsConfig.fontSize)
@@ -46,13 +48,31 @@ class GraphicWindow():
         self._initSnake(graphicsConfig)
 
     def update(self, gameEnvironment):
-        pass
+        fps = int(self._clock.get_fps())
+        score = gameEnvironment.score
+        self._message = f"Score: {score:04d} FPS: {fps}"
+
+        food = self._environmentToWindow(gameEnvironment.food)
+        self._foodSprite.rect.x = food.x
+        self._foodSprite.rect.y = food.y
+
+        snake = self._environmentToWindow(gameEnvironment.snake.head)
+        h = self._snakeHeads[0]
+        h.rect.x = snake.x
+        h.rect.y = snake.y
+
+        e = self._snakeEyes[0]
+        e.rect.x = snake.x
+        e.rect.y = snake.y
 
     def render(self, message=None):
         self._window.fill(self._clearColor)
         self._backgroundTiles.draw(self._window)
         self._food.draw(self._window)
         self._snake.draw(self._window)
+
+        if message is None:
+            message = self._message
 
         if not message is None:
             textImage = self._font.render(message, True, self._fontColor)
@@ -153,3 +173,7 @@ class GraphicWindow():
         sprite.rect.y += self._gameAreaStart
 
         return sprite
+
+    def _environmentToWindow(self, vector):
+        return Vector(vector.x * self._tileSize,
+                      vector.y * self._tileSize + self._gameAreaStart)

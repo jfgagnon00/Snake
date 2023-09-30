@@ -28,6 +28,8 @@ class InteractiveApplication():
         self._environement = GameEnvironmentTemp(configs.environment)
         self._agent = InteractiveAgent()
         self._updateFnc = None
+        self._simulationFpsDivider = configs.graphics.simulationFpsDivider
+        self._simulationCounter = 0
 
     def run(self):
         self._quit = False
@@ -58,18 +60,24 @@ class InteractiveApplication():
             if e.type == pygame.QUIT:
                 self._quit = True
 
+            if e.type == pygame.KEYDOWN:
+                self._agent.onKeyDown(e.key)
+
             if e.type == pygame.KEYUP:
                 self._anyKeyPressed = True
+                self._agent.onKeyUp(e.key)
 
     def _update(self):
-        action = self._agent.getAction()
-        done = self._environement.apply(action)
+        self._simulationCounter -= 1
+        if self._simulationCounter <= 0:
+            self._simulationCounter = self._simulationFpsDivider
 
-        if done:
-            self._setUpdateState(self._resetBeforeRestart,
-                                 "LOSER! - Pesez une touche pour redémarrer")
-        else:
-            self._window.update(self._environement)
+            action = self._agent.getAction(self._environement._snake.direction)
+            if self._environement.apply(action):
+                self._setUpdateState(self._resetBeforeRestart,
+                                    "LOSER! - Pesez une touche pour redémarrer")
+            else:
+                self._window.update(self._environement)
 
     def _waitForAnyKey(self):
         if self._anyKeyPressed:
@@ -81,6 +89,7 @@ class InteractiveApplication():
             self._setUpdateState(self._update)
 
     def _setUpdateState(self, updateFnc, message=None):
+        self._simulationCounter = 0
         self._anyKeyPressed = False
         self._importantMessage = message
         self._updateFnc = updateFnc

@@ -2,7 +2,7 @@ import numpy as np
 import random
 from enum import Enum
 from .GameConfig import GameConfig
-from .Point import Point
+from .Vector import Vector
 from .Snake import Snake
 
 
@@ -48,10 +48,10 @@ class GameEnvironment():
     def _place_food(self):
         self.x = random.randint(0, self._gridWidth)
         self.y = random.randint(0, self._gridHeight)
-        self._food = Point(self.x, self.y)
+        self._food = Vector(self.x, self.y)
         if self._food in self._snake.bodyParts:
             self._place_food()
-        
+
 
     def _move(self, direction):
         x = self._snake.head.x
@@ -65,7 +65,7 @@ class GameEnvironment():
         elif direction == Direction.UP:
             y -= GameConfig.block_size
 
-        self.head = Point(x, y)
+        self.head = Vector(x, y)
 
     def _move(self, action):
 
@@ -100,7 +100,7 @@ class GameEnvironment():
         elif self.direction == GameEnvironment.Direction.UP:
             y -= GameConfig.block_size
 
-        self._snake.head = Point(x, y)
+        self._snake.head = Vector(x, y)
 
     def apply(self, movement):
         """
@@ -117,7 +117,7 @@ class GameEnvironment():
         if pt is None:
             pt = self._snake.head
         # hits boundary
-        if pt.x > self.w - GameConfig.block_size or pt.x < 0 or pt.y > self.h - Point or pt.y < 0:
+        if pt.x > self.w - GameConfig.block_size or pt.x < 0 or pt.y > self.h - Vector or pt.y < 0:
             return True
         # hits itself
         if pt in self.snake[1:]:

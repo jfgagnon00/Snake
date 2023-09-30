@@ -4,7 +4,6 @@ class GameAction(Enum):
     """
     Les actions possibles pour la tete du serpent
     """
-    LEFT = 0
-    RIGHT = 1
-    UP = 2
-    DOWN = 3
+    TURN_LEFT = 0
+    TURN_RIGHT = 1
+    FORWARD = 2
