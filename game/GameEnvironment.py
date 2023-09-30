@@ -1,11 +1,12 @@
 import numpy as np
+import random
 from enum import Enum
 from game.GameConfig import GameConfig
 from game.Snake import Snake
 from game.Food import Food
 
 
-class Direction(Enum): # temp
+class Direction(Enum):  # temp
     RIGHT = 1
     LEFT = 2
     UP = 3
@@ -17,29 +18,28 @@ class GameEnvironment():
     Responsable d'appliquer le mouvement au serpent
     """
 
-    MOVEMENT_TURN_LEFT = 1
-    MOVEMENT_TURN_RIGHT = 2
-    MOVEMENT_FORWARD = 3
-
     def __init__(self, gameConfig):
-        self._grid = []  # array 2d ???? GameConfig.grid_width, GameConfig.grid_height
-        self._snake = Snake
-        self._food = Food
-        self._score = 0
-        self._rewards = 0
-        # self.clock = pygame.time.Clock() oui non ?
+        #self._grid = []  # array 2d ???? GameConfig.grid_width, GameConfig.grid_height
+        self._snake = Snake(4, 1, Direction.RIGHT)
+        #self._food = Food()
+        #self._score = 0
+        #self._rewards = 0
 
     def reset(self):
         """
         Remet l'environment dans un etat initial
         """
-        self.direction = GameEnvironment.MOVEMENT_TURN_RIGHT
 
-        self._snake.head
-        self._snake.bodyParts
+        self._snake = Snake(4, 1, Direction.RIGHT)
 
-        self.score = 0
-        self._food.place_food()
+
+        #self.score = 0
+        #self.place_food()
+
+    def place_food(self):
+          self.x = random.randint(0, (self.GameConfig.grid_width-GameConfig.block_size )//GameConfig.block_size )*GameConfig.block_size
+          self.y = random.randint(0, (self.GameConfig.grid_height-GameConfig.block_size )//GameConfig.block_size )*GameConfig.block_size
+          Food.position = GameConfig.point(self.x, self.y)    
 
     def _move(self, direction):
         x = self._snake.head.x
@@ -95,7 +95,7 @@ class GameEnvironment():
         Applique le movement au serpent et met a jour les etats internes
         """
         # 1. bouge serpent
-        self._move(movement)  # update the head
+        self._snake._move(movement, Direction)  # update the head
         self._snake.insert(0, self._snake.head)
 
         # 2. mettre a jour grid
@@ -103,13 +103,13 @@ class GameEnvironment():
         # 3. resoudre collision
     def is_collision(self, pt=None):
         if pt is None:
-            pt = self.head
+            pt = self._snake.head
         # hits boundary
         if pt.x > self.w - GameConfig.block_size or pt.x < 0 or pt.y > self.h - GameConfig.point or pt.y < 0:
-                return True
+            return True
         # hits itself
         if pt in self.snake[1:]:
-                return True
+            return True
 
         return False
 

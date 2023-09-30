@@ -5,15 +5,15 @@ class Snake():
     Represente le serpent
     """
 
-    def __init__(self):
+    def __init__(self, x, y, direction):
         # tete est toujours le dernier element de la liste
         # la queue est toujours l'element 0
-        self.head = GameConfig.point(self.GameConfig.grid_width/2, self.GameConfig.grid_height/2)
+        self.head = GameConfig.point(x, y)
         self.bodyParts = [self.head,
-                           GameConfig.point(self.head.x-GameConfig.block_size, self.head.y),
-                           GameConfig.point(self.head.x-(2*GameConfig.block_size), self.head.y)]
+                           GameConfig.point(self.head.x-1, self.head.y),
+                           GameConfig.point(self.head.x-2, self.head.y)]
         #self._state = Alive, Dead
-        self.direction = None
+        self.direction = direction
 
     #@property.getter
     #def head(self):
@@ -21,19 +21,18 @@ class Snake():
 
     #pas sure de mettre les moves la ??
 
-    #def move(self, movement, direction): 
-    #    def _move(self, direction):
-    #    x = self.head.x
-    #    y = self.head.y
-    #    if direction == Direction.RIGHT:
-    #        x += GameConfig.block_size
-    #    elif direction == Direction.LEFT:
-    #        x -= GameConfig.block_size
-    #    elif direction == Direction.DOWN:
-    #        y += GameConfig.block_size
-    #    elif direction == Direction.UP:
-    #        y -= GameConfig.block_size
+    def _move(self, movement, Direction):
+        x = self.head.x
+        y = self.head.y
+        if movement == Direction.RIGHT:
+            x += GameConfig.block_size
+        elif movement == Direction.LEFT:
+            x -= GameConfig.block_size
+        elif movement == Direction.DOWN:
+            y += GameConfig.block_size
+        elif movement == Direction.UP:
+            y -= GameConfig.block_size
             
-    #    self.head = Point(x, y)
+        self.head = GameConfig.point(x, y)
 
      
