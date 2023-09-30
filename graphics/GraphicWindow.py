@@ -24,7 +24,6 @@ class GraphicWindow():
         _, fontHeight = self._font.size("DEFAULT")
         self._fontMargin = int(fontHeight / 4)
         self._fontColor = graphicsConfig.fontColor
-        self._textAreaStart = self._fontMargin
         self._gameAreaStart = fontHeight + 2 * self._fontMargin
 
         gameAreaSize = graphicsConfig.windowSize - self._gameAreaStart
