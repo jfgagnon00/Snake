@@ -45,7 +45,7 @@ class GraphicWindow():
         self._initFood(graphicsConfig)
         self._initSnake(graphicsConfig)
 
-    def update(gameEnvironment):
+    def update(self, gameEnvironment):
         pass
 
     def render(self, message=None):
@@ -57,7 +57,6 @@ class GraphicWindow():
         if not message is None:
             textImage = self._font.render(message, True, self._fontColor)
             self._window.blit(textImage, (self._fontMargin, self._fontMargin))
-
 
     def flip(self):
         flip()

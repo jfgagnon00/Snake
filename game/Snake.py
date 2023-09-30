@@ -1,38 +1,36 @@
+from collections import deque
+from .GameAction import GameAction
 from .Point import Point
 
 class Snake():
     """
     Represente le serpent
     """
+    def __init__(self, x, y):
+        self.bodyParts = deque()
 
-    def __init__(self, x, y, direction):
-        # tete est toujours le dernier element de la liste
-        # la queue est toujours l'element 0
-        self.head = Point(x, y)
-        self.bodyParts = [self.head,
-                           Point(self.head.x-1, self.head.y),
-                           Point(self.head.x-2, self.head.y)]
-        #self._state = Alive, Dead
-        self.direction = direction
+        # la tete est toujours le premier element
+        self.bodyParts.append(Point(x, y))
 
-    #@property.getter
-    #def head(self):
-    #    return self._bodyParts[-1]
+        self.bodyParts.append(Point(x - 1, y))
 
-    #pas sure de mettre les moves la ??
+        # la queue est toujours le dermier element
+        self.bodyParts.append(Point(x - 2, y))
 
-    def _move(self, movement, Direction):
-        x = self.head.x
-        y = self.head.y
-        if movement == Direction.RIGHT:
-            x += GameConfig.block_size
-        elif movement == Direction.LEFT:
-            x -= GameConfig.block_size
-        elif movement == Direction.DOWN:
-            y += GameConfig.block_size
-        elif movement == Direction.UP:
-            y -= GameConfig.block_size
-            
-        self.head = Point(x, y)
+    @property
+    def head(self):
+        return self.bodyParts[0]
 
-     
+    def move(self, action):
+        h = self.head
+        self.bodyParts.pop()
+        if action == GameAction.RIGHT:
+            h = Point(h.x + 1, h.y)
+        elif action == GameAction.LEFT:
+            h = Point(h.x - 1, h.y)
+        elif action == GameAction.DOWN:
+            h = Point(h.x, h.y + 1)
+        elif action == GameAction.UP:
+            h = Point(h.x, h.y - 1)
+
+        self.bodyParts.appendleft(h)
