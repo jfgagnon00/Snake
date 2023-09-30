@@ -1,4 +1,5 @@
 from pygame import BLEND_RGBA_MULT
+from pygame.font import Font
 from pygame.display import set_mode, flip
 from pygame.rect import Rect
 from pygame.sprite import Group
@@ -17,19 +18,29 @@ class GraphicWindow():
         self._fps = graphicsConfig.fps
         self._clearColor = graphicsConfig.clearColor
 
+        self._font = Font(graphicsConfig.fontPath,
+                          size=graphicsConfig.fontSize)
+
+        _, fontHeight = self._font.size("DEFAULT")
+        self._fontMargin = int(fontHeight / 4)
+        self._textAreaStart = self._fontMargin
+        self._gameAreaStart = fontHeight + 2 * self._fontMargin
+
+        gameAreaSize = graphicsConfig.windowSize - self._gameAreaStart
+
         # attention #1: simulationGridShape utlise la convention (w, h)
         # attention #2: pygame aime bien les coordonnes en pixels, attention aux
         #               operations en nombres flotant
         aspectRatio = simulationGridShape[0] / simulationGridShape[1]
         if aspectRatio >= 1:
-            self._tileSize = int(graphicsConfig.windowSize / simulationGridShape[0])
+            self._tileSize = int(gameAreaSize / simulationGridShape[0])
         else:
-            self._tileSize = int(graphicsConfig.windowSize / simulationGridShape[1])
+            self._tileSize = int(gameAreaSize / simulationGridShape[1])
         self._initBackgroundTiles(simulationGridShape, graphicsConfig)
 
         w = simulationGridShape[0] * self._tileSize
-        h = simulationGridShape[1] * self._tileSize
-        self._canvas = set_mode((w, h))
+        h = simulationGridShape[1] * self._tileSize + self._gameAreaStart
+        self._window = set_mode((w, h))
 
         self._initFood(graphicsConfig)
         self._initSnake(graphicsConfig)
@@ -37,11 +48,11 @@ class GraphicWindow():
     def update(gameEnvironment):
         pass
 
-    def render(self, ):
-        self._canvas.fill(self._clearColor)
-        self._backgroundTiles.draw(self._canvas)
-        self._food.draw(self._canvas)
-        self._snake.draw(self._canvas)
+    def render(self, message=None):
+        self._window.fill(self._clearColor)
+        self._backgroundTiles.draw(self._window)
+        self._food.draw(self._window)
+        self._snake.draw(self._window)
 
     def flip(self):
         flip()
@@ -65,7 +76,7 @@ class GraphicWindow():
             for _ in range(simulationGridShape[0]):
                 sprite = Sprite(image=tileSurfaces[tileSurfaceIndex])
                 sprite.rect.x = x
-                sprite.rect.y = y
+                sprite.rect.y = y + self._gameAreaStart
 
                 self._backgroundTiles.add(sprite)
 
@@ -79,6 +90,7 @@ class GraphicWindow():
         self._foodSprite = Sprite(filename=graphicsConfig.foodSpritePath)
         self._foodSprite.optimize(True)
         self._foodSprite.resize((self._tileSize, self._tileSize))
+        self._foodSprite.rect.y += self._gameAreaStart
         self._food = Group(self._foodSprite)
 
     def _initSnake(self, graphicsConfig):
@@ -133,4 +145,7 @@ class GraphicWindow():
         x *= self._tileSize
         y *= self._tileSize
         image = sprite.image.subsurface( Rect(x, y, self._tileSize, self._tileSize) )
-        return Sprite(image=image)
+        sprite = Sprite(image=image)
+        sprite.rect.y += self._gameAreaStart
+
+        return sprite

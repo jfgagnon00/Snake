@@ -11,8 +11,12 @@
     },
 
     "graphics": {
+        "clearColor": [0, 0, 0],
         "fps": 60,
         "windowSize": 800,
+        "fontSize": 20,
+        "fontColor":[255, 255, 255],
+        "fontPath": "assets/arial.ttf",
         "snakeSpritesPath": "assets/snake.png",
         "foodSpritePath": "assets/food.png"
     }

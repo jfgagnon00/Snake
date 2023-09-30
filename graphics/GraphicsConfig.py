@@ -15,9 +15,14 @@ class GraphicsConfig():
         # 0 signifie infinie
         self.fps = 0
 
-        # coter le plus large de la fenetre en pixels
+        # dimension du cote le plus large de la fenetre en pixels
         # le rapport d'aspect est deduit par la taille de la grille de simulation
         self.windowSize = 512
+
+        # taille du texte en point
+        self.fontSize = 12
+        self.fontColor = (255, 255, 255)
+        self.fontPath = ""
 
         # proprietes pour le serpents
         self.snakeSpritesPath = ""
