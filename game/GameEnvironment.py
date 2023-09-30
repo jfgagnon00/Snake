@@ -20,30 +20,38 @@ class GameEnvironment():
 
     def __init__(self, gameConfig):
 
-        shape = (gameConfig.grid_height, gameConfig.grid_width)
+        self._gridWidth = gameConfig.grid_width
+        self._gridHeight = gameConfig.grid_height
+        self.reset()
 
-        self._grid = np.zeros(shape=shape, dtype=np.int8)
-        self._snake = Snake(4, 1, Direction.RIGHT)
-        self._food = Point(0, 0)
         #self._score = 0
         #self._rewards = 0
+
+    def _sinc_element_grid(self):
+
+        for i in self._snake.bodyParts:
+            self._grid[i.y, i.x] = 1
 
     def reset(self):
         """
         Remet l'environment dans un etat initial
         """
+        shape = (self._gridHeight, self._gridWidth)
 
+        self._grid = np.zeros(shape=shape, dtype=np.int8)
         self._snake = Snake(4, 1, Direction.RIGHT)
+        self._sinc_element_grid()
         self._place_food()
 
         #self.score = 0
 
     def _place_food(self):
-        self.x = random.randint(
-            0, (self.GameConfig.grid_width-GameConfig.block_size)//GameConfig.block_size)*GameConfig.block_size
-        self.y = random.randint(0, (self.GameConfig.grid_height -
-                                GameConfig.block_size)//GameConfig.block_size)*GameConfig.block_size
-        Food.position = Point(self.x, self.y)
+        self.x = random.randint(0, self._gridWidth)
+        self.y = random.randint(0, self._gridHeight)
+        self._food = Point(self.x, self.y)
+        if self._food in self._snake.bodyParts:
+            self._place_food()
+        
 
     def _move(self, direction):
         x = self._snake.head.x
