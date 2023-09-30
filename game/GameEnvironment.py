@@ -4,7 +4,6 @@ from enum import Enum
 from .GameConfig import GameConfig
 from .Point import Point
 from .Snake import Snake
-from .Food import Food
 
 
 class Direction(Enum):  # temp
@@ -20,9 +19,12 @@ class GameEnvironment():
     """
 
     def __init__(self, gameConfig):
-        #self._grid = []  # array 2d ???? GameConfig.grid_width, GameConfig.grid_height
+
+        shape = (gameConfig.grid_height, gameConfig.grid_width)
+
+        self._grid = np.zeros(shape=shape, dtype=np.int8)
         self._snake = Snake(4, 1, Direction.RIGHT)
-        #self._food = Food()
+        self._food = Point(0, 0)
         #self._score = 0
         #self._rewards = 0
 
@@ -32,15 +34,16 @@ class GameEnvironment():
         """
 
         self._snake = Snake(4, 1, Direction.RIGHT)
-
+        self._place_food()
 
         #self.score = 0
-        #self.place_food()
 
-    def place_food(self):
-          self.x = random.randint(0, (self.GameConfig.grid_width-GameConfig.block_size )//GameConfig.block_size )*GameConfig.block_size
-          self.y = random.randint(0, (self.GameConfig.grid_height-GameConfig.block_size )//GameConfig.block_size )*GameConfig.block_size
-          Food.position = Point(self.x, self.y)    
+    def _place_food(self):
+        self.x = random.randint(
+            0, (self.GameConfig.grid_width-GameConfig.block_size)//GameConfig.block_size)*GameConfig.block_size
+        self.y = random.randint(0, (self.GameConfig.grid_height -
+                                GameConfig.block_size)//GameConfig.block_size)*GameConfig.block_size
+        Food.position = Point(self.x, self.y)
 
     def _move(self, direction):
         x = self._snake.head.x
