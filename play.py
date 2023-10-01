@@ -24,7 +24,10 @@ class InteractiveApplication():
         self._quit = False
         self._anyKeyPressed = False
         self._importantMessage = None
-        self._window = GraphicWindow((10, 15), configs.graphics)
+
+        gridShape = (configs.environment.grid_width, configs.environment.grid_height)
+        self._window = GraphicWindow(gridShape, configs.graphics)
+
         self._environement = GameEnvironmentTemp(configs.environment)
         self._agent = InteractiveAgent()
         self._updateFnc = None
@@ -33,6 +36,7 @@ class InteractiveApplication():
 
     def run(self):
         self._quit = False
+        self._reset()
 
         # en mode interactif, l'utilisateur doit
         # peser sur une touche avant de demarrer
@@ -55,6 +59,11 @@ class InteractiveApplication():
         pygame.font.quit()
         pygame.quit()
 
+    def _reset(self):
+        self._agent.reset()
+        self._environement.reset()
+        self._window.update(self._environement)
+
     def _handleEvents(self):
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
@@ -65,7 +74,6 @@ class InteractiveApplication():
 
             if e.type == pygame.KEYUP:
                 self._anyKeyPressed = True
-                self._agent.onKeyUp(e.key)
 
     def _update(self):
         self._simulationCounter -= 1
@@ -85,7 +93,7 @@ class InteractiveApplication():
 
     def _resetBeforeRestart(self):
         if self._anyKeyPressed:
-            self._environement.reset()
+            self._reset()
             self._setUpdateState(self._update)
 
     def _setUpdateState(self, updateFnc, message=None):

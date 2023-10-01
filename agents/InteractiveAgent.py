@@ -5,12 +5,12 @@ from game.GameAction import GameAction
 
 def _onLeft(direction):
     if direction.y > 0:
-        # serpent va vers le haut, tourne a gauche pour devenir la gauche
-        return GameAction.TURN_LEFT
-
-    if direction.y < 0:
         # serpent va vers le bas, tourne a droite pour devenir la gauche
         return GameAction.TURN_RIGHT
+
+    if direction.y < 0:
+        # serpent va vers le haut, tourne a gauche pour devenir la gauche
+        return GameAction.TURN_LEFT
 
     # serpent va vers la droite ou vers la gauche
     # ne pas permettre un retour en arriere
@@ -19,12 +19,12 @@ def _onLeft(direction):
 
 def _onRight(direction):
     if direction.y > 0:
-        # serpent va vers le haut, tourne a droite pour devenir la droite
-        return GameAction.TURN_RIGHT
-
-    if direction.y < 0:
         # serpent va vers le bas, tourne a gauche pour devenir la droite
         return GameAction.TURN_LEFT
+
+    if direction.y < 0:
+        # serpent va vers le haut, tourne a droite pour devenir la droite
+        return GameAction.TURN_RIGHT
 
     # serpent va vers la droite ou vers la gauche
     # ne pas permettre un retour en arriere
@@ -68,24 +68,18 @@ class InteractiveAgent():
     }
 
     def __init__(self):
-        self._isKeyDown = {
-            K_LEFT: False,
-            K_RIGHT: False,
-            K_UP: False,
-            K_DOWN: False
-        }
+        self.reset()
+
+    def reset(self):
+        self._lastKeyDown = -1
 
     def onKeyDown(self, key):
-        if key in self._isKeyDown:
-            self._isKeyDown[key] = True
-
-    def onKeyUp(self, key):
-        if key in self._isKeyDown:
-            self._isKeyDown[key] = False
+        if key in InteractiveAgent._KEY_HANDLERS:
+            self._lastKeyDown = key
 
     def getAction(self, direction):
-        for k, handler in InteractiveAgent._KEY_HANDLERS.items():
-            if self._isKeyDown[k]:
-                return handler(direction)
+        if self._lastKeyDown in InteractiveAgent._KEY_HANDLERS:
+            handler = InteractiveAgent._KEY_HANDLERS[self._lastKeyDown]
+            return handler(direction)
 
         return GameAction.FORWARD

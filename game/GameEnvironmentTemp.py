@@ -43,15 +43,18 @@ class GameEnvironmentTemp():
 
         if action == GameAction.TURN_LEFT:
             # tourne direction 90 degres CCW
-            d.x, d.y = -d.y, d.x
+            d.x, d.y = d.y, -d.x
 
         if action == GameAction.TURN_RIGHT:
             # tourne direction 90 degres CW
-            d.x, d.y = d.y, -d.x
+            d.x, d.y = -d.y, d.x
 
         # bouger la tete dans la nouvelle direction
         # ATTENTION: l'operateur + cree une nouvelle instance
         head = self._snake.head + d
+
+        if False:
+            print("HEAD:", head.x, head.y, "DIR", d.x, d.y)
 
         if head == self._food:
             # tete est sur la nourriture, grandire le serpent
