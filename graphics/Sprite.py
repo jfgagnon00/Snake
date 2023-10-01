@@ -4,8 +4,8 @@ from pygame.sprite import Sprite as pygame_Sprite
 from pygame.transform import smoothscale
 
 
-class Sprite(pygame_Sprite):
-    def __init__(self, image=None, filename=None):
+class _Sprite(pygame_Sprite):
+    def __init__(self, image=None, filename=None, x=0, y=0, w=0, h=0):
         super().__init__()
 
         if not image is  None:
@@ -16,7 +16,7 @@ class Sprite(pygame_Sprite):
             self.image = None
 
         if self.image is None:
-            self.rect = Rect()
+            self.rect = Rect(x, y, w, h)
         else:
             self.rect = self.image.get_rect()
 
