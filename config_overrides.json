@@ -11,6 +11,7 @@
     },
 
     "graphics": {
+        "caption": "A59 - Snake",
         "clearColor": [0, 0, 0],
         "simulationFpsDivider": 30,
         "windowSize": 800,
@@ -18,6 +19,7 @@
         "fontColor":[255, 255, 255],
         "fontPath": "assets/arial.ttf",
         "snakeSpritesPath": "assets/snake.png",
-        "foodSpritePath": "assets/food.png"
+        "foodSpritePath": "assets/food.png",
+        "iconPath": "assets/icon.png"
     }
 }

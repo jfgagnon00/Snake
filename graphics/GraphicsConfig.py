@@ -35,3 +35,6 @@ class GraphicsConfig():
 
         # proprietes pour la nouriture
         self.foodSpritePath = ""
+
+        self.caption = ""
+        self.iconPath = ""

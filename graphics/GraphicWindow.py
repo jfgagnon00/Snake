@@ -1,7 +1,7 @@
 from enum import IntEnum
 from pygame import BLEND_RGBA_MULT
 from pygame.font import Font
-from pygame.display import set_mode, flip
+from pygame.display import set_mode, set_caption, set_icon, flip
 from pygame.rect import Rect
 from pygame.sprite import Group
 from pygame.surface import Surface
@@ -29,6 +29,11 @@ class GraphicWindow():
     l'animation de GameEnvironment
     """
     def __init__(self, simulationGridShape, graphicsConfig):
+        set_caption(graphicsConfig.caption)
+
+        icon = Sprite(filename=graphicsConfig.iconPath)
+        set_icon(icon.image)
+
         self._clock = Clock()
         self._fps = graphicsConfig.fps
         self._clearColor = graphicsConfig.clearColor
