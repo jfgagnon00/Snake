@@ -1,3 +1,4 @@
+from enum import IntEnum
 from pygame import BLEND_RGBA_MULT
 from pygame.font import Font
 from pygame.display import set_mode, flip
@@ -8,6 +9,19 @@ from pygame.time import Clock
 
 from game.Vector import Vector
 from .Sprite import Sprite
+
+class _Edge(IntEnum):
+    NONE = 0
+    NORTH = 1
+    SOUTH = 2
+    EAST = 3
+    WEST = 4
+
+class _Type(IntEnum):
+    TAIL = 0
+    BODY = 1
+    HEAD = 2
+    EYES = 3
 
 class GraphicWindow():
     """
@@ -56,14 +70,7 @@ class GraphicWindow():
         self._foodSprite.rect.x = food.x
         self._foodSprite.rect.y = food.y
 
-        snake = self._environmentToWindow(gameEnvironment.snake.head)
-        h = self._snakeHeads[0]
-        h.rect.x = snake.x
-        h.rect.y = snake.y
-
-        e = self._snakeEyes[0]
-        e.rect.x = snake.x
-        e.rect.y = snake.y
+        self._updateSnake(gameEnvironment.snake)
 
     def render(self, message=None):
         self._window.fill(self._clearColor)
@@ -137,33 +144,31 @@ class GraphicWindow():
         snake.resize((w, h))
 
         # decouper en sous sprites
-        self._snakeTails = []
-        self._snakeTails.append( self._getSnakeSubSprite(snake, 0, 0) )
-        self._snakeTails.append( self._getSnakeSubSprite(snake, 0, 1) )
-        self._snakeTails.append( self._getSnakeSubSprite(snake, 0, 2) )
-        self._snakeTails.append( self._getSnakeSubSprite(snake, 0, 3) )
+        self._spriteMapping = {}
 
-        self._snakeBodies = []
-        self._snakeBodies.append( self._getSnakeSubSprite(snake, 1, 0) )
-        self._snakeBodies.append( self._getSnakeSubSprite(snake, 1, 1) )
-        self._snakeBodies.append( self._getSnakeSubSprite(snake, 1, 2) )
-        self._snakeBodies.append( self._getSnakeSubSprite(snake, 1, 3) )
-        self._snakeBodies.append( self._getSnakeSubSprite(snake, 1, 4) )
-        self._snakeBodies.append( self._getSnakeSubSprite(snake, 2, 4) )
+        self._spriteMapping[GraphicWindow._getKey(_Type.TAIL, _Edge.NONE, _Edge.WEST)] = self._getSnakeSubSprite(snake, 0, 0)
+        self._spriteMapping[GraphicWindow._getKey(_Type.TAIL, _Edge.NONE, _Edge.NORTH)] = self._getSnakeSubSprite(snake, 0, 1)
+        self._spriteMapping[GraphicWindow._getKey(_Type.TAIL, _Edge.NONE, _Edge.EAST)] = self._getSnakeSubSprite(snake, 0, 2)
+        self._spriteMapping[GraphicWindow._getKey(_Type.TAIL, _Edge.NONE, _Edge.SOUTH)] = self._getSnakeSubSprite(snake, 0, 3)
 
-        self._snakeHeads = []
-        self._snakeHeads.append( self._getSnakeSubSprite(snake, 2, 0) )
-        self._snakeHeads.append( self._getSnakeSubSprite(snake, 2, 1) )
-        self._snakeHeads.append( self._getSnakeSubSprite(snake, 2, 2) )
-        self._snakeHeads.append( self._getSnakeSubSprite(snake, 2, 3) )
+        self._spriteMapping[GraphicWindow._getKey(_Type.BODY, _Edge.WEST, _Edge.EAST)] = self._getSnakeSubSprite(snake, 1, 0)
+        self._spriteMapping[GraphicWindow._getKey(_Type.BODY, _Edge.WEST, _Edge.SOUTH)] = self._getSnakeSubSprite(snake, 1, 1)
+        self._spriteMapping[GraphicWindow._getKey(_Type.BODY, _Edge.WEST, _Edge.NORTH)] = self._getSnakeSubSprite(snake, 1, 2)
+        self._spriteMapping[GraphicWindow._getKey(_Type.BODY, _Edge.NORTH, _Edge.EAST)] = self._getSnakeSubSprite(snake, 1, 3)
+        self._spriteMapping[GraphicWindow._getKey(_Type.BODY, _Edge.SOUTH, _Edge.EAST)] = self._getSnakeSubSprite(snake, 1, 4)
+        self._spriteMapping[GraphicWindow._getKey(_Type.BODY, _Edge.NORTH, _Edge.SOUTH)] = self._getSnakeSubSprite(snake, 2, 4)
 
-        self._snakeEyes = []
-        self._snakeEyes.append( self._getSnakeSubSprite(snake, 3, 0) )
-        self._snakeEyes.append( self._getSnakeSubSprite(snake, 3, 1) )
-        self._snakeEyes.append( self._getSnakeSubSprite(snake, 3, 2) )
-        self._snakeEyes.append( self._getSnakeSubSprite(snake, 3, 3) )
+        self._spriteMapping[GraphicWindow._getKey(_Type.HEAD, _Edge.WEST, _Edge.NONE)] = self._getSnakeSubSprite(snake, 2, 0)
+        self._spriteMapping[GraphicWindow._getKey(_Type.HEAD, _Edge.NORTH, _Edge.NONE)] = self._getSnakeSubSprite(snake, 2, 1)
+        self._spriteMapping[GraphicWindow._getKey(_Type.HEAD, _Edge.EAST, _Edge.NONE)] = self._getSnakeSubSprite(snake, 2, 2)
+        self._spriteMapping[GraphicWindow._getKey(_Type.HEAD, _Edge.SOUTH, _Edge.NONE)] = self._getSnakeSubSprite(snake, 2, 3)
 
-        self._snake = Group(self._snakeHeads[0], self._snakeEyes[0])
+        self._spriteMapping[GraphicWindow._getKey(_Type.EYES, _Edge.WEST, _Edge.NONE)] = self._getSnakeSubSprite(snake, 3, 0)
+        self._spriteMapping[GraphicWindow._getKey(_Type.EYES, _Edge.NORTH, _Edge.NONE)] = self._getSnakeSubSprite(snake, 3, 1)
+        self._spriteMapping[GraphicWindow._getKey(_Type.EYES, _Edge.EAST, _Edge.NONE)] = self._getSnakeSubSprite(snake, 3, 2)
+        self._spriteMapping[GraphicWindow._getKey(_Type.EYES, _Edge.SOUTH, _Edge.NONE)] = self._getSnakeSubSprite(snake, 3, 3)
+
+        self._snake = Group()
 
     def _getSnakeSubSprite(self, sprite, x, y):
         x *= self._tileSize
@@ -177,3 +182,82 @@ class GraphicWindow():
     def _environmentToWindow(self, vector):
         return Vector(vector.x * self._tileSize,
                       vector.y * self._tileSize + self._gameAreaStart)
+
+    def _updateSnake(self, snake):
+        self._snake.empty()
+
+        # head et eyes
+        p0 = snake.bodyParts[0]
+        p1 = snake.bodyParts[1]
+        inDir = p0 - p1
+
+        p = self._environmentToWindow(p0)
+        head = self._getSprite(_Type.HEAD, inDir, Vector(0, 0))
+        head.rect.x = p.x
+        head.rect.y = p.y
+
+        eyes = self._getSprite(_Type.EYES, inDir, Vector(0, 0))
+        eyes.rect.x = p.x
+        eyes.rect.y = p.y
+
+        self._snake.add(head, eyes)
+
+        # body parts
+        count = len(snake.bodyParts)
+        for i in range(1, count - 1):
+            outDir = inDir
+            p0 = p1
+            p1 = snake.bodyParts[i + 1]
+            inDir = p0 - p1
+
+            p = self._environmentToWindow(p0)
+            body = self._getSprite(_Type.BODY, inDir, outDir)
+            body.rect.x = p.x
+            body.rect.y = p.y
+
+            self._snake.add(body)
+
+        # tail
+        p = self._environmentToWindow(p1)
+        tail = self._getSprite(_Type.TAIL, Vector(0, 0), -inDir)
+        tail.rect.x = p.x
+        tail.rect.y = p.y
+        self._snake.add(tail)
+
+        # print(len(self._snake.sprites()))
+        # for i, s in enumerate(self._snake.sprites()):
+        #     print(i,":", s.rect.x, s.rect.y, s)
+        # print("")
+
+    def _getSprite(self, type, inDir, outDir):
+        e0 = GraphicWindow._getEdgeFromDir(-inDir)
+        e1 = GraphicWindow._getEdgeFromDir(outDir)
+
+        key = GraphicWindow._getKey(type, e0, e1)
+        if key in self._spriteMapping:
+            return self._spriteMapping[key]
+
+        key = GraphicWindow._getKey(type, e1, e0)
+        return self._spriteMapping[key]
+
+    @classmethod
+    def _getEdgeFromDir(cls, outDir):
+        if outDir.x > 0:
+            return _Edge.EAST
+
+        if outDir.x < 0:
+            return _Edge.WEST
+
+        if outDir.y > 0:
+            return _Edge.SOUTH
+
+        if outDir.y < 0:
+            return _Edge.NORTH
+
+        return _Edge.NONE
+
+    @classmethod
+    def _getKey(cls, type, edge1, edge2):
+            return int(type) | \
+                   (int(edge1) << 3) | \
+                   (int(edge2) << 6)
