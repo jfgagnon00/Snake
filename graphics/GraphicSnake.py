@@ -92,6 +92,8 @@ class _GraphicSnake():
 
     def update(self, gameSnake):
         gameCount = len(gameSnake.bodyParts)
+
+        # +1 a cause du sprite des yeux
         while (gameCount + 1) > len(self._sprites):
             self._sprites.append(_Sprite(x=0, y=0, w=self._tileSize, h=self._tileSize))
 

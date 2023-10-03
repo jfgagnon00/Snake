@@ -27,7 +27,7 @@ class GameEnvironmentTemp():
     def reset(self):
         self._score = 0
 
-        shape = (self._gridHeight, self._gridWidth)
+        shape = (self._gridWidth, self._gridHeight)
         self._grid = np.zeros(shape=shape, dtype=np.int8)
         self._snake = Snake(Vector(4, 1), Vector(1, 0))
 
@@ -69,7 +69,7 @@ class GameEnvironmentTemp():
            head.y < 0 or \
            head.x >= self._gridWidth or \
            head.y >= self._gridHeight or \
-           self._grid[head.y, head.x] == 1:
+           self._grid[head.x, head.y] == 1:
             # tete est en collision ou en dehors de la grille, terminer
             return True
 
@@ -84,7 +84,7 @@ class GameEnvironmentTemp():
     def _setSnakeInGrid(self, value):
         # sous optimal, a changer
         for i in self._snake.bodyParts:
-            self._grid[i.y, i.x] = value
+            self._grid[i.x, i.y] = value
 
     def _placeFood(self):
         # sous optimal, a changer
@@ -92,7 +92,7 @@ class GameEnvironmentTemp():
             x = random.randint(0, self._gridWidth - 1)
             y = random.randint(0, self._gridHeight - 1)
 
-            if self._grid[y, x] == 0:
+            if self._grid[x, y] == 0:
                 self._food = Vector(x, y)
-                self._grid[y, x] = 1
+                self._grid[x, y] = 1
                 break
