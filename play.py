@@ -8,7 +8,7 @@ import pygame
 
 from agents.InteractiveAgent import InteractiveAgent
 from configs.configs import createConfigs
-from game.GameEnvironmentTemp import GameEnvironmentTemp
+from game.GameEnvironment import GameEnvironment
 from graphics.GraphicWindow import GraphicWindow
 
 
@@ -28,7 +28,7 @@ class InteractiveApplication():
         gridShape = (configs.environment.grid_width, configs.environment.grid_height)
         self._window = GraphicWindow(gridShape, configs.graphics)
 
-        self._environement = GameEnvironmentTemp(configs.environment)
+        self._environement = GameEnvironment(configs.environment)
         self._agent = InteractiveAgent()
         self._updateFnc = None
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider

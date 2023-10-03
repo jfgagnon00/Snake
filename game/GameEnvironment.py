@@ -1,134 +1,98 @@
 import numpy as np
 import random
-from enum import Enum
-from .GameConfig import GameConfig
-from .Vector import Vector
+
+from .GameAction import GameAction
 from .Snake import Snake
-
-
-class Direction(Enum):  # temp
-    RIGHT = 1
-    LEFT = 2
-    UP = 3
-    DOWN = 4
+from .Vector import Vector
 
 
 class GameEnvironment():
-    """
-    Responsable d'appliquer le mouvement au serpent
-    """
-
     def __init__(self, gameConfig):
-
         self._gridWidth = gameConfig.grid_width
         self._gridHeight = gameConfig.grid_height
         self.reset()
 
-        #self._score = 0
-        #self._rewards = 0
+    @property
+    def snake(self):
+        return self._snake
 
-    def _sinc_element_grid(self):
+    @property
+    def food(self):
+        return self._food
 
-        for i in self._snake.bodyParts:
-            self._grid[i.y, i.x] = 1
+    @property
+    def score(self):
+        return self._score
 
     def reset(self):
-        """
-        Remet l'environment dans un etat initial
-        """
-        shape = (self._gridHeight, self._gridWidth)
+        self._score = 0
 
+        shape = (self._gridWidth, self._gridHeight)
         self._grid = np.zeros(shape=shape, dtype=np.int8)
-        self._snake = Snake(4, 1, Direction.RIGHT)
-        self._sinc_element_grid()
-        self._place_food()
+        self._snake = Snake(Vector(4, 1), Vector(1, 0))
 
-        #self.score = 0
+        # placer le serpent dans la grille
+        self._setSnakeInGrid(1)
 
-    def _place_food(self):
-        self.x = random.randint(0, self._gridWidth)
-        self.y = random.randint(0, self._gridHeight)
-        self._food = Vector(self.x, self.y)
-        if self._food in self._snake.bodyParts:
-            self._place_food()
+        self._placeFood()
 
+    def apply(self, action):
+        # d est la meme instance que le serpent
+        # la mise a jour va modifier le serpent aussi
+        d = self._snake.direction
 
-    def _move(self, direction):
-        x = self._snake.head.x
-        y = self._snake.head.y
-        if direction == Direction.RIGHT:
-            x += GameConfig.block_size
-        elif direction == Direction.LEFT:
-            x -= GameConfig.block_size
-        elif direction == Direction.DOWN:
-            y += GameConfig.block_size
-        elif direction == Direction.UP:
-            y -= GameConfig.block_size
+        if action == GameAction.TURN_LEFT:
+            # tourne direction 90 degres CCW
+            d.x, d.y = d.y, -d.x
 
-        self.head = Vector(x, y)
+        if action == GameAction.TURN_RIGHT:
+            # tourne direction 90 degres CW
+            d.x, d.y = -d.y, d.x
 
-    def _move(self, action):
+        # bouger la tete dans la nouvelle direction
+        # ATTENTION: l'operateur + cree une nouvelle instance
+        head = self._snake.head + d
 
-        # Actions : [1, 0, 0] -> straight ; [0, 1, 0] -> right turn ; [0, 0, 1] -> left turn
-        #[straight, right, left]
-        self.direction = GameEnvironment.MOVEMENT_TURN_RIGHT
-        clock_wise = [Direction.RIGHT, Direction.DOWN,
-                      Direction.LEFT, Direction.UP]
-        idx = clock_wise.index(self.direction)
+        if False:
+            print("HEAD:", head.x, head.y, "DIR", d.x, d.y)
 
-        if np.array_equal(action, [1, 0, 0]):
-            new_dir = clock_wise[idx]  # no change
-        elif np.array_equal(action, [0, 1, 0]):
-            next_idx = (idx + 1) % 4  # (pour revenir au debut du clock_wise)
-            # right-turn right -> down -> left -> up
-            new_dir = clock_wise[next_idx]
-        else:  # [0, 0, 1]
-            next_idx = (idx - 1) % 4  # (pour revenir au debut du clock_wise)
-            # left-turn right -> up -> left -> down
-            new_dir = clock_wise[next_idx]
+        if head == self._food:
+            # tete est sur la nourriture, grandire le serpent
+            self._setSnakeInGrid(0)
+            self._snake.bodyParts.appendleft(head)
+            self._setSnakeInGrid(1)
+            self._placeFood()
+            self._score += 1
+            return False
 
-        self.direction = new_dir
-
-        x = self._snake.head.x
-        y = self._snake.head.y
-        if self.direction == GameEnvironment.Direction.RIGHT:
-            x += GameConfig.block_size
-        elif self.direction == GameEnvironment.Direction.LEFT:
-            x -= GameConfig.block_size
-        elif self.direction == GameEnvironment.Direction.DOWN:
-            y += GameConfig.block_size
-        elif self.direction == GameEnvironment.Direction.UP:
-            y -= GameConfig.block_size
-
-        self._snake.head = Vector(x, y)
-
-    def apply(self, movement):
-        """
-        Applique le movement au serpent et met a jour les etats internes
-        """
-        # 1. bouge serpent
-        self._snake._move(movement, Direction)  # update the head
-        self._snake.insert(0, self._snake.head)
-
-        # 2. mettre a jour grid
-
-        # 3. resoudre collision
-    def is_collision(self, pt=None):
-        if pt is None:
-            pt = self._snake.head
-        # hits boundary
-        if pt.x > self.w - GameConfig.block_size or pt.x < 0 or pt.y > self.h - Vector or pt.y < 0:
+        if head.x < 0 or \
+           head.y < 0 or \
+           head.x >= self._gridWidth or \
+           head.y >= self._gridHeight or \
+           self._grid[head.x, head.y] == 1:
+            # tete est en collision ou en dehors de la grille, terminer
             return True
-        # hits itself
-        if pt in self.snake[1:]:
-            return True
+
+        # bouger le corps du serpent
+        self._setSnakeInGrid(0)
+        self._snake.bodyParts.pop()
+        self._snake.bodyParts.appendleft(head)
+        self._setSnakeInGrid(1)
 
         return False
 
-        # 4. calculer reward et game over
-        reward = 0
-        game_over = False
-        if self.is_collision():  # or self.frame_iteration > 100*len(self.snake):
-            game_over = True
-            reward = -10
-        return reward, game_over, self.score
+    def _setSnakeInGrid(self, value):
+        # sous optimal, a changer
+        for i in self._snake.bodyParts:
+            self._grid[i.x, i.y] = value
+
+    def _placeFood(self):
+        # sous optimal, a changer
+        while True:
+            x = random.randint(0, self._gridWidth - 1)
+            y = random.randint(0, self._gridHeight - 1)
+
+            if self._grid[x, y] == 0:
+                self._food = Vector(x, y)
+                self._grid[x, y] = 1
+                break
