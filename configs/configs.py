@@ -11,7 +11,7 @@ def createConfigs(config_overrides):
     except:
         config_overrides = None
 
-    from game.GameConfig import GameConfig
+    from configs.GameConfig import GameConfig
     from graphics.GraphicsConfig import GraphicsConfig
 
     # creer les configs par defaut
