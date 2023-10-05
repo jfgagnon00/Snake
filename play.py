@@ -6,7 +6,7 @@ Demarrer le jeu en mode interactif
 import os
 import pygame
 
-from agents.InteractiveAgent import InteractiveAgent
+from rl.agents.InteractiveAgent import InteractiveAgent
 from configs.configs import createConfigs
 from game.GameEnvironment import GameEnvironment
 from graphics.GraphicWindow import GraphicWindow
