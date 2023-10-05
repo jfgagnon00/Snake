@@ -1,4 +1,4 @@
-from misc.MetaObject import MetaObject
+from core.MetaObject import MetaObject
 
 
 def createConfigs(config_overrides):
