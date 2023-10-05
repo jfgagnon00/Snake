@@ -1,6 +1,5 @@
 from collections import deque
-from .GameAction import GameAction
-from .Vector import Vector
+
 
 class Snake():
     """

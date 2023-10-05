@@ -1,9 +1,9 @@
 import numpy as np
 import random
 
+from core.Vector import Vector
 from .GameAction import GameAction
 from .Snake import Snake
-from .Vector import Vector
 
 
 class GameEnvironment():
