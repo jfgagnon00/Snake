@@ -3,7 +3,7 @@ import random
 
 from core import Vector
 from .GameAction import GameAction
-from .Snake import Snake
+from .GameSnake import GameSnake
 
 
 class GameEnvironment():
@@ -29,7 +29,7 @@ class GameEnvironment():
 
         shape = (self._gridWidth, self._gridHeight)
         self._grid = np.zeros(shape=shape, dtype=np.int8)
-        self._snake = Snake(Vector(4, 1), Vector(1, 0))
+        self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
 
         # placer le serpent dans la grille
         self._setSnakeInGrid(1)
