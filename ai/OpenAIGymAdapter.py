@@ -1,7 +1,7 @@
 from gym import Env
 
 class OpenAIGymAdapter(Env):
-    def __init__(self):
+    def __init__(self, gameEnvironment, environmentConfig, trainConfig):
         super().__init__()
 
         self.action_space = None

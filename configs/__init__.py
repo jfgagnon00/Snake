@@ -1,29 +1,35 @@
 from core import MetaObject
 from .GameConfig import GameConfig
 from .GraphicsConfig import GraphicsConfig
+from .TrainConfig import TrainConfig
 
 
-def createConfigs(config_overrides):
+def createConfigs(configOverrides):
     """
     Utilitaire pour creer une config complete
     """
 
     try:
-        config_overrides = MetaObject.from_json(config_overrides)
+        configOverrides = MetaObject.from_json(configOverrides)
     except:
-        config_overrides = None
+        configOverrides = None
 
     # creer les configs par defaut
-    env_config = GameConfig()
-    gfx_config = GraphicsConfig()
+    envConfig = GameConfig()
+    gfxConfig = GraphicsConfig()
+    trainConfig = TrainConfig()
 
     # appliquer les overrides
-    if not config_overrides is None:
-        MetaObject.override_from_object(env_config,
-                                        config_overrides.environment)
+    if not configOverrides is None:
+        MetaObject.override_from_object(envConfig,
+                                        configOverrides.environment)
 
-        MetaObject.override_from_object(gfx_config,
-                                        config_overrides.graphics)
+        MetaObject.override_from_object(gfxConfig,
+                                        configOverrides.graphics)
 
-    return MetaObject.from_kwargs(environment=env_config,
-                                  graphics=gfx_config)
+        MetaObject.override_from_object(trainConfig,
+                                        configOverrides.train)
+
+    return MetaObject.from_kwargs(environment=envConfig,
+                                  graphics=gfxConfig,
+                                  train=trainConfig)
