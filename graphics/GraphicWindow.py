@@ -2,7 +2,7 @@ from pygame.font import Font
 from pygame.display import set_mode, set_caption, set_icon, flip
 from pygame.time import Clock
 
-from core.Vector import Vector
+from core import Vector
 from .Sprite import _Sprite
 from .GraphicBackground import _GraphicBackground
 from .GraphicFood import _GraphicFood

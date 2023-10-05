@@ -4,7 +4,7 @@ from pygame.rect import Rect
 from pygame.sprite import Group
 
 
-from core.Vector import Vector
+from core import Vector
 from .Sprite import _Sprite
 
 

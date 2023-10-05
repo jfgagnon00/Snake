@@ -7,7 +7,7 @@ import os
 import pygame
 
 from rl.agents.InteractiveAgent import InteractiveAgent
-from configs.configs import createConfigs
+from configs import createConfigs
 from game.GameEnvironment import GameEnvironment
 from graphics.GraphicWindow import GraphicWindow
 

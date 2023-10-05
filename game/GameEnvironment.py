@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-from core.Vector import Vector
+from core import Vector
 from .GameAction import GameAction
 from .Snake import Snake
 

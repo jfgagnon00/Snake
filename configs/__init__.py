@@ -1,4 +1,6 @@
-from core.MetaObject import MetaObject
+from core import MetaObject
+from .GameConfig import GameConfig
+from .GraphicsConfig import GraphicsConfig
 
 
 def createConfigs(config_overrides):
@@ -10,9 +12,6 @@ def createConfigs(config_overrides):
         config_overrides = MetaObject.from_json(config_overrides)
     except:
         config_overrides = None
-
-    from configs.GameConfig import GameConfig
-    from configs.GraphicsConfig import GraphicsConfig
 
     # creer les configs par defaut
     env_config = GameConfig()
