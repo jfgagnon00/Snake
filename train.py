@@ -14,6 +14,7 @@ class TrainApplication():
     """
     """
     # https://blog.paperspace.com/creating-custom-environments-openai-gym/
+    # https://towardsdatascience.com/creating-a-custom-openai-gym-environment-for-stock-trading-be532be3910e
     def __init__(self, configs):
         self._agent = None
         self._env = OpenAIGymAdapter(GameEnvironment(configs.environment),
