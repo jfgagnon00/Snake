@@ -1,6 +1,6 @@
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
 
-from game.GameAction import GameAction
+from game import GameAction
 
 
 def _onLeft(direction):
