@@ -33,11 +33,10 @@ class SnakeEnvironment(Env):
             render_mode = None
 
         self.action_space = spaces.Discrete(int(GameAction.COUNT))
-        self.observation_space = spaces.Box(GridOccupancy.EMPTY,
-                                            GridOccupancy.FOOD,
-                                            # TODO: valider convention (w, h)
-                                            shape=(simulationConfig.gridHeight, simulationConfig.gridWidth),
-                                            dtype=np.int8)
+        self.observation_space = spaces.Box(low=0,
+                                            high=255,
+                                            shape=(simulationConfig.gridWidth, simulationConfig.gridHeight, 1),
+                                            dtype=np.uint8)
         self.render_mode = render_mode
 
         self._simulation = GameSimulation(simulationConfig)

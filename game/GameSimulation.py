@@ -29,7 +29,7 @@ class GameSimulation():
         self._score = 0
 
         shape = (self._gridWidth, self._gridHeight)
-        self._grid = np.zeros(shape=shape, dtype=np.int8)
+        self._grid = np.zeros(shape=shape, dtype=np.uint8)
         self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
 
         # placer le serpent dans la grille

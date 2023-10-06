@@ -16,7 +16,12 @@ class TrainApplication():
     """
     def __init__(self, configs):
         self._agent = None
-        # self._env = gym.make()
+        self._env = gym.make("snake/SnakeEnvironment-v0",
+                            # render_mode="human",
+                            environmentConfig=configs.environment,
+                            simulationConfig=configs.simulation)
+                            # graphicsConfig=None)
+
         # ai.SnakeEnvironment(GameSimulation(configs.simulation),
         #                                 configs.simulation,
         #                                 configs.train)
