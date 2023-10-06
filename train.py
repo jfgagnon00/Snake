@@ -10,6 +10,7 @@ import gymnasium as gym
 import os
 
 from configs import configsCreate
+from tqdm import tqdm
 
 
 class TrainApplication():
@@ -23,9 +24,7 @@ class TrainApplication():
                             graphicsConfig=configs.graphics)
 
     def run(self):
-        for e in range(self._episodes):
-            print("Episode:", e)
-
+        for e in tqdm(range(self._episodes)):
             terminated = False
             observation = self._env.reset()
 
@@ -38,7 +37,6 @@ class TrainApplication():
                 # Render the game
                 self._env.render()
 
-        print("Terminé")
         self._env.close()
 
 @click.command()
