@@ -6,7 +6,7 @@ Demarrer le jeu en mode interactif
 import os
 import pygame
 
-from ai.agents import InteractiveAgent
+from ai.agents import AgentInteractive
 from configs import configsCreate
 from game import GameSimulation
 from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
@@ -28,7 +28,7 @@ class InteractiveApplication():
         self._window = GraphicWindow(gridShape, configs.graphics)
 
         self._simulation = GameSimulation(configs.simulation)
-        self._agent = InteractiveAgent()
+        self._agent = AgentInteractive()
         self._updateFnc = None
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
         self._simulationCounter = 0

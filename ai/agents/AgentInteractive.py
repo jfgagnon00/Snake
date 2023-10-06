@@ -59,7 +59,7 @@ def _onDown(direction):
     # donc garder la direction
     return GameAction.FORWARD
 
-class InteractiveAgent():
+class AgentInteractive():
     _KEY_HANDLERS = {
         K_LEFT: _onLeft,
         K_RIGHT: _onRight,
@@ -74,12 +74,12 @@ class InteractiveAgent():
         self._lastKeyDown = -1
 
     def onKeyDown(self, key):
-        if key in InteractiveAgent._KEY_HANDLERS:
+        if key in AgentInteractive._KEY_HANDLERS:
             self._lastKeyDown = key
 
     def getAction(self, direction):
-        if self._lastKeyDown in InteractiveAgent._KEY_HANDLERS:
-            handler = InteractiveAgent._KEY_HANDLERS[self._lastKeyDown]
+        if self._lastKeyDown in AgentInteractive._KEY_HANDLERS:
+            handler = AgentInteractive._KEY_HANDLERS[self._lastKeyDown]
             return handler(direction)
 
         return GameAction.FORWARD

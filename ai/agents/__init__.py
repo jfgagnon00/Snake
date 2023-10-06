@@ -1,1 +1,1 @@
-from .InteractiveAgent import InteractiveAgent
+from .AgentInteractive import AgentInteractive
