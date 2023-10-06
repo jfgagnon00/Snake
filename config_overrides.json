@@ -2,7 +2,7 @@
     "train": {
         "gamma": 0.0,
         "epsilon": 0.0,
-        "agent": "",
+        "agent": "AgentRandom",
         "episodes": 10
     },
 
@@ -26,7 +26,7 @@
         "backgroundTileColorLight": [0, 255, 0],
         "backgroundTileColorDark": [0, 200, 0],
         "simulationFpsDivider": 20,
-        "windowSize": 800,
+        "windowSize": 500,
         "fontSize": 20,
         "fontColor":[255, 255, 255],
         "fontPath": "assets/arial.ttf",

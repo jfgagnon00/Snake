@@ -16,12 +16,16 @@ from tqdm import tqdm
 class TrainApplication():
     def __init__(self, configs):
         self._episodes = configs.train.episodes
-        self._agent = agents.AgentRandom()
         self._env = gym.make("snake/SnakeEnvironment-v0",
                             renderMode = None if configs.train.unattended else "human",
                             environmentConfig=configs.environment,
                             simulationConfig=configs.simulation,
                             graphicsConfig=configs.graphics)
+
+        # instantier un agent a partir d'un string
+        # limiter a ai.agents pour le moment
+        agent_class = getattr(agents, configs.train.agent)
+        self._agent = agent_class()
 
     def run(self):
         for e in tqdm(range(self._episodes)):
@@ -49,12 +53,19 @@ class TrainApplication():
               "-e",
               type=int,
               help="Episode count to train.")
-def main(unattended, episodes):
+@click.option("--agent",
+              "-a",
+              type=str,
+              help="Type de l'agent à utiliser.")
+def main(unattended, episodes, agent):
     configs = configsCreate("config_overrides.json")
     configs.train.unattended = unattended
 
     if not episodes is None and episodes > 0:
         configs.train.episodes = episodes
+
+    if not agent is None and len(agent) > 0:
+        configs.train.agent = agent
 
     TrainApplication(configs).run()
 
