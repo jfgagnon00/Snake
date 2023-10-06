@@ -9,7 +9,7 @@ import pygame
 from ai.agents import InteractiveAgent
 from configs import configsCreate
 from game import GameSimulation
-from graphics import GraphicWindow
+from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
 
 
 class InteractiveApplication():
@@ -18,8 +18,7 @@ class InteractiveApplication():
     peut y jouer a l'aide du clavier
     """
     def __init__(self, configs):
-        pygame.init()
-        pygame.font.init()
+        gfxInit()
 
         self._quit = False
         self._anyKeyPressed = False
@@ -56,8 +55,7 @@ class InteractiveApplication():
         self._done()
 
     def _done(self):
-        pygame.font.quit()
-        pygame.quit()
+        gfxQuit()
 
     def _reset(self):
         self._agent.reset()

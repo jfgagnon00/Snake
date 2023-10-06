@@ -4,6 +4,7 @@ import random
 from core import Vector
 from .GameAction import GameAction
 from .GameSnake import GameSnake
+from .GridOccupancy import GridOccupancy
 
 
 class GameSimulation():
@@ -32,7 +33,7 @@ class GameSimulation():
         self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
 
         # placer le serpent dans la grille
-        self._setSnakeInGrid(1)
+        self._setSnakeInGrid(True)
 
         self._placeFood()
 
@@ -58,9 +59,9 @@ class GameSimulation():
 
         if head == self._food:
             # tete est sur la nourriture, grandire le serpent
-            self._setSnakeInGrid(0)
+            self._setSnakeInGrid(False)
             self._snake.bodyParts.appendleft(head)
-            self._setSnakeInGrid(1)
+            self._setSnakeInGrid(True)
             self._placeFood()
             self._score += 1
             return False
@@ -69,22 +70,27 @@ class GameSimulation():
            head.y < 0 or \
            head.x >= self._gridWidth or \
            head.y >= self._gridHeight or \
-           self._grid[head.x, head.y] == 1:
+           self._grid[head.x, head.y] != GridOccupancy.EMPTY:
             # tete est en collision ou en dehors de la grille, terminer
             return True
 
         # bouger le corps du serpent
-        self._setSnakeInGrid(0)
+        self._setSnakeInGrid(False)
         self._snake.bodyParts.pop()
         self._snake.bodyParts.appendleft(head)
-        self._setSnakeInGrid(1)
+        self._setSnakeInGrid(True)
 
         return False
 
-    def _setSnakeInGrid(self, value):
+    def _setSnakeInGrid(self, show):
         # sous optimal, a changer
-        for i in self._snake.bodyParts:
-            self._grid[i.x, i.y] = value
+        if show:
+            for i, p in enumerate(self._snake.bodyParts):
+                value = GridOccupancy.SNAKE_HEAD if i == 0 else GridOccupancy.SNAKE_BODY
+                self._grid[p.x, p.y] = value
+        else:
+            for i in self._snake.bodyParts:
+                self._grid[i.x, i.y] = GridOccupancy.EMPTY
 
     def _placeFood(self):
         # sous optimal, a changer
@@ -94,5 +100,5 @@ class GameSimulation():
 
             if self._grid[x, y] == 0:
                 self._food = Vector(x, y)
-                self._grid[x, y] = 1
+                self._grid[x, y] = GridOccupancy.FOOD
                 break

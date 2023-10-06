@@ -6,6 +6,7 @@
     },
 
     "environment": {
+        "renderFps": 240,
         "rewards": {
             "move": -0.5,
             "eat": 10,
