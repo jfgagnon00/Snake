@@ -1,10 +1,7 @@
 # TODO
 
 ## JFG
-1. refactor pour preparer agent et entrainement
-    * faire un agent random
-    * mettre mode offline et online (interactif rapide)
-2. mettre option pour enregistrer input et playback
+1. mettre option pour enregistrer input et playback
 
 ## MDLS
 1. starter 1 agent
