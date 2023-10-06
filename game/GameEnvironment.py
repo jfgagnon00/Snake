@@ -8,8 +8,8 @@ from .GameSnake import GameSnake
 
 class GameEnvironment():
     def __init__(self, gameConfig):
-        self._gridWidth = gameConfig.grid_width
-        self._gridHeight = gameConfig.grid_height
+        self._gridWidth = gameConfig.gridWidth
+        self._gridHeight = gameConfig.gridHeight
         self.reset()
 
     @property

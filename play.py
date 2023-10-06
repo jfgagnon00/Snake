@@ -25,7 +25,7 @@ class InteractiveApplication():
         self._anyKeyPressed = False
         self._importantMessage = None
 
-        gridShape = (configs.environment.grid_width, configs.environment.grid_height)
+        gridShape = (configs.environment.gridWidth, configs.environment.gridHeight)
         self._window = GraphicWindow(gridShape, configs.graphics)
 
         self._environement = GameEnvironment(configs.environment)

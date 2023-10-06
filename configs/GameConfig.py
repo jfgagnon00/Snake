@@ -7,8 +7,8 @@ class GameConfig():
 
 
     def __init__(self):
-        self.grid_width = 10
-        self.grid_height = 10
+        self.gridWidth = 10
+        self.gridHeight = 10
         self.rewards = {
             GameConfig.MOVE: 0,
             GameConfig.EAT: 10,
