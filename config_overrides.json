@@ -6,14 +6,16 @@
     },
 
     "environment": {
-        "gridWidth": 15,
-        "gridHeight": 15,
-
         "rewards": {
             "move": -0.5,
             "eat": 10,
             "collide": -10
         }
+    },
+
+    "simulation": {
+        "gridWidth": 15,
+        "gridHeight": 15
     },
 
     "graphics": {

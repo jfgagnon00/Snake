@@ -7,9 +7,9 @@ from .GameSnake import GameSnake
 
 
 class GameSimulation():
-    def __init__(self, gameConfig):
-        self._gridWidth = gameConfig.gridWidth
-        self._gridHeight = gameConfig.gridHeight
+    def __init__(self, simulationConfig):
+        self._gridWidth = simulationConfig.gridWidth
+        self._gridHeight = simulationConfig.gridHeight
         self.reset()
 
     @property

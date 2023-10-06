@@ -1,6 +1,7 @@
 from core import MetaObject
-from .GameConfig import GameConfig
+from .EnvironmentConfig import EnvironmentConfig
 from .GraphicsConfig import GraphicsConfig
+from .SimulationConfig import SimulationConfig
 from .TrainConfig import TrainConfig
 
 
@@ -15,8 +16,9 @@ def createConfigs(configOverrides):
         configOverrides = None
 
     # creer les configs par defaut
-    envConfig = GameConfig()
+    envConfig = EnvironmentConfig()
     gfxConfig = GraphicsConfig()
+    simConfig = SimulationConfig()
     trainConfig = TrainConfig()
 
     # appliquer les overrides
@@ -27,9 +29,13 @@ def createConfigs(configOverrides):
         MetaObject.override_from_object(gfxConfig,
                                         configOverrides.graphics)
 
+        MetaObject.override_from_object(simConfig,
+                                        configOverrides.simulation)
+
         MetaObject.override_from_object(trainConfig,
                                         configOverrides.train)
 
     return MetaObject.from_kwargs(environment=envConfig,
                                   graphics=gfxConfig,
+                                  simulation=simConfig,
                                   train=trainConfig)

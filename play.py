@@ -25,10 +25,10 @@ class InteractiveApplication():
         self._anyKeyPressed = False
         self._importantMessage = None
 
-        gridShape = (configs.environment.gridWidth, configs.environment.gridHeight)
+        gridShape = (configs.simulation.gridWidth, configs.simulation.gridHeight)
         self._window = GraphicWindow(gridShape, configs.graphics)
 
-        self._simulation = GameSimulation(configs.environment)
+        self._simulation = GameSimulation(configs.simulation)
         self._agent = InteractiveAgent()
         self._updateFnc = None
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
