@@ -1,11 +1,11 @@
 from core import MetaObject
-from .EnvironmentConfig import EnvironmentConfig
-from .GraphicsConfig import GraphicsConfig
-from .SimulationConfig import SimulationConfig
-from .TrainConfig import TrainConfig
+from .ConfigEnvironment import ConfigEnvironment
+from .ConfigGraphics import ConfigGraphics
+from .ConfigSimulation import ConfigSimulation
+from .ConfigTrain import ConfigTrain
 
 
-def createConfigs(configOverrides):
+def configsCreate(configOverrides):
     """
     Utilitaire pour creer une config complete
     """
@@ -16,10 +16,10 @@ def createConfigs(configOverrides):
         configOverrides = None
 
     # creer les configs par defaut
-    envConfig = EnvironmentConfig()
-    gfxConfig = GraphicsConfig()
-    simConfig = SimulationConfig()
-    trainConfig = TrainConfig()
+    envConfig = ConfigEnvironment()
+    gfxConfig = ConfigGraphics()
+    simConfig = ConfigSimulation()
+    trainConfig = ConfigTrain()
 
     # appliquer les overrides
     if not configOverrides is None:

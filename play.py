@@ -7,7 +7,7 @@ import os
 import pygame
 
 from ai.agents import InteractiveAgent
-from configs import createConfigs
+from configs import configsCreate
 from game import GameSimulation
 from graphics import GraphicWindow
 
@@ -110,6 +110,6 @@ if __name__ == "__main__":
     path, _ = os.path.split(path)
     os.chdir(path)
 
-    configs = createConfigs("config_overrides.json")
+    configs = configsCreate("config_overrides.json")
 
     InteractiveApplication(configs).run()

@@ -6,7 +6,7 @@ Demarrer le jeu en mode interactif
 import os
 
 from ai import OpenAIGymAdapter
-from configs import createConfigs
+from configs import configsCreate
 from game import GameSimulation
 
 
@@ -44,6 +44,6 @@ if __name__ == "__main__":
     path, _ = os.path.split(path)
     os.chdir(path)
 
-    configs = createConfigs("config_overrides.json")
+    configs = configsCreate("config_overrides.json")
 
     TrainApplication(configs).run()

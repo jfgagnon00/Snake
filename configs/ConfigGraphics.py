@@ -1,4 +1,4 @@
-class GraphicsConfig():
+class ConfigGraphics():
     """
     Represente les configurations pour tout ce qui
     correspond a l'affichage

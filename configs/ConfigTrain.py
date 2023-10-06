@@ -1,4 +1,4 @@
-class TrainConfig():
+class ConfigTrain():
     def __init__(self):
         self.gamma = 0.0
         self.epsilon = 0.0
