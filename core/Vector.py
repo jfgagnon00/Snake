@@ -18,4 +18,5 @@ class Vector():
         return Vector(-self.x, -self.y)
 
     def to_numpy(self):
+        # TODO: sous optimal, devrait heriter de np.array plutot que creer des objets
         return np.array([self.x, self.y])

@@ -40,14 +40,14 @@ class SnakeEnvironment(Env):
                                              high=1,
                                              shape=(2,),
                                              dtype=int),
-                # "head_position": spaces.Box(low=[0, simulationConfig.gridWidth - 1],
-                #                             high=[0, simulationConfig.gridHeight - 1],
-                #                             shape=(2, 1),
-                #                             dtype=int),
-                # "food_position": spaces.Box(low=[0, simulationConfig.gridWidth - 1],
-                #                             high=[0, simulationConfig.gridHeight - 1],
-                #                             shape=(2, 1),
-                #                             dtype=int),
+                "head_position": spaces.Box(low=np.array([0, 0]),
+                                            high=np.array([simulationConfig.gridWidth - 1, simulationConfig.gridHeight - 1]),
+                                            shape=(2,),
+                                            dtype=int),
+                "food_position": spaces.Box(low=np.array([0, 0]),
+                                            high=np.array([simulationConfig.gridWidth - 1, simulationConfig.gridHeight - 1]),
+                                            shape=(2,),
+                                            dtype=int),
             })
 
         self._renderMode = renderMode
@@ -104,8 +104,8 @@ class SnakeEnvironment(Env):
         return {
             "occupancy_grid": np.expand_dims(self._simulation.grid, axis=-1),
             "head_direction": self._simulation.snake.direction.to_numpy(),
-            # "head_position": self._simulation.snake.head,
-            # "food_position": self._simulation.food,
+            "head_position": self._simulation.snake.head.to_numpy(),
+            "food_position": self._simulation.food.to_numpy(),
         }
 
     def _get_info(self):
