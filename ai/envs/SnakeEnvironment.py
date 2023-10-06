@@ -10,14 +10,15 @@ from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
 class SnakeEnvironment(Env):
     _HUMAN = "human"
     _FPS = "render_fps"
+    _RENDER_MODES = "render_modes"
 
     metadata = {
-        "render_modes": [_HUMAN],
+        _RENDER_MODES: [_HUMAN],
         _FPS: 1000
     }
 
     def __init__(self,
-                 render_mode=None,
+                 renderMode=None,
                  environmentConfig=None,
                  simulationConfig=None,
                  graphicsConfig=None):
@@ -25,10 +26,10 @@ class SnakeEnvironment(Env):
 
         assert not environmentConfig is None
         assert not simulationConfig is None
-        assert render_mode is None or render_mode in SnakeEnvironment.metadata
+        assert renderMode is None or renderMode in SnakeEnvironment.metadata[SnakeEnvironment._RENDER_MODES]
 
         if graphicsConfig is None or environmentConfig.renderFps <= 0:
-            render_mode = None
+            renderMode = None
 
         self.action_space = spaces.Discrete(int(GameAction.COUNT))
         self.observation_space = spaces.Dict({
@@ -36,7 +37,7 @@ class SnakeEnvironment(Env):
                                              high=255,
                                              shape=(simulationConfig.gridWidth, simulationConfig.gridHeight, 1),
                                              dtype=np.uint8),
-                "head_direction": spaces.Box(low=0,
+                "head_direction": spaces.Box(low=-1,
                                              high=1,
                                              shape=(2,),
                                              dtype=int),
@@ -50,17 +51,17 @@ class SnakeEnvironment(Env):
                 #                             dtype=int),
             })
 
-        self.render_mode = render_mode
+        self._renderMode = renderMode
         self._simulation = GameSimulation(simulationConfig)
         self._window = None
 
-        if render_mode == SnakeEnvironment._HUMAN:
-            gfxInit
+        if self._renderMode == SnakeEnvironment._HUMAN:
+            gfxInit()
 
             # environment override le fps, on veut que l'entraiment soit rapide et non interactif
-            graphicsConfig.fps = environmentConfig.environmentConfig.renderFps
+            graphicsConfig.fps = environmentConfig.renderFps
 
-            SnakeEnvironment.metadata[SnakeEnvironment._FPS] = graphicsConfig._fps
+            SnakeEnvironment.metadata[SnakeEnvironment._FPS] = graphicsConfig.fps
             self._window = GraphicWindow((simulationConfig.gridWidth, simulationConfig.gridHeight),
                                          graphicsConfig)
 
@@ -70,9 +71,9 @@ class SnakeEnvironment(Env):
         self._simulation.reset()
 
         if not self._window is None:
-            self._simulation.reset(self._simulation)
+            self._window.update(self._simulation)
 
-        if self.render_mode == SnakeEnvironment._HUMAN:
+        if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
         return self._get_obs(), self._get_info()
@@ -83,7 +84,7 @@ class SnakeEnvironment(Env):
         if not done and not self._window is None:
             self._window.update(self._simulation)
 
-        if self.render_mode == SnakeEnvironment._HUMAN:
+        if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
         # TODO
