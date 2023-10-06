@@ -1,3 +1,3 @@
 from .GameAction import GameAction
-from .GameEnvironment import GameEnvironment
+from .GameSimulation import GameSimulation
 from .GameSnake import GameSnake

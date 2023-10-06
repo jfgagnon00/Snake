@@ -7,7 +7,7 @@ import os
 
 from ai import OpenAIGymAdapter
 from configs import createConfigs
-from game import GameEnvironment
+from game import GameSimulation
 
 
 class TrainApplication():
@@ -17,7 +17,7 @@ class TrainApplication():
     # https://towardsdatascience.com/creating-a-custom-openai-gym-environment-for-stock-trading-be532be3910e
     def __init__(self, configs):
         self._agent = None
-        self._env = OpenAIGymAdapter(GameEnvironment(configs.environment),
+        self._env = OpenAIGymAdapter(GameSimulation(configs.environment),
                                      configs.environment,
                                      configs.train)
 

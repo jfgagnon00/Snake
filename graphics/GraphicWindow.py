@@ -12,7 +12,7 @@ from .GraphicSnake import _GraphicSnake
 class GraphicWindow():
     """
     Encapsule les objets pygame pour l'affichage et
-    l'animation de GameEnvironment
+    l'animation de GameSimulation
     """
     def __init__(self, simulationGridShape, graphicsConfig):
         self._clock = Clock()

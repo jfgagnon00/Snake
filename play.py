@@ -8,7 +8,7 @@ import pygame
 
 from ai.agents import InteractiveAgent
 from configs import createConfigs
-from game import GameEnvironment
+from game import GameSimulation
 from graphics import GraphicWindow
 
 
@@ -28,7 +28,7 @@ class InteractiveApplication():
         gridShape = (configs.environment.gridWidth, configs.environment.gridHeight)
         self._window = GraphicWindow(gridShape, configs.graphics)
 
-        self._environement = GameEnvironment(configs.environment)
+        self._simulation = GameSimulation(configs.environment)
         self._agent = InteractiveAgent()
         self._updateFnc = None
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
@@ -61,8 +61,8 @@ class InteractiveApplication():
 
     def _reset(self):
         self._agent.reset()
-        self._environement.reset()
-        self._window.update(self._environement)
+        self._simulation.reset()
+        self._window.update(self._simulation)
 
     def _handleEvents(self):
         for e in pygame.event.get():
@@ -80,12 +80,12 @@ class InteractiveApplication():
         if self._simulationCounter <= 0:
             self._simulationCounter = self._simulationFpsDivider
 
-            action = self._agent.getAction(self._environement._snake.direction)
-            if self._environement.apply(action):
+            action = self._agent.getAction(self._simulation._snake.direction)
+            if self._simulation.apply(action):
                 self._setUpdateState(self._resetBeforeRestart,
                                     "LOSER! - Pesez une touche pour redémarrer")
             else:
-                self._window.update(self._environement)
+                self._window.update(self._simulation)
 
     def _waitForAnyKey(self):
         if self._anyKeyPressed:

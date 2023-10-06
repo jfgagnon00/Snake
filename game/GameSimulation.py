@@ -6,7 +6,7 @@ from .GameAction import GameAction
 from .GameSnake import GameSnake
 
 
-class GameEnvironment():
+class GameSimulation():
     def __init__(self, gameConfig):
         self._gridWidth = gameConfig.gridWidth
         self._gridHeight = gameConfig.gridHeight
