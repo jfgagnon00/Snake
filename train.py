@@ -45,18 +45,24 @@ class TrainApplication():
               is_flag=True,
               default=False,
               help="Train without rendering.")
-def main(unattended):
+@click.option("--episodes",
+              "-e",
+              type=int,
+              help="Episode count to train.")
+def main(unattended, episodes):
+    configs = configsCreate("config_overrides.json")
+    configs.train.unattended = unattended
+
+    if not episodes is None and episodes > 0:
+        configs.train.episodes = episodes
+
+    TrainApplication(configs).run()
+
+if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut
     # (facilite la gestion des chemins relatifs)
     path = os.path.abspath(__file__)
     path, _ = os.path.split(path)
     os.chdir(path)
 
-    configs = configsCreate("config_overrides.json")
-    configs.train.unattended = unattended
-
-    TrainApplication(configs).run()
-
-if __name__ == "__main__":
     main()
-    print("Yo")
