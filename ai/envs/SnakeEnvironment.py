@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from gym import Env, spaces
+from gymnasium import Env, spaces
 from game import GameAction
 from game import GameSimulation
 from game import GridOccupancy
@@ -15,7 +15,7 @@ class SnakeEnvironment(Env):
 
     metadata = {
         "render_modes": [_HUMAN],
-        _FPS: 0
+        _FPS: 1000
     }
 
     def __init__(self,
@@ -33,12 +33,26 @@ class SnakeEnvironment(Env):
             render_mode = None
 
         self.action_space = spaces.Discrete(int(GameAction.COUNT))
-        self.observation_space = spaces.Box(low=0,
-                                            high=255,
-                                            shape=(simulationConfig.gridWidth, simulationConfig.gridHeight, 1),
-                                            dtype=np.uint8)
-        self.render_mode = render_mode
+        self.observation_space = spaces.Dict({
+                "occupancy_grid": spaces.Box(low=0,
+                                             high=255,
+                                             shape=(simulationConfig.gridWidth, simulationConfig.gridHeight, 1),
+                                             dtype=np.uint8),
+                "head_direction": spaces.Box(low=0,
+                                             high=1,
+                                             shape=(2,),
+                                             dtype=int),
+                # "head_position": spaces.Box(low=[0, simulationConfig.gridWidth - 1],
+                #                             high=[0, simulationConfig.gridHeight - 1],
+                #                             shape=(2, 1),
+                #                             dtype=int),
+                # "food_position": spaces.Box(low=[0, simulationConfig.gridWidth - 1],
+                #                             high=[0, simulationConfig.gridHeight - 1],
+                #                             shape=(2, 1),
+                #                             dtype=int),
+            })
 
+        self.render_mode = render_mode
         self._simulation = GameSimulation(simulationConfig)
         self._window = None
 
@@ -77,7 +91,7 @@ class SnakeEnvironment(Env):
         # TODO
         reward = 0
 
-        return self._get_obs(), reward, done, self._get_info()
+        return self._get_obs(), reward, done, False, self._get_info()
 
     def render(self):
         # rien a faire
@@ -88,11 +102,15 @@ class SnakeEnvironment(Env):
             gfxQuit()
 
     def _get_obs(self):
-        # TODO
-        return None
+        return {
+            "occupancy_grid": np.expand_dims(self._simulation.grid, axis=-1),
+            "head_direction": self._simulation.snake.direction.to_numpy(),
+            # "head_position": self._simulation.snake.head,
+            # "food_position": self._simulation.food,
+        }
 
     def _get_info(self):
-        return None
+        return {}
 
     def _renderInternal(self):
         self._window.render()

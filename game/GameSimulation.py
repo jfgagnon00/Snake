@@ -22,6 +22,10 @@ class GameSimulation():
         return self._food
 
     @property
+    def grid(self):
+        return self._grid
+
+    @property
     def score(self):
         return self._score
 

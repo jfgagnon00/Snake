@@ -1,3 +1,5 @@
+import numpy as np
+
 class Vector():
     def __init__(self, x, y):
         self.x = x
@@ -14,3 +16,6 @@ class Vector():
 
     def __neg__(self):
         return Vector(-self.x, -self.y)
+
+    def to_numpy(self):
+        return np.array([self.x, self.y])
