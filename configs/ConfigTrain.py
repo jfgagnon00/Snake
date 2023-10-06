@@ -4,3 +4,4 @@ class ConfigTrain():
         self.epsilon = 0.0
         self.agent = ""
         self.unattended = True
+        self.episodes = 1

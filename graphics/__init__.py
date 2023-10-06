@@ -9,3 +9,6 @@ def init():
 def quit():
     pygame.font.quit()
     pygame.quit()
+
+def pumpEvents():
+    pygame.event.pump()

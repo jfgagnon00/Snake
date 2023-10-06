@@ -2,11 +2,12 @@
     "train": {
         "gamma": 0.0,
         "epsilon": 0.0,
-        "agent": ""
+        "agent": "",
+        "episodes": 10
     },
 
     "environment": {
-        "renderFps": 10,
+        "renderFps": 90,
         "rewards": {
             "move": -0.5,
             "eat": 10,

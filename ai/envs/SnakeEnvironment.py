@@ -3,8 +3,7 @@ import numpy as np
 from gymnasium import Env, spaces
 from game import GameAction
 from game import GameSimulation
-from game import GridOccupancy
-from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
+from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit, pumpEvents
 
 
 class SnakeEnvironment(Env):
@@ -14,7 +13,7 @@ class SnakeEnvironment(Env):
 
     metadata = {
         _RENDER_MODES: [_HUMAN],
-        _FPS: 1000
+        _FPS: 60
     }
 
     def __init__(self,
@@ -58,10 +57,11 @@ class SnakeEnvironment(Env):
         if self._renderMode == SnakeEnvironment._HUMAN:
             gfxInit()
 
-            # environment override le fps, on veut que l'entraiment soit rapide et non interactif
+            # environment override le fps
+            # on veut que l'entraiment soit rapide et non interactif
             graphicsConfig.fps = environmentConfig.renderFps
-
             SnakeEnvironment.metadata[SnakeEnvironment._FPS] = graphicsConfig.fps
+
             self._window = GraphicWindow((simulationConfig.gridWidth, simulationConfig.gridHeight),
                                          graphicsConfig)
 
@@ -112,5 +112,6 @@ class SnakeEnvironment(Env):
         return {}
 
     def _renderInternal(self):
+        pumpEvents()
         self._window.render()
         self._window.flip()

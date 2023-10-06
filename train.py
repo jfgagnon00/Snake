@@ -14,6 +14,7 @@ from configs import configsCreate
 
 class TrainApplication():
     def __init__(self, configs):
+        self._episodes = configs.train.episodes
         self._agent = agents.AgentRandom()
         self._env = gym.make("snake/SnakeEnvironment-v0",
                             renderMode = None if configs.train.unattended else "human",
@@ -22,20 +23,22 @@ class TrainApplication():
                             graphicsConfig=configs.graphics)
 
     def run(self):
-        observation = self._env.reset()
+        for e in range(self._episodes):
+            print("Episode:", e)
 
-        while True:
-            action = self._agent.getAction(observation)
+            terminated = False
+            observation = self._env.reset()
 
-            # TODO: s'assurer que les observations ne pointent pas sur le meme object
-            newObervation, reward, terminated, truncated, info = self._env.step(action)
+            while not terminated:
+                action = self._agent.getAction(observation)
 
-            # Render the game
-            self._env.render()
+                # TODO: s'assurer que les observations ne pointent pas sur le meme object
+                newObervation, reward, terminated, truncated, info = self._env.step(action)
 
-            if terminated:
-                break
+                # Render the game
+                self._env.render()
 
+        print("Terminé")
         self._env.close()
 
 @click.command()
@@ -58,3 +61,4 @@ def main(unattended):
 
 if __name__ == "__main__":
     main()
+    print("Yo")
