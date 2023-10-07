@@ -1,7 +1,9 @@
 # TODO
 
 ## JFG
-1. mettre option pour enregistrer input et playback
+1. Ajout signal/slot/event pour manager les rewards et l'input clavier
+2. mettre option pour enregistrer input et playback
+3. Animation deplacement du serpent (?)
 
 ## MDLS
 1. starter 1 agent
