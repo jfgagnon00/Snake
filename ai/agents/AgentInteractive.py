@@ -1,5 +1,4 @@
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
-
 from game import GameAction
 
 
@@ -60,6 +59,9 @@ def _onDown(direction):
     return GameAction.FORWARD
 
 class AgentInteractive():
+    """
+    Specialization pour agent interactif. Utiliser par play.py
+    """
     _KEY_HANDLERS = {
         K_LEFT: _onLeft,
         K_RIGHT: _onRight,
@@ -71,13 +73,23 @@ class AgentInteractive():
         self.reset()
 
     def reset(self):
+        """
+        Reset etats interne.
+        """
         self._lastKeyDown = -1
 
     def onKeyDown(self, key):
+        """
+        Handler système d'input
+        """
         if key in AgentInteractive._KEY_HANDLERS:
             self._lastKeyDown = key
 
     def getAction(self, direction):
+        """
+        Obtenir action a partir de l'etat.
+        Note: specialiser pour play.py. Ne pas utiliser comme agent conventionel.
+        """
         if self._lastKeyDown in AgentInteractive._KEY_HANDLERS:
             handler = AgentInteractive._KEY_HANDLERS[self._lastKeyDown]
             return handler(direction)

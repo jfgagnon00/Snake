@@ -3,6 +3,9 @@ from pygame.sprite import Group
 from .Sprite import _Sprite
 
 class _GraphicFood():
+    """
+    Represente la nourriture
+    """
     def __init__(self, graphicsConfig, size):
         self._sprite = _Sprite(filename=graphicsConfig.foodSpritePath)
         self._sprite.resize((size, size))

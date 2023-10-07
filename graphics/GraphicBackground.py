@@ -5,6 +5,9 @@ from .Sprite import _Sprite
 
 
 class _GraphicBackground():
+    """
+    Represente le damier du background
+    """
     def __init__(self, graphicsConfig, gridShape, gridCellSize, offset):
         self._group = Group()
 

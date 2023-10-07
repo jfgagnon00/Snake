@@ -7,4 +7,4 @@ class GridOccupancy(IntEnum):
     EMPTY = 0
     SNAKE_BODY = 64
     SNAKE_HEAD = 128
-    FOOD = 255,
+    FOOD = 255

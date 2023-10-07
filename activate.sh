@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# script pour gerer l'installation/activation
+# de l'environnement virutal pour le developement
+
 # verifier si deja dans virtual environment
 if [[ "$VIRTUAL_ENV" != "" ]]
 then

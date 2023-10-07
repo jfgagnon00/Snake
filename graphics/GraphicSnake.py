@@ -7,7 +7,9 @@ from pygame.sprite import Group
 from core import Vector
 from .Sprite import _Sprite
 
-
+# types utilitaires pour gerer l'affichage des differents sprites du serpent
+# le principe est de determiner ou le corps du serpent entre et sort dans une
+# cellule de simulation
 class _Edge(IntEnum):
     NONE = 0
     NORTH = 1
@@ -40,6 +42,9 @@ def _getKey(spriteType, edge1, edge2):
         return int(spriteType) | (int(edge1) << 3) | (int(edge2) << 6)
 
 class _GraphicSnake():
+    """
+    Responsable de l'affchage de tous le serpent (tete et corps).
+    """
     def __init__(self, graphicsConfig, gridCellSize, offset):
         self._tileSize = gridCellSize
         self._offset = offset

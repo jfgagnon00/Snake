@@ -5,6 +5,9 @@ from pygame.transform import smoothscale
 
 
 class _Sprite(pygame_Sprite):
+    """
+    Utilitaire pour encapsuler pygame sprite
+    """
     def __init__(self, image=None, filename=None, x=0, y=0, w=0, h=0):
         super().__init__()
 

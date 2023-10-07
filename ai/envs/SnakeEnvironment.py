@@ -7,6 +7,10 @@ from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit, pumpEvents
 
 
 class SnakeEnvironment(Env):
+    """
+    Responsable de faire le pont entre le jeu de snake et OpenAI Gym.
+    Parametres de configuration passent par les objets du module configs.
+    """
     _HUMAN = "human"
     _FPS = "render_fps"
     _RENDER_MODES = "render_modes"

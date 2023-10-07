@@ -1,6 +1,12 @@
-from .GraphicWindow import GraphicWindow
+"""
+Gere l'afficahge de la simulation
+"""
+
 
 import pygame
+
+from .GraphicWindow import GraphicWindow
+
 
 def init():
     pygame.init()

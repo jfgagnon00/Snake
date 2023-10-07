@@ -8,6 +8,10 @@ from .GridOccupancy import GridOccupancy
 
 
 class GameSimulation():
+    """
+    Responsable de la logique de simulation du jeu de serpent.
+    La simulation evolue sur une grille discrete.
+    """
     def __init__(self, simulationConfig):
         self._gridWidth = simulationConfig.gridWidth
         self._gridHeight = simulationConfig.gridHeight
@@ -30,6 +34,9 @@ class GameSimulation():
         return self._score
 
     def reset(self):
+        """
+        Reinitialize etats internes
+        """
         self._score = 0
 
         shape = (self._gridWidth, self._gridHeight)
@@ -42,6 +49,9 @@ class GameSimulation():
         self._placeFood()
 
     def apply(self, action):
+        """
+        Met a jour la simulation en fonction de l'action fournie.
+        """
         # d est la meme instance que le serpent
         # la mise a jour va modifier le serpent aussi
         d = self._snake.direction

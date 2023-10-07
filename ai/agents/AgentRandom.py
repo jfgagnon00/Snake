@@ -3,13 +3,15 @@ import numpy as np
 from game import GameAction
 
 class AgentRandom():
+    """
+    Agent qui prend une action aléatoire.
+    """
     def __init__(self):
         self._actions = [
             GameAction.TURN_LEFT,
             GameAction.TURN_RIGHT,
-            GameAction.FORWARD,
-            GameAction.COUNT
+            GameAction.FORWARD
         ]
 
-    def getAction(self, observation):
+    def getAction(self, state):
         return np.random.choice(self._actions)

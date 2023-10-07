@@ -30,13 +30,13 @@ class TrainApplication():
     def run(self):
         for e in tqdm(range(self._episodes)):
             terminated = False
-            observation = self._env.reset()
+            state = self._env.reset()
 
             while not terminated:
-                action = self._agent.getAction(observation)
+                action = self._agent.getAction(state)
 
                 # TODO: s'assurer que les observations ne pointent pas sur le meme object
-                newObervation, reward, terminated, truncated, info = self._env.step(action)
+                newState, reward, terminated, truncated, info = self._env.step(action)
 
                 # Render the game
                 self._env.render()

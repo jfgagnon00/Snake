@@ -1,5 +1,5 @@
 """
-Demarrer le jeu en mode interactif
+Responsable du jeu en mode interactif
 """
 
 
