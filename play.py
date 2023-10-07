@@ -3,6 +3,7 @@ Demarrer le jeu en mode interactif
 """
 
 
+import click
 import os
 import pygame
 
@@ -100,6 +101,25 @@ class InteractiveApplication():
         self._importantMessage = message
         self._updateFnc = updateFnc
 
+@click.command()
+@click.option("--windowSize",
+              "-w",
+              type=int,
+              help="Taille de la fenêtre d'affichage.")
+@click.option("--fpsDivider",
+              "-fd",
+              type=int,
+              help="Taille de la fenêtre d'affichage.")
+def main(windowsize, fpsdivider):
+    configs = configsCreate("config_overrides.json")
+
+    if not windowsize is None and windowsize > 0:
+        configs.graphics.windowSize = windowsize
+
+    if not fpsdivider is None and fpsdivider > 0:
+        configs.graphics.simulationFpsDivider = fpsdivider
+
+    InteractiveApplication(configs).run()
 
 if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut
@@ -108,6 +128,4 @@ if __name__ == "__main__":
     path, _ = os.path.split(path)
     os.chdir(path)
 
-    configs = configsCreate("config_overrides.json")
-
-    InteractiveApplication(configs).run()
+    main()
