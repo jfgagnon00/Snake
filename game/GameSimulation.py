@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-from core import Vector
+from core import Delegate, Vector
 from .GameAction import GameAction
 from .GameSnake import GameSnake
 from .GridOccupancy import GridOccupancy
@@ -13,8 +13,16 @@ class GameSimulation():
     La simulation evolue sur une grille discrete.
     """
     def __init__(self, simulationConfig):
-        self._gridWidth = simulationConfig.gridWidth
-        self._gridHeight = simulationConfig.gridHeight
+        self._occupancyGridWidth = simulationConfig.gridWidth
+        self._occupancyGridHeight = simulationConfig.gridHeight
+
+        self._outOfBoundsDelegate = Delegate()
+        self._collisionDelegate = Delegate()
+        self._eatDelegate = Delegate()
+        self._winDelegate = Delegate()
+        self._turnDelegate = Delegate()
+        self._moveDelegate = Delegate()
+
         self.reset()
 
     @property
@@ -26,8 +34,32 @@ class GameSimulation():
         return self._food
 
     @property
-    def grid(self):
-        return self._grid
+    def occupancyGrid(self):
+        return self._occupancyGrid
+
+    @property
+    def outOfBoundsDelegate(self):
+        return self._outOfBoundsDelegate
+
+    @property
+    def collisionDelegate(self):
+        return self._collisionDelegate
+
+    @property
+    def eatDelegate(self):
+        return self._eatDelegate
+
+    @property
+    def winDelegate(self):
+        return self._winDelegate
+
+    @property
+    def turnDelegate(self):
+        return self._turnDelegate
+
+    @property
+    def moveDelegate(self):
+        return self._moveDelegate
 
     @property
     def score(self):
@@ -39,8 +71,8 @@ class GameSimulation():
         """
         self._score = 0
 
-        shape = (self._gridWidth, self._gridHeight)
-        self._grid = np.zeros(shape=shape, dtype=np.uint8)
+        shape = (self._occupancyGridWidth, self._occupancyGridHeight)
+        self._occupancyGrid = np.zeros(shape=shape, dtype=np.uint8)
         self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
 
         # placer le serpent dans la grille
@@ -59,17 +91,16 @@ class GameSimulation():
         if action == GameAction.TURN_LEFT:
             # tourne direction 90 degres CCW
             d.x, d.y = d.y, -d.x
+            self._turnDelegate()
 
         if action == GameAction.TURN_RIGHT:
             # tourne direction 90 degres CW
             d.x, d.y = -d.y, d.x
+            self._turnDelegate()
 
         # bouger la tete dans la nouvelle direction
         # ATTENTION: l'operateur + cree une nouvelle instance
         head = self._snake.head + d
-
-        if False:
-            print("HEAD:", head.x, head.y, "DIR", d.x, d.y)
 
         if head == self._food:
             # tete est sur la nourriture, grandire le serpent
@@ -78,14 +109,20 @@ class GameSimulation():
             self._setSnakeInGrid(True)
             self._placeFood()
             self._score += 1
+            self._eatDelegate()
             return False
 
         if head.x < 0 or \
            head.y < 0 or \
-           head.x >= self._gridWidth or \
-           head.y >= self._gridHeight or \
-           self._grid[head.x, head.y] != GridOccupancy.EMPTY:
-            # tete est en collision ou en dehors de la grille, terminer
+           head.x >= self._occupancyGridWidth or \
+           head.y >= self._occupancyGridHeight:
+           # tete est en dehors de la grille, terminer
+           self._outOfBoundsDelegate()
+           return True
+
+        if self._occupancyGrid[head.x, head.y] != GridOccupancy.EMPTY:
+            # tete est en collision
+            self._collisionDelegate()
             return True
 
         # bouger le corps du serpent
@@ -93,6 +130,7 @@ class GameSimulation():
         self._snake.bodyParts.pop()
         self._snake.bodyParts.appendleft(head)
         self._setSnakeInGrid(True)
+        self._moveDelegate()
 
         return False
 
@@ -101,18 +139,18 @@ class GameSimulation():
         if show:
             for i, p in enumerate(self._snake.bodyParts):
                 value = GridOccupancy.SNAKE_HEAD if i == 0 else GridOccupancy.SNAKE_BODY
-                self._grid[p.x, p.y] = value
+                self._occupancyGrid[p.x, p.y] = value
         else:
             for i in self._snake.bodyParts:
-                self._grid[i.x, i.y] = GridOccupancy.EMPTY
+                self._occupancyGrid[i.x, i.y] = GridOccupancy.EMPTY
 
     def _placeFood(self):
         # sous optimal, a changer
         while True:
-            x = random.randint(0, self._gridWidth - 1)
-            y = random.randint(0, self._gridHeight - 1)
+            x = random.randint(0, self._occupancyGridWidth - 1)
+            y = random.randint(0, self._occupancyGridHeight - 1)
 
-            if self._grid[x, y] == 0:
+            if self._occupancyGrid[x, y] == 0:
                 self._food = Vector(x, y)
-                self._grid[x, y] = GridOccupancy.FOOD
+                self._occupancyGrid[x, y] = GridOccupancy.FOOD
                 break

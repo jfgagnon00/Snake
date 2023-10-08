@@ -1,5 +1,5 @@
 from core import MetaObject
-from .ConfigEnvironment import ConfigEnvironment
+from .ConfigEnvironment import ConfigEnvironment, Rewards
 from .ConfigGraphics import ConfigGraphics
 from .ConfigSimulation import ConfigSimulation
 from .ConfigTrain import ConfigTrain

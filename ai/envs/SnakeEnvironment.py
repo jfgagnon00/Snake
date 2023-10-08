@@ -1,5 +1,7 @@
 import numpy as np
 
+from configs import Rewards
+from copy import deepcopy
 from gymnasium import Env, spaces
 from game import GameAction
 from game import GameSimulation
@@ -69,6 +71,15 @@ class SnakeEnvironment(Env):
             self._window = GraphicWindow((simulationConfig.gridWidth, simulationConfig.gridHeight),
                                          graphicsConfig)
 
+        # configuer les delegates pour gerer les recompenses
+        self._rewards = deepcopy(environmentConfig.rewards)
+        self._lastReward = 0
+        self._simulation.outOfBoundsDelegate.register(self._onOutOfBounds)
+        self._simulation.collisionDelegate.register(self._onCollision)
+        self._simulation.eatDelegate.register(self._onEat)
+        self._simulation.winDelegate.register(self._onWin)
+        self._simulation.moveDelegate.register(self._onMove)
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
@@ -83,18 +94,21 @@ class SnakeEnvironment(Env):
         return self._get_obs(), self._get_info()
 
     def step(self, action):
+        # reset recompense (les delegates vont le mettre la jour)
+        self._lastReward = 0
+
+        # avancer la simulation
         done = self._simulation.apply(action)
 
+        # mettre a jour le rendu si besoin
         if not done and not self._window is None:
             self._window.update(self._simulation)
 
+        # faire affichage si besoin
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        # TODO
-        reward = 0
-
-        return self._get_obs(), reward, done, False, self._get_info()
+        return self._get_obs(), self._lastReward, done, False, self._get_info()
 
     def render(self):
         # rien a faire
@@ -106,7 +120,7 @@ class SnakeEnvironment(Env):
 
     def _get_obs(self):
         return {
-            "occupancy_grid": np.expand_dims(self._simulation.grid, axis=-1),
+            "occupancy_grid": np.expand_dims(self._simulation.occupancyGrid, axis=-1),
             "head_direction": self._simulation.snake.direction.to_numpy(),
             "head_position": self._simulation.snake.head.to_numpy(),
             "food_position": self._simulation.food.to_numpy(),
@@ -119,3 +133,18 @@ class SnakeEnvironment(Env):
         pumpEvents()
         self._window.render()
         self._window.flip()
+
+    def _onOutOfBounds(self):
+        self._lastReward = self._rewards[Rewards.OUT_OF_BOUNDS]
+
+    def _onCollision(self):
+        self._lastReward = self._rewards[Rewards.COLLISION]
+
+    def _onEat(self):
+        self._lastReward = self._rewards[Rewards.EAT]
+
+    def _onWin(self):
+        self._lastReward = self._rewards[Rewards.WIN]
+
+    def _onMove(self):
+        self._lastReward = self._rewards[Rewards.MOVE]

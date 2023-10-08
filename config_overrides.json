@@ -11,7 +11,9 @@
         "rewards": {
             "move": -0.5,
             "eat": 10,
-            "collide": -10
+            "collision": -5,
+            "out_of_bounds": -20,
+            "win": 30
         }
     },
 
