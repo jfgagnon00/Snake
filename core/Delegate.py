@@ -2,7 +2,7 @@
 class Delegate():
     """
     Encapsule le design pattern delegation. Enregistre une
-    liste de callable qui seront notifie lors de l'appel
+    liste de callable qui seront notifies lors de l'appel
     de ce delegate.
     """
 
@@ -28,5 +28,9 @@ class Delegate():
         self._delegates.clear()
 
     def __call__(self, *args):
+        """
+        Active le delegate. Responsabilite des appelants de register/unregister
+        de determiner l'ordre et de maintenir la coherance avec args
+        """
         for callable in self._delegates:
             callable(*args)

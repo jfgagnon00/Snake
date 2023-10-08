@@ -9,9 +9,39 @@ import pygame
 
 from ai.agents import AgentInteractive
 from configs import configsCreate
+from core import Delegate
 from game import GameSimulation
 from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
 
+
+class InputManager():
+    def __init__(self):
+        self._keyDownDelegate = Delegate()
+        self._quitDelegate = Delegate()
+        self._anyKeyPressedDelegate = Delegate()
+
+    @property
+    def keyDownDelegate(self):
+        return self._keyDownDelegate
+
+    @property
+    def quitDelegate(self):
+        return self._quitDelegate
+
+    @property
+    def anyKeyPressedDelegate(self):
+        return self._anyKeyPressedDelegate
+
+    def update(self):
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                self._quitDelegate()
+
+            if e.type == pygame.KEYDOWN:
+                self._keyDownDelegate(e.key)
+
+            if e.type == pygame.KEYUP:
+                self._anyKeyPressedDelegate()
 
 class InteractiveApplication():
     """
@@ -22,17 +52,27 @@ class InteractiveApplication():
         gfxInit()
 
         self._quit = False
-        self._anyKeyPressed = False
         self._importantMessage = None
 
         gridShape = (configs.simulation.gridWidth, configs.simulation.gridHeight)
         self._window = GraphicWindow(gridShape, configs.graphics)
 
-        self._simulation = GameSimulation(configs.simulation)
         self._agent = AgentInteractive()
-        self._updateFnc = None
+
+        self._simulation = GameSimulation(configs.simulation)
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
         self._simulationCounter = 0
+
+        self._inputManager = InputManager()
+        self._lastAnyKeyPressedCallable = None
+
+        self._updateDelegate = Delegate()
+        self._lastUpdateCallable = None
+
+        # configure les delegates "statiques"
+        self._updateDelegate.register(self._inputManager.update)
+        self._inputManager.quitDelegate.register(self._onQuit)
+        self._inputManager.keyDownDelegate.register(self._agent.onKeyDown)
 
     def run(self):
         self._quit = False
@@ -41,15 +81,10 @@ class InteractiveApplication():
         # en mode interactif, l'utilisateur doit
         # peser sur une touche avant de demarrer
         # (laisse le temps d'observer)
-        self._setUpdateState(self._waitForAnyKey,
-                             "Pesez une touche démarrer")
+        self._setAnyKeyPressedState(self._onStartSimulation, "Pesez une touche démarrer")
 
         while not self._quit:
-            self._handleEvents()
-
-            if not self._updateFnc is None:
-                self._updateFnc()
-
+            self._updateDelegate()
             self._window.render(self._importantMessage)
             self._window.flip()
 
@@ -59,20 +94,8 @@ class InteractiveApplication():
         gfxQuit()
 
     def _reset(self):
-        self._agent.reset()
         self._simulation.reset()
         self._window.update(self._simulation)
-
-    def _handleEvents(self):
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                self._quit = True
-
-            if e.type == pygame.KEYDOWN:
-                self._agent.onKeyDown(e.key)
-
-            if e.type == pygame.KEYUP:
-                self._anyKeyPressed = True
 
     def _update(self):
         self._simulationCounter -= 1
@@ -81,25 +104,44 @@ class InteractiveApplication():
 
             action = self._agent.getAction(self._simulation._snake.direction)
             if self._simulation.apply(action):
-                self._setUpdateState(self._resetBeforeRestart,
-                                    "LOSER! - Pesez une touche pour redémarrer")
+                self._setAnyKeyPressedState(self._onResetSimulation, "LOSER! - Pesez une touche pour redémarrer")
+                self._setUpdateState(None)
             else:
                 self._window.update(self._simulation)
 
-    def _waitForAnyKey(self):
-        if self._anyKeyPressed:
-            self._setUpdateState(self._update)
-
-    def _resetBeforeRestart(self):
-        if self._anyKeyPressed:
-            self._reset()
-            self._setUpdateState(self._update)
-
-    def _setUpdateState(self, updateFnc, message=None):
-        self._simulationCounter = 0
-        self._anyKeyPressed = False
+    def _setAnyKeyPressedState(self, newAnyKeyPressedCallable, message=None):
         self._importantMessage = message
-        self._updateFnc = updateFnc
+
+        if not self._lastAnyKeyPressedCallable is None:
+            self._inputManager.anyKeyPressedDelegate.unregister(self._lastAnyKeyPressedCallable)
+
+        self._lastAnyKeyPressedCallable = newAnyKeyPressedCallable
+
+        if not self._lastAnyKeyPressedCallable is None:
+            self._inputManager.anyKeyPressedDelegate.register(self._lastAnyKeyPressedCallable)
+
+    def _setUpdateState(self, newUpdateCallable):
+        self._simulationCounter = 0
+
+        if not self._lastUpdateCallable is None:
+            self._updateDelegate.unregister(self._lastUpdateCallable)
+
+        self._lastUpdateCallable = newUpdateCallable
+
+        if not self._lastUpdateCallable is None:
+            self._updateDelegate.register(self._lastUpdateCallable)
+
+    def _onStartSimulation(self):
+        self._setAnyKeyPressedState(None)
+        self._setUpdateState(self._update)
+
+    def _onResetSimulation(self):
+        self._setAnyKeyPressedState(None)
+        self._reset()
+        self._setUpdateState(self._update)
+
+    def _onQuit(self):
+        self._quit = True
 
 @click.command()
 @click.option("--windowSize",
