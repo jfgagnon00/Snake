@@ -1,9 +1,8 @@
 # TODO
 
 ## JFG
-1. Ajout signal/slot/event pour manager les rewards et l'input clavier
-2. mettre option pour enregistrer input et playback
-3. Animation deplacement du serpent (?)
+1. mettre option pour enregistrer input et playback
+2. Animation deplacement du serpent (?)
 
 ## MDLS
 1. starter 1 agent
@@ -11,10 +10,5 @@
 3. regarder pour la music de background
 
 ## Brainstorm
-1. State == la grille de simulation + direction tete + position de tete
-2. State == par rapport a la tete:
-              vecteur de la tete vers la 1e collision à gauche +
-              vecteur de la tete vers la 1e collision à droite +
-              vecteur de la tete vers la 1e collision en face +
-              vecteur vers la pomme
-    Ne semble pas super concluant -> manque info quand le serpent est long: il se trape.
+1. State == la grille de simulation + direction tete + position de tete + position food
+    C'est ce qui est implemente dans SnakeEnvironment. Tout est possible apres.
