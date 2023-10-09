@@ -11,10 +11,12 @@ class _GraphicFood():
         self._sprite.resize((size, size))
         self._sprite.optimize(True)
         self._group = Group(self._sprite)
+        self.enable = True
 
     @property
     def rect(self):
         return self._sprite.rect
 
     def render(self, image):
-        self._group.draw(image)
+        if self.enable:
+            self._group.draw(image)

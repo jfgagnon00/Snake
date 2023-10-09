@@ -74,6 +74,13 @@ class InteractiveApplication():
         self._inputManager.quitDelegate.register(self._onQuit)
         self._inputManager.keyDownDelegate.register(self._agent.onKeyDown)
 
+        self._simulation.outOfBoundsDelegate.register(self._onLose)
+        self._simulation.collisionDelegate.register(self._onLose)
+        self._simulation.eatDelegate.register(self._onSnakeEat)
+        self._simulation.winDelegate.register(self._onWin)
+        self._simulation.turnDelegate.register(self._onSnakeTurn)
+        self._simulation.moveDelegate.register(self._onSnakeMove)
+
     def run(self):
         self._quit = False
         self._reset()
@@ -101,13 +108,11 @@ class InteractiveApplication():
         self._simulationCounter -= 1
         if self._simulationCounter <= 0:
             self._simulationCounter = self._simulationFpsDivider
-
             action = self._agent.getAction(self._simulation._snake.direction)
-            if self._simulation.apply(action):
-                self._setAnyKeyPressedState(self._onResetSimulation, "LOSER! - Pesez une touche pour redémarrer")
-                self._setUpdateState(None)
-            else:
-                self._window.update(self._simulation)
+
+            # la simulation va lancer les evenements appropries
+            # ceux-ci vont faire avancer les etats
+            self._simulation.apply(action)
 
     def _setAnyKeyPressedState(self, newAnyKeyPressedCallable, message=None):
         self._importantMessage = message
@@ -139,6 +144,26 @@ class InteractiveApplication():
         self._setAnyKeyPressedState(None)
         self._reset()
         self._setUpdateState(self._update)
+
+    def _onLose(self):
+        self._setAnyKeyPressedState(self._onResetSimulation, "LOSER! - Pesez une touche pour redémarrer")
+        self._setUpdateState(None)
+
+    def _onWin(self):
+        self._setAnyKeyPressedState(self._onResetSimulation, "WINNER! - Pesez une touche pour redémarrer")
+        self._setUpdateState(None)
+        self._window.update(self._simulation)
+
+    def _onSnakeEat(self):
+        # TODO: play sound
+        self._window.update(self._simulation)
+
+    def _onSnakeTurn(self):
+        # TODO: play sound
+        pass
+
+    def _onSnakeMove(self):
+        self._window.update(self._simulation)
 
     def _onQuit(self):
         self._quit = True

@@ -13,8 +13,8 @@ class GameSimulation():
     La simulation evolue sur une grille discrete.
     """
     def __init__(self, simulationConfig):
-        self._occupancyGridWidth = simulationConfig.gridWidth
-        self._occupancyGridHeight = simulationConfig.gridHeight
+        self._occupancyGridWidth = max(5, simulationConfig.gridWidth)
+        self._occupancyGridHeight = max(5, simulationConfig.gridHeight)
 
         self._outOfBoundsDelegate = Delegate()
         self._collisionDelegate = Delegate()
@@ -107,10 +107,18 @@ class GameSimulation():
             self._setSnakeInGrid(False)
             self._snake.bodyParts.appendleft(head)
             self._setSnakeInGrid(True)
-            self._placeFood()
             self._score += 1
-            self._eatDelegate()
-            return False
+
+            cellCount = self._occupancyGridWidth * self._occupancyGridHeight
+            if len(self._snake.bodyParts) == cellCount:
+                self._food = None
+                # serpent couvre toutes les cellules, gagner la partie
+                self._winDelegate()
+                return True
+            else:
+                self._placeFood()
+                self._eatDelegate()
+                return False
 
         if head.x < 0 or \
            head.y < 0 or \
@@ -120,7 +128,10 @@ class GameSimulation():
            self._outOfBoundsDelegate()
            return True
 
-        if self._occupancyGrid[head.x, head.y] != GridOccupancy.EMPTY:
+        # la tete va bouger, donc la queue aussi
+        # pas de collision possible avec la queue
+        if head != self._snake.tail and \
+           self._occupancyGrid[head.x, head.y] != GridOccupancy.EMPTY:
             # tete est en collision
             self._collisionDelegate()
             return True
@@ -136,13 +147,17 @@ class GameSimulation():
 
     def _setSnakeInGrid(self, show):
         # sous optimal, a changer
+        value = GridOccupancy.SNAKE_BODY if show else GridOccupancy.EMPTY
+
+        for i, p in enumerate(self._snake.bodyParts):
+            self._occupancyGrid[p.x, p.y] = value
+
         if show:
-            for i, p in enumerate(self._snake.bodyParts):
-                value = GridOccupancy.SNAKE_HEAD if i == 0 else GridOccupancy.SNAKE_BODY
-                self._occupancyGrid[p.x, p.y] = value
-        else:
-            for i in self._snake.bodyParts:
-                self._occupancyGrid[i.x, i.y] = GridOccupancy.EMPTY
+            head = self._snake.head
+            self._occupancyGrid[head.x, head.y] = GridOccupancy.SNAKE_HEAD
+
+            tail = self._snake.tail
+            self._occupancyGrid[tail.x, tail.y] = GridOccupancy.SNAKE_TAIL
 
     def _placeFood(self):
         # sous optimal, a changer

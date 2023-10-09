@@ -21,3 +21,7 @@ class GameSnake():
     @property
     def head(self):
         return self.bodyParts[0]
+
+    @property
+    def tail(self):
+        return self.bodyParts[-1]

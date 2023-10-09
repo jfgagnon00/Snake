@@ -55,9 +55,13 @@ class GraphicWindow():
         score = gameEnvironment.score
         self._message = f"Score: {score:04d} FPS: {fps}"
 
-        food = self._environmentToWindow(gameEnvironment.food)
-        self._food.rect.x = food.x
-        self._food.rect.y = food.y
+        if gameEnvironment.food is None:
+            self._food.enable = False
+        else:
+            food = self._environmentToWindow(gameEnvironment.food)
+            self._food.rect.x = food.x
+            self._food.rect.y = food.y
+            self._food.enable = True
 
         self._snake.update(gameEnvironment.snake)
 
