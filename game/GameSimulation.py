@@ -114,11 +114,11 @@ class GameSimulation():
                 self._food = None
                 # serpent couvre toutes les cellules, gagner la partie
                 self._winDelegate()
-                return True
             else:
                 self._placeFood()
                 self._eatDelegate()
-                return False
+
+            return
 
         if head.x < 0 or \
            head.y < 0 or \
@@ -126,7 +126,7 @@ class GameSimulation():
            head.y >= self._occupancyGridHeight:
            # tete est en dehors de la grille, terminer
            self._outOfBoundsDelegate()
-           return True
+           return
 
         # la tete va bouger, donc la queue aussi
         # pas de collision possible avec la queue
@@ -134,7 +134,7 @@ class GameSimulation():
            self._occupancyGrid[head.x, head.y] != GridOccupancy.EMPTY:
             # tete est en collision
             self._collisionDelegate()
-            return True
+            return
 
         # bouger le corps du serpent
         self._setSnakeInGrid(False)
@@ -142,8 +142,6 @@ class GameSimulation():
         self._snake.bodyParts.appendleft(head)
         self._setSnakeInGrid(True)
         self._moveDelegate()
-
-        return False
 
     def _setSnakeInGrid(self, show):
         # sous optimal, a changer

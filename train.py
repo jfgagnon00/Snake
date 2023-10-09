@@ -57,7 +57,15 @@ class TrainApplication():
               "-a",
               type=str,
               help="Type de l'agent à utiliser.")
-def main(unattended, episodes, agent):
+@click.option("--windowSize",
+              "-w",
+              type=int,
+              help="Taille de la fenêtre d'affichage.")
+@click.option("--renderFps",
+              "-fps",
+              type=int,
+              help="Frame Par Seconde de l'affichage.")
+def main(unattended, episodes, agent, windowsize, renderfps):
     configs = configsCreate("config_overrides.json")
     configs.train.unattended = unattended
 
@@ -66,6 +74,12 @@ def main(unattended, episodes, agent):
 
     if not agent is None and len(agent) > 0:
         configs.train.agent = agent
+
+    if not windowsize is None and windowsize > 0:
+        configs.graphics.windowSize = windowsize
+
+    if not renderfps is None and renderfps > 0:
+        configs.environment.renderFps = renderfps
 
     TrainApplication(configs).run()
 

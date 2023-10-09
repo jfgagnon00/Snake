@@ -71,44 +71,43 @@ class SnakeEnvironment(Env):
             self._window = GraphicWindow((simulationConfig.gridWidth, simulationConfig.gridHeight),
                                          graphicsConfig)
 
-        # configuer les delegates pour gerer les recompenses
         self._rewards = deepcopy(environmentConfig.rewards)
-        self._lastReward = 0
-        self._simulation.outOfBoundsDelegate.register(self._onOutOfBounds)
-        self._simulation.collisionDelegate.register(self._onCollision)
-        self._simulation.eatDelegate.register(self._onEat)
+        self._reward = 0
+        self._done = False
+
+        # configuer les delegates pour gerer les recompenses
+        self._simulation.outOfBoundsDelegate.register(self._onSnakeOutOfBounds)
+        self._simulation.collisionDelegate.register(self._onSnakeCollision)
+        self._simulation.eatDelegate.register(self._onSnakeEat)
         self._simulation.winDelegate.register(self._onWin)
-        self._simulation.moveDelegate.register(self._onMove)
+        self._simulation.moveDelegate.register(self._onSnakeMove)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
         self._simulation.reset()
-
-        if not self._window is None:
-            self._window.update(self._simulation)
+        self._maybeUpdateWindow()
 
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        return self._get_obs(), self._get_info()
+        return self._getState(), self._getInfo()
 
     def step(self, action):
         # reset recompense (les delegates vont le mettre la jour)
-        self._lastReward = 0
+        self._reward = 0
+        self._done = False
 
         # avancer la simulation
-        done = self._simulation.apply(action)
-
-        # mettre a jour le rendu si besoin
-        if not done and not self._window is None:
-            self._window.update(self._simulation)
+        # la simulation va lancer les evenements appropries
+        # ceux-ci vont faire avancer les etats
+        self._simulation.apply(action)
 
         # faire affichage si besoin
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        return self._get_obs(), self._lastReward, done, False, self._get_info()
+        return self._getState(), self._reward, self._done, False, self._getInfo()
 
     def render(self):
         # rien a faire
@@ -118,7 +117,7 @@ class SnakeEnvironment(Env):
         if not self._window is None:
             gfxQuit()
 
-    def _get_obs(self):
+    def _getState(self):
         return {
             "occupancy_grid": np.expand_dims(self._simulation.occupancyGrid, axis=-1),
             "head_direction": self._simulation.snake.direction.to_numpy(),
@@ -126,7 +125,7 @@ class SnakeEnvironment(Env):
             "food_position": self._simulation.food.to_numpy(),
         }
 
-    def _get_info(self):
+    def _getInfo(self):
         return {}
 
     def _renderInternal(self):
@@ -134,17 +133,27 @@ class SnakeEnvironment(Env):
         self._window.render()
         self._window.flip()
 
-    def _onOutOfBounds(self):
-        self._lastReward = self._rewards[Rewards.OUT_OF_BOUNDS]
+    def _maybeUpdateWindow(self):
+        if not self._window is None:
+            self._window.update(self._simulation)
 
-    def _onCollision(self):
-        self._lastReward = self._rewards[Rewards.COLLISION]
+    def _onSnakeOutOfBounds(self):
+        self._reward = self._rewards[Rewards.OUT_OF_BOUNDS]
+        self._done = True
 
-    def _onEat(self):
-        self._lastReward = self._rewards[Rewards.EAT]
+    def _onSnakeCollision(self):
+        self._reward = self._rewards[Rewards.COLLISION]
+        self._done = True
+
+    def _onSnakeEat(self):
+        self._reward = self._rewards[Rewards.EAT]
+        self._maybeUpdateWindow()
 
     def _onWin(self):
-        self._lastReward = self._rewards[Rewards.WIN]
+        self._reward = self._rewards[Rewards.WIN]
+        self._done = True
+        self._maybeUpdateWindow()
 
-    def _onMove(self):
-        self._lastReward = self._rewards[Rewards.MOVE]
+    def _onSnakeMove(self):
+        self._reward = self._rewards[Rewards.MOVE]
+        self._maybeUpdateWindow()
