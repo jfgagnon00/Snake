@@ -7,7 +7,7 @@ import click
 import os
 import pygame
 
-from ai.agents import AgentInteractive
+from ai.agents import AgentInteractive, AgentActionRecorder
 from configs import configsCreate
 from core import Delegate
 from game import GameSimulation
@@ -48,11 +48,12 @@ class InteractiveApplication():
     Coordonne la simulation de tel sorte qu'un utiisateur
     peut y jouer a l'aide du clavier
     """
-    def __init__(self, configs):
+    def __init__(self, configs, record=None):
         gfxInit()
 
         self._quit = False
         self._importantMessage = None
+        self._gameCount = -1
 
         gridShape = (configs.simulation.gridWidth, configs.simulation.gridHeight)
         self._window = GraphicWindow(gridShape, configs.graphics)
@@ -81,6 +82,10 @@ class InteractiveApplication():
         self._simulation.turnDelegate.register(self._onSnakeTurn)
         self._simulation.moveDelegate.register(self._onSnakeMove)
 
+        if not record is None:
+            self._record = record
+            self._agent = AgentActionRecorder(self._agent)
+
     def run(self):
         self._quit = False
         self._reset()
@@ -101,6 +106,10 @@ class InteractiveApplication():
         gfxQuit()
 
     def _reset(self):
+        if isinstance(self._agent, AgentActionRecorder):
+            self._gameCount += 1
+            self._agent.reset()
+
         self._simulation.reset()
         self._window.update(self._simulation)
 
@@ -136,6 +145,12 @@ class InteractiveApplication():
         if not self._lastUpdateCallable is None:
             self._updateDelegate.register(self._lastUpdateCallable)
 
+    def _maybeSaveRecording(self):
+        if isinstance(self._agent, AgentActionRecorder):
+            if not self._agent.isEmpty:
+                filename = self._record.replace("%", f"{self._gameCount:04d}")
+                self._agent.serialize(filename)
+
     def _onStartSimulation(self):
         self._setAnyKeyPressedState(None)
         self._setUpdateState(self._update)
@@ -146,10 +161,12 @@ class InteractiveApplication():
         self._setUpdateState(self._update)
 
     def _onLose(self):
+        self._maybeSaveRecording()
         self._setAnyKeyPressedState(self._onResetSimulation, "LOSER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
 
     def _onWin(self):
+        self._maybeSaveRecording()
         self._setAnyKeyPressedState(self._onResetSimulation, "WINNER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
         self._window.update(self._simulation)
@@ -177,7 +194,11 @@ class InteractiveApplication():
               "-fd",
               type=int,
               help="Taille de la fenêtre d'affichage.")
-def main(windowsize, fpsdivider):
+@click.option("--record",
+              type=str,
+              help="""Nom de fichier pour enregistrer des parties. Inclue le chemin. % sera remplacer par """
+                   """le numéro de partie. Le format est toujours json. Ex: recordings/game_%.json""")
+def main(windowsize, fpsdivider, record):
     configs = configsCreate("config_overrides.json")
 
     if not windowsize is None and windowsize > 0:
@@ -186,7 +207,7 @@ def main(windowsize, fpsdivider):
     if not fpsdivider is None and fpsdivider > 0:
         configs.graphics.simulationFpsDivider = fpsdivider
 
-    InteractiveApplication(configs).run()
+    InteractiveApplication(configs, record).run()
 
 if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut

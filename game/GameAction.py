@@ -1,10 +1,10 @@
-from enum import IntEnum
+from enum import StrEnum, auto
 
-class GameAction(IntEnum):
+class GameAction(StrEnum):
     """
     Les actions possibles pour la tete du serpent
     """
-    TURN_LEFT = 0
-    TURN_RIGHT = 1
-    FORWARD = 2
-    COUNT = 3
+    TURN_LEFT = auto()
+    TURN_RIGHT = auto()
+    FORWARD = auto()
+    COUNT = auto()
