@@ -7,7 +7,7 @@ import click
 import os
 import pygame
 
-from ai.agents import AgentInteractive, AgentActionRecorder
+from ai.agents import AgentInteractive, AgentActionRecorder, AgentActionPlayback
 from configs import configsCreate
 from core import Delegate
 from game import GameSimulation
@@ -48,17 +48,16 @@ class InteractiveApplication():
     Coordonne la simulation de tel sorte qu'un utiisateur
     peut y jouer a l'aide du clavier
     """
-    def __init__(self, configs, record=None):
+    def __init__(self, configs):
         gfxInit()
 
         self._quit = False
         self._importantMessage = None
-        self._gameCount = -1
 
         gridShape = (configs.simulation.gridWidth, configs.simulation.gridHeight)
         self._window = GraphicWindow(gridShape, configs.graphics)
 
-        self._agent = AgentInteractive()
+        self.agent = AgentInteractive()
 
         self._simulation = GameSimulation(configs.simulation)
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
@@ -73,7 +72,7 @@ class InteractiveApplication():
         # configure les delegates "statiques"
         self._updateDelegate.register(self._inputManager.update)
         self._inputManager.quitDelegate.register(self._onQuit)
-        self._inputManager.keyDownDelegate.register(self._agent.onKeyDown)
+        self._inputManager.keyDownDelegate.register(self.agent.onKeyDown)
 
         self._simulation.outOfBoundsDelegate.register(self._onLose)
         self._simulation.collisionDelegate.register(self._onLose)
@@ -82,9 +81,13 @@ class InteractiveApplication():
         self._simulation.turnDelegate.register(self._onSnakeTurn)
         self._simulation.moveDelegate.register(self._onSnakeMove)
 
-        if not record is None:
-            self._record = record
-            self._agent = AgentActionRecorder(self._agent)
+    @property
+    def caption(self):
+        return self._window.caption
+
+    @caption.setter
+    def caption(self, value):
+        self._window.caption = value
 
     def run(self):
         self._quit = False
@@ -106,10 +109,7 @@ class InteractiveApplication():
         gfxQuit()
 
     def _reset(self):
-        if isinstance(self._agent, AgentActionRecorder):
-            self._gameCount += 1
-            self._agent.reset()
-
+        self.agent.reset()
         self._simulation.reset()
         self._window.update(self._simulation)
 
@@ -117,7 +117,7 @@ class InteractiveApplication():
         self._simulationCounter -= 1
         if self._simulationCounter <= 0:
             self._simulationCounter = self._simulationFpsDivider
-            action = self._agent.getAction(self._simulation._snake.direction)
+            action = self.agent.getAction(self._simulation._snake.direction)
 
             # la simulation va lancer les evenements appropries
             # ceux-ci vont faire avancer les etats
@@ -145,12 +145,6 @@ class InteractiveApplication():
         if not self._lastUpdateCallable is None:
             self._updateDelegate.register(self._lastUpdateCallable)
 
-    def _maybeSaveRecording(self):
-        if isinstance(self._agent, AgentActionRecorder):
-            if not self._agent.isEmpty:
-                filename = self._record.replace("%", f"{self._gameCount:04d}")
-                self._agent.serialize(filename)
-
     def _onStartSimulation(self):
         self._setAnyKeyPressedState(None)
         self._setUpdateState(self._update)
@@ -161,12 +155,12 @@ class InteractiveApplication():
         self._setUpdateState(self._update)
 
     def _onLose(self):
-        self._maybeSaveRecording()
+        self.agent.onSimulationDone()
         self._setAnyKeyPressedState(self._onResetSimulation, "LOSER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
 
     def _onWin(self):
-        self._maybeSaveRecording()
+        self.agent.onSimulationDone()
         self._setAnyKeyPressedState(self._onResetSimulation, "WINNER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
         self._window.update(self._simulation)
@@ -198,7 +192,10 @@ class InteractiveApplication():
               type=str,
               help="""Nom de fichier pour enregistrer des parties. Inclue le chemin. % sera remplacer par """
                    """le numéro de partie. Le format est toujours json. Ex: recordings/game_%.json""")
-def main(windowsize, fpsdivider, record):
+@click.option("--playback",
+              type=str,
+              help="Nom de l'enregistrement a rejouer. Ex: recordings/game_%.json")
+def main(windowsize, fpsdivider, record, playback):
     configs = configsCreate("config_overrides.json")
 
     if not windowsize is None and windowsize > 0:
@@ -207,7 +204,17 @@ def main(windowsize, fpsdivider, record):
     if not fpsdivider is None and fpsdivider > 0:
         configs.graphics.simulationFpsDivider = fpsdivider
 
-    InteractiveApplication(configs, record).run()
+    application = InteractiveApplication(configs)
+
+    # override agent pour gerer record/playback
+    if not record is None:
+        application.agent = AgentActionRecorder(application.agent, record)
+        application.caption += " - recording"
+    elif not playback is None:
+        application.agent = AgentActionPlayback(playback)
+        application.caption += " - playback"
+
+    application.run()
 
 if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut

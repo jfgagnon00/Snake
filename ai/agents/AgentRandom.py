@@ -1,8 +1,9 @@
 import numpy as np
 
 from game import GameAction
+from .AgentBase import AgentBase
 
-class AgentRandom():
+class AgentRandom(AgentBase):
     """
     Agent qui prend une action aléatoire.
     """

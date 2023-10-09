@@ -1,5 +1,5 @@
 from pygame.font import Font
-from pygame.display import set_mode, set_caption, set_icon, flip
+from pygame.display import set_mode, set_caption, get_caption, set_icon, flip
 from pygame.time import Clock
 
 from core import Vector
@@ -49,6 +49,14 @@ class GraphicWindow():
         self._initBackground(graphicsConfig, simulationGridShape)
         self._initFood(graphicsConfig)
         self._initSnake(graphicsConfig)
+
+    @property
+    def caption(self):
+        return get_caption()[0]
+
+    @caption.setter
+    def caption(self, value):
+        set_caption(value)
 
     def update(self, gameEnvironment):
         fps = int(self._clock.get_fps())

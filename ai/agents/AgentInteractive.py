@@ -1,5 +1,6 @@
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
 from game import GameAction
+from .AgentBase import AgentBase
 
 
 def _onLeft(direction):
@@ -58,7 +59,7 @@ def _onDown(direction):
     # donc garder la direction
     return GameAction.FORWARD
 
-class AgentInteractive():
+class AgentInteractive(AgentBase):
     """
     Specialization pour agent interactif. Utiliser par play.py
     """

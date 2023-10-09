@@ -1,5 +1,8 @@
 from json import JSONDecoder, JSONEncoder
 
+# TODO: revoir pour enlever cette dependance
+from game import GameAction
+
 
 class _TimedAction():
     def __init__(self, time, action):
@@ -14,3 +17,13 @@ class _TimedActionEncoder(JSONEncoder):
         if isinstance(o, _TimedAction):
             return {"time": o.time, "action": str(o.action)}
         return super().default(o)
+
+class _TimedActionDecoder(JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, object_hook=self._object_hook)
+
+    def _object_hook(self, dict_):
+        if len(dict_.keys()) == 2 and "time" in dict_ and "action" in dict_:
+            return _TimedAction(dict_["time"], GameAction(dict_["action"]))
+
+        return dict_
