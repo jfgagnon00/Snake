@@ -1,13 +1,13 @@
 # TODO
 
 ## JFG
-1. mettre option pour enregistrer input et playback
-2. Animation deplacement du serpent (?)
+1. starter 1 agent
+2. Enlever completement la fenetre lors enregistrement video
+3. Animation deplacement du serpent (?)
 
 ## MDLS
 1. starter 1 agent
-2. mettre option pour enregistrer video
-3. regarder pour la music de background
+2. regarder pour la music de background
 
 ## Brainstorm
 1. State == la grille de simulation + direction tete + position de tete + position food
