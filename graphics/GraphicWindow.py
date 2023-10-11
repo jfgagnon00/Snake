@@ -58,6 +58,18 @@ class GraphicWindow():
     def caption(self, value):
         set_caption(value)
 
+    @property
+    def fps(self):
+        return self._fps
+
+    @property
+    def size(self):
+        return self._window.get_rect().size
+
+    @property
+    def surface(self):
+        return self._window
+
     def update(self, gameEnvironment):
         fps = int(self._clock.get_fps())
         score = gameEnvironment.score

@@ -1,8 +1,7 @@
 import json
-import os
 import random
 
-from ..AgentBase import AgentBase
+from ai.agents import AgentBase
 from .TimedAction import _TimedActionDecoder
 
 
@@ -28,7 +27,7 @@ class AgentActionPlayback(AgentBase):
 
     def getAction(self, *args):
         """
-        Relie les actions enregistrees
+        Rejoue les actions enregistrees
         """
         self._time += 1
 

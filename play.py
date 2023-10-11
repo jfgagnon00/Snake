@@ -7,11 +7,14 @@ import click
 import os
 import pygame
 
-from ai.agents import AgentInteractive, AgentActionRecorder, AgentActionPlayback
+from ai.agents import AgentInteractive
 from configs import configsCreate
 from core import Delegate
 from game import GameSimulation
 from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
+
+from wrappers.ai.agents import AgentActionRecorder, AgentActionPlayback
+from wrappers.graphics import VideoWriter
 
 
 class InputManager():
@@ -46,7 +49,7 @@ class InputManager():
 class InteractiveApplication():
     """
     Coordonne la simulation de tel sorte qu'un utiisateur
-    peut y jouer a l'aide du clavier
+    peut y jouer a l'aide du clavier.
     """
     def __init__(self, configs):
         gfxInit()
@@ -55,7 +58,7 @@ class InteractiveApplication():
         self._importantMessage = None
 
         gridShape = (configs.simulation.gridWidth, configs.simulation.gridHeight)
-        self._window = GraphicWindow(gridShape, configs.graphics)
+        self.window = GraphicWindow(gridShape, configs.graphics)
 
         self.agent = AgentInteractive()
 
@@ -81,27 +84,36 @@ class InteractiveApplication():
         self._simulation.turnDelegate.register(self._onSnakeTurn)
         self._simulation.moveDelegate.register(self._onSnakeMove)
 
-    @property
-    def caption(self):
-        return self._window.caption
-
-    @caption.setter
-    def caption(self, value):
-        self._window.caption = value
-
-    def run(self):
-        self._quit = False
-        self._reset()
-
+    def runAttended(self):
         # en mode interactif, l'utilisateur doit
         # peser sur une touche avant de demarrer
         # (laisse le temps d'observer)
         self._setAnyKeyPressedState(self._onStartSimulation, "Pesez une touche démarrer")
+        self._runInternal()
+
+    def runUnattended(self):
+        # run le plus vite possible
+        self._simulationFpsDivider = 1
+
+        # quitte des que simulation est en etat terminal
+        self._simulation.outOfBoundsDelegate.register(self._onQuit)
+        self._simulation.collisionDelegate.register(self._onQuit)
+        self._simulation.winDelegate.register(self._onQuit)
+
+        # s'assurer que la simulation demarre sans attendre
+        self._onStartSimulation()
+
+        # go!
+        self._runInternal()
+
+    def _runInternal(self):
+        self._quit = False
+        self._reset()
 
         while not self._quit:
             self._updateDelegate()
-            self._window.render(self._importantMessage)
-            self._window.flip()
+            self.window.render(self._importantMessage)
+            self.window.flip()
 
         self._done()
 
@@ -111,7 +123,7 @@ class InteractiveApplication():
     def _reset(self):
         self.agent.reset()
         self._simulation.reset()
-        self._window.update(self._simulation)
+        self.window.update(self._simulation)
 
     def _update(self):
         self._simulationCounter -= 1
@@ -163,18 +175,18 @@ class InteractiveApplication():
         self.agent.onSimulationDone()
         self._setAnyKeyPressedState(self._onResetSimulation, "WINNER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
-        self._window.update(self._simulation)
+        self.window.update(self._simulation)
 
     def _onSnakeEat(self):
         # TODO: play sound
-        self._window.update(self._simulation)
+        self.window.update(self._simulation)
 
     def _onSnakeTurn(self):
         # TODO: play sound
         pass
 
     def _onSnakeMove(self):
-        self._window.update(self._simulation)
+        self.window.update(self._simulation)
 
     def _onQuit(self):
         self._quit = True
@@ -190,12 +202,16 @@ class InteractiveApplication():
               help="Taille de la fenêtre d'affichage.")
 @click.option("--record",
               type=str,
-              help="""Nom de fichier pour enregistrer des parties. Inclue le chemin. % sera remplacer par """
-                   """le numéro de partie. Le format est toujours json. Ex: recordings/game_%.json""")
+              help="Nom de fichier pour enregistrer des parties. Inclue le chemin. % sera remplacer par "
+                   "le numéro de partie. Le format est toujours json. Ex: recordings/game_%.json")
 @click.option("--playback",
               type=str,
               help="Nom de l'enregistrement a rejouer. Ex: recordings/game_%.json")
-def main(windowsize, fpsdivider, record, playback):
+@click.option("--movie",
+              is_flag=True,
+              default=False,
+              help="Enregistre le playback dans un fichier .mp4.")
+def main(windowsize, fpsdivider, record, playback, movie):
     configs = configsCreate("config_overrides.json")
 
     if not windowsize is None and windowsize > 0:
@@ -206,15 +222,28 @@ def main(windowsize, fpsdivider, record, playback):
 
     application = InteractiveApplication(configs)
 
-    # override agent pour gerer record/playback
+    unattended = False
     if not record is None:
+        # override agent pour gerer record
         application.agent = AgentActionRecorder(application.agent, record)
-        application.caption += " - recording"
+        application.window.caption += " - recording"
     elif not playback is None:
+        # override agent pour gerer playback
         application.agent = AgentActionPlayback(playback)
-        application.caption += " - playback"
+        application.window.caption += " - playback"
+        if movie:
+            # override window pour avoir enregistrement video
+            filename, _ = os.path.splitext(playback)
+            filename = f"{filename}.mp4"
+            fps = configs.graphics.fps / configs.graphics.simulationFpsDivider
+            application.window = VideoWriter(application.window, fps, filename)
+            unattended = True
 
-    application.run()
+    if unattended:
+        application.runUnattended()
+        application.window.dispose()
+    else:
+        application.runAttended()
 
 if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut

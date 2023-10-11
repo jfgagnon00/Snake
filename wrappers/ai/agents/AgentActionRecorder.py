@@ -3,7 +3,7 @@ import os
 import random
 
 from datetime import datetime
-from ..AgentBase import AgentBase
+from ai.agents import AgentBase
 from .TimedAction import _TimedAction, _TimedActionEncoder
 
 

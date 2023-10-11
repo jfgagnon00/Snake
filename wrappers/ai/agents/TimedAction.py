@@ -1,6 +1,8 @@
-from json import JSONDecoder, JSONEncoder
+"""
+Gere la serialisation des actions pour l'enregistrement/playback
+"""
 
-# TODO: revoir pour enlever cette dependance
+from json import JSONDecoder, JSONEncoder
 from game import GameAction
 
 
