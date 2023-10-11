@@ -207,11 +207,11 @@ class InteractiveApplication():
 @click.option("--playback",
               type=str,
               help="Nom de l'enregistrement a rejouer. Ex: recordings/game_%.json")
-@click.option("--movie",
+@click.option("--mp4",
               is_flag=True,
               default=False,
               help="Enregistre le playback dans un fichier .mp4.")
-def main(windowsize, fpsdivider, record, playback, movie):
+def main(windowsize, fpsdivider, record, playback, mp4):
     configs = configsCreate("config_overrides.json")
 
     if not windowsize is None and windowsize > 0:
@@ -231,7 +231,7 @@ def main(windowsize, fpsdivider, record, playback, movie):
         # override agent pour gerer playback
         application.agent = AgentActionPlayback(playback)
         application.window.caption += " - playback"
-        if movie:
+        if mp4:
             # override window pour avoir enregistrement video
             filename, _ = os.path.splitext(playback)
             filename = f"{filename}.mp4"
