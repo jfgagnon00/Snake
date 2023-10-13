@@ -35,6 +35,10 @@ class GameSimulation():
 
     @property
     def occupancyGrid(self):
+        """
+        Retourne une reference sur la grille d'occupation.
+        Attention, prendre la convention d'acces numpy
+        """
         return self._occupancyGrid
 
     @property
@@ -71,7 +75,9 @@ class GameSimulation():
         """
         self._score = 0
 
-        shape = (self._occupancyGridWidth, self._occupancyGridHeight)
+        # numpy est transpose par rapport au sens naturel
+        # l'acces a _occupancyGrid suivra la convention numpy
+        shape = (self._occupancyGridHeight, self._occupancyGridWidth)
         self._occupancyGrid = np.zeros(shape=shape, dtype=np.uint8)
         self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
 
@@ -131,7 +137,7 @@ class GameSimulation():
         # la tete va bouger, donc la queue aussi
         # pas de collision possible avec la queue
         if head != self._snake.tail and \
-           self._occupancyGrid[head.x, head.y] != GridOccupancy.EMPTY:
+           self._occupancyGrid[head.y, head.x] != GridOccupancy.EMPTY:
             # tete est en collision
             self._collisionDelegate()
             return
@@ -148,22 +154,33 @@ class GameSimulation():
         value = GridOccupancy.SNAKE_BODY if show else GridOccupancy.EMPTY
 
         for i, p in enumerate(self._snake.bodyParts):
-            self._occupancyGrid[p.x, p.y] = value
+            self._occupancyGrid[p.y, p.x] = value
 
         if show:
             head = self._snake.head
-            self._occupancyGrid[head.x, head.y] = GridOccupancy.SNAKE_HEAD
+            self._occupancyGrid[head.y, head.x] = GridOccupancy.SNAKE_HEAD
 
             tail = self._snake.tail
-            self._occupancyGrid[tail.x, tail.y] = GridOccupancy.SNAKE_TAIL
+            self._occupancyGrid[tail.y, tail.x] = GridOccupancy.SNAKE_TAIL
 
     def _placeFood(self):
-        # sous optimal, a changer
-        while True:
-            x = random.randint(0, self._occupancyGridWidth - 1)
-            y = random.randint(0, self._occupancyGridHeight - 1)
+        # trouver les cellules libres a partir de _occupancyGrid
+        allCells = np.arange(self._occupancyGridWidth * self._occupancyGridHeight)
+        freeCells = np.where(self._occupancyGrid == GridOccupancy.EMPTY, True, False)
+        freeCells = allCells[freeCells.reshape(-1)]
 
-            if self._occupancyGrid[x, y] == 0:
-                self._food = Vector(x, y)
-                self._occupancyGrid[x, y] = GridOccupancy.FOOD
-                break
+        # prendre une cellule au hasard
+        cellIndex = random.choice(freeCells)
+
+        # transformer index en coordonnees
+        x = cellIndex % self._occupancyGridWidth
+        y = cellIndex // self._occupancyGridWidth
+
+        # validation
+        assert 0 <= x and x < self._occupancyGridWidth
+        assert 0 <= y and y < self._occupancyGridHeight
+        assert self._occupancyGrid[y, x] == GridOccupancy.EMPTY
+
+        # placer dans la grille
+        self._food = Vector(x, y)
+        self._occupancyGrid[y, x] = GridOccupancy.FOOD
