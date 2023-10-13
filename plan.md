@@ -2,8 +2,7 @@
 
 ## JFG
 1. starter 1 agent
-2. Enlever completement la fenetre lors enregistrement video
-3. Animation deplacement du serpent (?)
+2. Animation deplacement du serpent (?)
 
 ## MDLS
 1. starter 1 agent

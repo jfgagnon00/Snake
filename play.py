@@ -220,6 +220,9 @@ def main(windowsize, fpsdivider, record, playback, mp4):
     if not fpsdivider is None and fpsdivider > 0:
         configs.graphics.simulationFpsDivider = fpsdivider
 
+    if not playback is None and mp4:
+        configs.graphics.showWindow = False
+
     application = InteractiveApplication(configs)
 
     unattended = False

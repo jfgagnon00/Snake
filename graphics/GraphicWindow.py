@@ -1,3 +1,4 @@
+from pygame import HIDDEN, SHOWN
 from pygame.font import Font
 from pygame.display import set_mode, set_caption, get_caption, set_icon, flip
 from pygame.time import Clock
@@ -44,7 +45,9 @@ class GraphicWindow():
         icon = _Sprite(filename=graphicsConfig.iconPath)
         set_icon(icon.image)
         set_caption(graphicsConfig.caption)
-        self._window = set_mode((w, h))
+
+        flags = SHOWN if graphicsConfig.showWindow else HIDDEN
+        self._window = set_mode((w, h), flags=flags)
 
         self._initBackground(graphicsConfig, simulationGridShape)
         self._initFood(graphicsConfig)

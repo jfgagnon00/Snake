@@ -35,6 +35,9 @@ def configsCreate(configOverrides):
         MetaObject.override_from_object(trainConfig,
                                         configOverrides.train)
 
+    # ce flag ne peut etre overrider par les configs
+    gfxConfig.showWindow = True
+
     return MetaObject.from_kwargs(environment=envConfig,
                                   graphics=gfxConfig,
                                   simulation=simConfig,

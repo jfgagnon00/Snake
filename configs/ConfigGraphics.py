@@ -38,3 +38,4 @@ class ConfigGraphics():
 
         self.caption = ""
         self.iconPath = ""
+        self.showWindow = True
