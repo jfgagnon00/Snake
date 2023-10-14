@@ -13,11 +13,12 @@ class AgentActionRecorder(AgentBase):
     capturer ses actions pour les enregistrer dans un fichier.
     Ne pas utiliser comme agent conventionel.
     """
-    def __init__(self, agent, recordPattern):
+    def __init__(self, agent, recordPattern, recordN=None):
         super().__init__()
         self._agent = agent
         self._simulationCount = -1
-        self.recordPattern = recordPattern
+        self._recordPattern = recordPattern
+        self._simulationCountModulo = 1 if recordN is None else int(recordN)
         self.reset()
 
     def reset(self):
@@ -47,8 +48,8 @@ class AgentActionRecorder(AgentBase):
         """
         self._simulationCount += 1
 
-        if not self._isEmpty():
-            filename = self.recordPattern.replace("%", f"{self._simulationCount:04d}")
+        if not self._isEmpty() and (self._simulationCount % self._simulationCountModulo) == 0:
+            filename = self._recordPattern.replace("%", f"{self._simulationCount:04d}")
 
             path, _ = os.path.split(filename)
             if not path is None:

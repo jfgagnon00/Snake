@@ -76,7 +76,17 @@ class TrainApplication():
               type=str,
               help="Nom de fichier pour enregistrer les épisodes. Inclue le chemin. % sera remplacer par "
                    "le numéro d'épisode. Le format est toujours json. Ex: recordings/train_%.json")
-def main(unattended, episodes, agent, windowsize, renderfps, record):
+@click.option("--recordN",
+              "-rn",
+              type=int,
+              help="Si record est spécifié, enregistre un épisode tout les N épisodes.")
+def main(unattended,
+         episodes,
+         agent,
+         windowsize,
+         renderfps,
+         record,
+         recordn):
     configs = configsCreate("config_overrides.json")
     configs.train.unattended = unattended
 
@@ -98,7 +108,7 @@ def main(unattended, episodes, agent, windowsize, renderfps, record):
     application = TrainApplication(configs)
 
     if not record is None:
-        application.agent = AgentActionRecorder(application.agent, record)
+        application.agent = AgentActionRecorder(application.agent, record, recordn)
 
     application.run()
 

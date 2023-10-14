@@ -205,6 +205,10 @@ class InteractiveApplication():
               type=str,
               help="Nom de fichier pour enregistrer des parties. Inclue le chemin. % sera remplacer par "
                    "le numéro de partie. Le format est toujours json. Ex: recordings/game_%.json")
+@click.option("--recordN",
+              "-rn",
+              type=int,
+              help="Si record est spécifié, enregistre un épisode tout les N épisodes.")
 @click.option("--playback",
               type=str,
               help="Nom de l'enregistrement a rejouer. Ex: recordings/game_%.json")
@@ -212,7 +216,7 @@ class InteractiveApplication():
               is_flag=True,
               default=False,
               help="Enregistre le playback dans un fichier .mp4.")
-def main(windowsize, fpsdivider, record, playback, mp4):
+def main(windowsize, fpsdivider, record, recordb, playback, mp4):
     configs = configsCreate("config_overrides.json")
 
     if not windowsize is None and windowsize > 0:
@@ -229,7 +233,7 @@ def main(windowsize, fpsdivider, record, playback, mp4):
     unattended = False
     if not record is None:
         # override agent pour gerer record
-        application.agent = AgentActionRecorder(application.agent, record)
+        application.agent = AgentActionRecorder(application.agent, record, recordb)
         application.window.caption += " - recording"
     elif not playback is None:
         # override agent pour gerer playback
