@@ -3,7 +3,7 @@ Responsable de l'entrainement des agents
 """
 
 
-import ai
+import ai # importe l'environnement "snake/SnakeEnvironment-v0"
 import ai.agents as agents
 import click
 import gymnasium as gym
@@ -11,17 +11,23 @@ import os
 
 from configs import configsCreate
 from tqdm import tqdm
+from wrappers.ai.agents import AgentActionRecorder
 
 
 class TrainApplication():
-    def __init__(self, configs):
+    def __init__(self, recordPattern, configs):
         self._episodes = configs.train.episodes
+        self._agent = self._createAgent(configs.train, configs.simulation)
+
+        if not recordPattern is None:
+            self._agent = AgentActionRecorder(self._agent, recordPattern)
+            configs.graphics.caption += " - recording"
+
         self._env = gym.make("snake/SnakeEnvironment-v0",
                             renderMode = None if configs.train.unattended else "human",
                             environmentConfig=configs.environment,
                             simulationConfig=configs.simulation,
                             graphicsConfig=configs.graphics)
-        self._agent = self._createAgent(configs.train, configs.simulation)
 
     def run(self):
         for e in tqdm(range(self._episodes)):
@@ -37,6 +43,8 @@ class TrainApplication():
 
                 # Render the game
                 self._env.render()
+
+            self._agent.onSimulationDone()
 
         self._env.close()
 
@@ -68,7 +76,12 @@ class TrainApplication():
               "-fps",
               type=int,
               help="Frame Par Seconde de l'affichage.")
-def main(unattended, episodes, agent, windowsize, renderfps):
+@click.option("--record",
+              "-r",
+              type=str,
+              help="Nom de fichier pour enregistrer les épisodes. Inclue le chemin. % sera remplacer par "
+                   "le numéro d'épisode. Le format est toujours json. Ex: recordings/train_%.json")
+def main(unattended, episodes, agent, windowsize, renderfps, record):
     configs = configsCreate("config_overrides.json")
     configs.train.unattended = unattended
 
@@ -84,7 +97,7 @@ def main(unattended, episodes, agent, windowsize, renderfps):
     if not renderfps is None and renderfps > 0:
         configs.environment.renderFps = renderfps
 
-    TrainApplication(configs).run()
+    TrainApplication(record, configs).run()
 
 if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut

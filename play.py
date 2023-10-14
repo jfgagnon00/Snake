@@ -201,6 +201,7 @@ class InteractiveApplication():
               type=int,
               help="Taille de la fenêtre d'affichage.")
 @click.option("--record",
+              "-r",
               type=str,
               help="Nom de fichier pour enregistrer des parties. Inclue le chemin. % sera remplacer par "
                    "le numéro de partie. Le format est toujours json. Ex: recordings/game_%.json")
