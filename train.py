@@ -15,14 +15,9 @@ from wrappers.ai.agents import AgentActionRecorder
 
 
 class TrainApplication():
-    def __init__(self, recordPattern, configs):
+    def __init__(self, configs):
         self._episodes = configs.train.episodes
-        self._agent = self._createAgent(configs.train, configs.simulation)
-
-        if not recordPattern is None:
-            self._agent = AgentActionRecorder(self._agent, recordPattern)
-            configs.graphics.caption += " - recording"
-
+        self.agent = self._createAgent(configs.train, configs.simulation)
         self._env = gym.make("snake/SnakeEnvironment-v0",
                             renderMode = None if configs.train.unattended else "human",
                             environmentConfig=configs.environment,
@@ -35,7 +30,7 @@ class TrainApplication():
             state = self._env.reset()
 
             while not done:
-                action = self._agent.getAction(state)
+                action = self.agent.getAction(state)
 
                 # TODO: s'assurer que les observations ne pointent pas sur le meme object
                 newState, reward, terminated, truncated, info = self._env.step(action)
@@ -44,7 +39,7 @@ class TrainApplication():
                 # Render the game
                 self._env.render()
 
-            self._agent.onSimulationDone()
+            self.agent.onSimulationDone()
 
         self._env.close()
 
@@ -97,7 +92,16 @@ def main(unattended, episodes, agent, windowsize, renderfps, record):
     if not renderfps is None and renderfps > 0:
         configs.environment.renderFps = renderfps
 
-    TrainApplication(record, configs).run()
+    if not record is None:
+        configs.graphics.caption += " - recording"
+
+    application = TrainApplication(configs)
+
+    if not record is None:
+        application.agent = AgentActionRecorder(application.agent, record)
+
+    application.run()
+
 
 if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut
