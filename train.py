@@ -21,27 +21,30 @@ class TrainApplication():
                             environmentConfig=configs.environment,
                             simulationConfig=configs.simulation,
                             graphicsConfig=configs.graphics)
-
-        # instantier un agent a partir d'un string
-        # limiter a ai.agents pour le moment
-        agent_class = getattr(agents, configs.train.agent)
-        self._agent = agent_class()
+        self._agent = self._createAgent(configs.train, configs.simulation)
 
     def run(self):
         for e in tqdm(range(self._episodes)):
-            terminated = False
+            done = False
             state = self._env.reset()
 
-            while not terminated:
+            while not done:
                 action = self._agent.getAction(state)
 
                 # TODO: s'assurer que les observations ne pointent pas sur le meme object
                 newState, reward, terminated, truncated, info = self._env.step(action)
+                done = terminated or truncated
 
                 # Render the game
                 self._env.render()
 
         self._env.close()
+
+    def _createAgent(self, trainConfig, simulatinConfig):
+        # instantier un agent a partir d'un string
+        # limiter a ai.agents pour le moment
+        agent_class = getattr(agents, trainConfig.agent)
+        return agent_class(trainConfig, simulatinConfig)
 
 @click.command()
 @click.option("--unattended",

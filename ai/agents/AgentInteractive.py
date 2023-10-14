@@ -61,7 +61,8 @@ def _onDown(direction):
 
 class AgentInteractive(AgentBase):
     """
-    Specialization pour agent interactif. Utiliser par play.py
+    Specialization pour agent interactif.
+    Note: specialiser pour play.py. Ne pas utiliser comme agent conventionel.
     """
     _KEY_HANDLERS = {
         K_LEFT: _onLeft,
@@ -71,12 +72,10 @@ class AgentInteractive(AgentBase):
     }
 
     def __init__(self):
+        super().__init__()
         self.reset()
 
     def reset(self):
-        """
-        Reset etats interne.
-        """
         self._lastKeyDown = -1
 
     def onKeyDown(self, key):
@@ -89,7 +88,6 @@ class AgentInteractive(AgentBase):
     def getAction(self, direction):
         """
         Obtenir action a partir de l'etat.
-        Note: specialiser pour play.py. Ne pas utiliser comme agent conventionel.
         """
         if self._lastKeyDown in AgentInteractive._KEY_HANDLERS:
             handler = AgentInteractive._KEY_HANDLERS[self._lastKeyDown]

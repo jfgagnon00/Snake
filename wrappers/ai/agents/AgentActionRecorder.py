@@ -10,9 +10,11 @@ from .TimedAction import _TimedAction, _TimedActionEncoder
 class AgentActionRecorder(AgentBase):
     """
     Agent qui encapsule un autre agent dans le but de
-    capturer ses actions pour les enregistrer dans un fichier
+    capturer ses actions pour les enregistrer dans un fichier.
+    Ne pas utiliser comme agent conventionel.
     """
     def __init__(self, agent, recordPattern):
+        super().__init__()
         self._agent = agent
         self._simulationCount = -1
         self.recordPattern = recordPattern

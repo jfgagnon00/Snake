@@ -7,9 +7,11 @@ from .TimedAction import _TimedActionDecoder
 
 class AgentActionPlayback(AgentBase):
     """
-    Agent qui rejoue les actions enregistres par AgentActionRecorder
+    Agent qui rejoue les actions enregistres par AgentActionRecorder.
+    Ne pas utiliser comme agent conventionel.
     """
     def __init__(self, filename):
+        super().__init__()
         with open(filename, "r") as file:
             dict_ = json.load(file, cls=_TimedActionDecoder)
             self._seed = dict_["seed"]
