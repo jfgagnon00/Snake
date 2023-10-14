@@ -36,7 +36,7 @@ class SnakeEnvironment(Env):
         if graphicsConfig is None or environmentConfig.renderFps <= 0:
             renderMode = None
 
-        self.action_space = spaces.Discrete(int(GameAction.COUNT))
+        self.action_space = spaces.Discrete(len(GameAction))
         self.observation_space = spaces.Dict({
                 "occupancy_grid": spaces.Box(low=0,
                                              high=255,

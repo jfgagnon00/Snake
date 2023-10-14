@@ -7,4 +7,3 @@ class GameAction(StrEnum):
     TURN_LEFT = auto()
     TURN_RIGHT = auto()
     FORWARD = auto()
-    COUNT = auto()
