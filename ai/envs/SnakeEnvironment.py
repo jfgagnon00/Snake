@@ -10,7 +10,7 @@ from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit, pumpEvents
 
 class SnakeEnvironment(Env):
     """
-    Responsable de faire le pont entre le jeu de snake et OpenAI Gym.
+    Responsable de faire le pont entre le jeu de snake et OpenAI Gymnasium.
     Parametres de configuration passent par les objets du module configs.
     """
     _HUMAN = "human"
@@ -98,9 +98,8 @@ class SnakeEnvironment(Env):
         self._reward = 0
         self._done = False
 
-        # avancer la simulation
-        # la simulation va lancer les evenements appropries
-        # ceux-ci vont faire avancer les etats
+        # simulation:
+        # les evenements appropries seront lances par les delegates et feront avancer les etats
         self._simulation.apply(action)
 
         # faire affichage si besoin
@@ -119,7 +118,7 @@ class SnakeEnvironment(Env):
 
     def _getState(self):
         return {
-            "occupancy_grid": np.expand_dims(self._simulation.occupancyGrid, axis=-1),
+            "occupancy_grid": np.expand_dims(self._simulation.occupancyGrid, axis=-1).copy(),
             "head_direction": self._simulation.snake.direction.to_numpy(),
             "head_position": self._simulation.snake.head.to_numpy(),
             "food_position": self._simulation.food.to_numpy(),

@@ -30,6 +30,8 @@ class AgentActionRecorder(AgentBase):
         self._timedActions = []
         random.seed(self._seed)
 
+        self._agent.reset()
+
     def getAction(self, *args):
         """
         Enregistre l'action de l'agent encapsule
@@ -61,6 +63,8 @@ class AgentActionRecorder(AgentBase):
                     file,
                     cls=_TimedActionEncoder,
                     indent=4)
+
+        self._agent.onSimulationDone()
 
     def _isEmpty(self):
         return len(self._timedActions) == 0

@@ -1,7 +1,9 @@
 {
     "train": {
-        "gamma": 0.0,
-        "epsilon": 0.0,
+        "gamma": 0.1,
+        "epsilon": 0.5,
+        "epsilonDecay": 0.5,
+        "lr": 0.01,
         "agent": "AgentRandom",
         "episodes": 10
     },

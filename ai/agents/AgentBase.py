@@ -11,6 +11,9 @@ class AgentBase():
         """
         pass
 
+    def train(self, *args):
+        pass
+
     def getAction(self, *args):
         """
         Appeler pour avoir une action
