@@ -41,7 +41,7 @@ class TrainApplication():
                 done = terminated or truncated
 
                 self._env.render()
-                self.agent.train(state, newState, reward, done)
+                self.agent.train(state, action, newState, reward, done)
 
                 state = newState
 
