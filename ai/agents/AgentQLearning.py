@@ -1,7 +1,7 @@
 from game import GameAction
 from random import random, choice
 from torch import argmax, from_numpy, Tensor
-from torch.nn import L1Loss, Linear, Module, ReLU, Sequential
+from torch.nn import L1Loss, Linear, Module, ReLU, Sequential, MSELoss
 from torch.optim import Adam
 from torchvision.transforms.functional import convert_image_dtype
 
@@ -48,22 +48,25 @@ class Agent47(AgentBase):
                           [x for x in div2Generator(numInputs, numOutput * 2)],
                           numOutput)
         self._optimizer = Adam(self._model.parameters(), lr=trainConfig.lr)
-        self._loss = L1Loss()
+        self._lossFnc = MSELoss()
         self._gameActions = list(GameAction)
+
+        self._iteration = 0
 
     def train(self, state, action, newState, reward, done):
         x = self._stateToTensor(state)
         q = self._model(x)
-
-        x_new = self._stateToTensor(newState)
-        q_new = self._model(x_new)
-
-        q_target = Tensor.new_tensor(q)
-        q_target[action] = reward + (self._gamma * q_new[action] - q_target[action])
+        q_target = q.clone()
+        if done:
+            q_target[action] = reward
+        else:
+            x_new = self._stateToTensor(newState)
+            q_new = self._model(x_new)
+            q_target[action] = reward + self._gamma * q_new[action]
 
         self._optimizer.zero_grad()
-        output = self._loss(q, q_new)
-        output.backward()
+        loss = self._lossFnc(q_target, q)
+        loss.backward()
         self._optimizer.step()
 
     def getAction(self, state):
@@ -77,8 +80,12 @@ class Agent47(AgentBase):
 
         return GameAction(gameAction)
 
-    def onSimulationDone(self):
-        self._epsilon *= self._epsilonDecay
+    def onSimulationDone(self, *args):
+        self._iteration += 1
+        eps = self._epsilon * self._epsilonDecay
+        eps = max(eps, 0.01)
+        # print(self._iteration, ":", self._epsilon, eps, self._epsilonDecay,)
+        self._epsilon = eps
 
     def _stateToTensor(self, state):
         x = state["occupancy_grid"]

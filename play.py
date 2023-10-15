@@ -167,12 +167,12 @@ class InteractiveApplication():
         self._setUpdateState(self._update)
 
     def _onLose(self):
-        self.agent.onSimulationDone()
+        self.agent.onSimulationDone(False)
         self._setAnyKeyPressedState(self._onResetSimulation, "LOSER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
 
     def _onWin(self):
-        self.agent.onSimulationDone()
+        self.agent.onSimulationDone(False)
         self._setAnyKeyPressedState(self._onResetSimulation, "WINNER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
         self.window.update(self._simulation)
@@ -189,6 +189,7 @@ class InteractiveApplication():
         self.window.update(self._simulation)
 
     def _onQuit(self):
+        self.agent.onSimulationDone(True)
         self._quit = True
 
 @click.command()

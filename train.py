@@ -45,7 +45,8 @@ class TrainApplication():
 
                 state = newState
 
-            self.agent.onSimulationDone()
+            last = e == (self._episodes - 1)
+            self.agent.onSimulationDone(last)
 
         self._env.close()
 

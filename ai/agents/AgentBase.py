@@ -20,7 +20,7 @@ class AgentBase():
         """
         pass
 
-    def onSimulationDone(self):
+    def onSimulationDone(self, *args):
         """
         Appeler quand la simulation est terminee mais avant reset
         """

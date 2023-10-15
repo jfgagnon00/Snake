@@ -44,14 +44,15 @@ class AgentActionRecorder(AgentBase):
 
         return action
 
-    def onSimulationDone(self):
+    def onSimulationDone(self, last=False):
         """
         House keeping
         """
         self._simulationCount += 1
 
-        if not self._isEmpty() and (self._simulationCount % self._simulationCountModulo) == 0:
-            filename = self._recordPattern.replace("%", f"{self._simulationCount:04d}")
+        if not self._isEmpty() and \
+           (last or (self._simulationCount % self._simulationCountModulo) == 0):
+            filename = self._recordPattern.replace("%", f"{self._simulationCount:05d}")
 
             path, _ = os.path.split(filename)
             if not path is None:
@@ -64,7 +65,7 @@ class AgentActionRecorder(AgentBase):
                     cls=_TimedActionEncoder,
                     indent=4)
 
-        self._agent.onSimulationDone()
+        self._agent.onSimulationDone(last)
 
     def _isEmpty(self):
         return len(self._timedActions) == 0

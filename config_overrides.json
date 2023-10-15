@@ -1,12 +1,12 @@
 {
     "train": {
-        "gamma": 0.05,
-        "epsilon": 0.5,
-        "epsilonDecay": 0.95,
+        "gamma": 0.9,
+        "epsilon": 0.9,
+        "epsilonDecay": 0.99999,
         "lr": 0.01,
-        "agent": "AgentRandom",
-        "episodes": 10,
-        "episodeMaxLen": 1000
+        "agent": "Agent47",
+        "episodes": 50000,
+        "episodeMaxLen": 500
     },
 
     "environment": {
