@@ -8,7 +8,7 @@ from torchvision.transforms.functional import convert_image_dtype
 from .AgentBase import AgentBase
 
 
-class QNet(Module):
+class _QNet(Module):
     def __init__(self, numInputs, hiddenLayers, numOutput):
         super().__init__()
 
@@ -25,7 +25,7 @@ class QNet(Module):
     def forward(self, x):
         return self._net(x)
 
-class QTrainer():
+class _QTrainer():
     def __init__(self, model, trainConfig):
         self._optimizer = Adam(model.parameters(), lr=trainConfig.lr)
         self._loss = L1Loss()
@@ -48,11 +48,10 @@ class Agent47(AgentBase):
                 else:
                     break
 
-        self._model = QNet(numInputs,
+        self._model = _QNet(numInputs,
                           [x for x in div2Generator(numInputs, numOutput * 2)],
                           numOutput)
-        self._trainer = QTrainer(self._model, trainConfig)
-        self._gameActions = list(GameAction)
+        self._trainer = _QTrainer(self._model, trainConfig)
 
     def train(self, state, newState, reward, done):
         self._trainer.train(state, newState, reward, done)
@@ -65,4 +64,4 @@ class Agent47(AgentBase):
         actions = self._model(x)
         gameAction = argmax(actions).item()
 
-        return GameAction( self._gameActions[gameAction] )
+        return GameAction.fromInt(gameAction)
