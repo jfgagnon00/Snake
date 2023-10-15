@@ -5,7 +5,8 @@
         "epsilonDecay": 0.5,
         "lr": 0.01,
         "agent": "AgentRandom",
-        "episodes": 10
+        "episodes": 10,
+        "episodeMaxLen": 1000
     },
 
     "environment": {

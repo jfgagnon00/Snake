@@ -7,3 +7,4 @@ class ConfigTrain():
         self.agent = ""
         self.unattended = False
         self.episodes = 1
+        self.episodeMaxLen = 0
