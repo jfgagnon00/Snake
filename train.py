@@ -32,6 +32,7 @@ class TrainApplication():
     def run(self):
         for e in tqdm(range(self._episodes)):
             done = False
+            self.agent.reset()
             state, _ = self._env.reset()
 
             while not done:

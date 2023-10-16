@@ -20,6 +20,7 @@ class GraphicWindow():
         self._fps = graphicsConfig.fps
         self._clearColor = graphicsConfig.clearColor
         self._message = None
+        self._frame = -1
 
         self._font = Font(graphicsConfig.fontPath,
                           size=graphicsConfig.fontSize)
@@ -74,9 +75,10 @@ class GraphicWindow():
         return self._window
 
     def update(self, gameEnvironment):
+        self._frame += 1
         fps = int(self._clock.get_fps())
         score = gameEnvironment.score
-        self._message = f"Score: {score:04d} FPS: {fps}"
+        self._message = f"Score: {score:03d} FPS: {fps:2d} Frame: {self._frame}"
 
         if gameEnvironment.food is None:
             self._food.enable = False

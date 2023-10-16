@@ -1,7 +1,9 @@
 from game import GameAction
-from random import random, choice
-from torch import argmax, from_numpy, Tensor
-from torch.nn import L1Loss, Linear, Module, ReLU, Sequential, MSELoss
+from numpy.random import choice as np_choice
+from random import random, choice as py_choice
+from torch import argmax, from_numpy
+from torch.nn import L1Loss, Linear, Module, MSELoss, ReLU, Sequential
+from torch.nn.functional import softmax
 from torch.optim import Adam
 from torchvision.transforms.functional import convert_image_dtype
 
@@ -51,18 +53,19 @@ class Agent47(AgentBase):
         self._lossFnc = MSELoss()
         self._gameActions = list(GameAction)
 
-        self._iteration = 0
-
     def train(self, state, action, newState, reward, done):
+        intAction = self._gameActions.index(action)
+
         x = self._stateToTensor(state)
         q = self._model(x)
         q_target = q.clone()
+
         if done:
-            q_target[action] = reward
+            q_target[intAction] = reward
         else:
             x_new = self._stateToTensor(newState)
             q_new = self._model(x_new)
-            q_target[action] = reward + self._gamma * q_new[action]
+            q_target[intAction] = reward + self._gamma * q_new[intAction]
 
         self._optimizer.zero_grad()
         loss = self._lossFnc(q_target, q)
@@ -71,20 +74,18 @@ class Agent47(AgentBase):
 
     def getAction(self, state):
         if random() < self._epsilon:
-            gameAction = choice(self._gameActions)
+            gameAction = np_choice(self._gameActions)
         else:
             x = self._stateToTensor(state)
             actions = self._model(x)
-            gameAction = argmax(actions).item()
-            gameAction = self._gameActions[gameAction]
+            p = softmax(actions, dim=0).detach().numpy()
+            gameAction = np_choice(self._gameActions, p=p)
 
         return GameAction(gameAction)
 
     def onSimulationDone(self, *args):
-        self._iteration += 1
         eps = self._epsilon * self._epsilonDecay
         eps = max(eps, 0.01)
-        # print(self._iteration, ":", self._epsilon, eps, self._epsilonDecay,)
         self._epsilon = eps
 
     def _stateToTensor(self, state):
