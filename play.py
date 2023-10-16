@@ -109,6 +109,7 @@ class InteractiveApplication():
     def _runInternal(self):
         self._quit = False
         self._reset()
+        self.window.render()
 
         while not self._quit:
             self._updateDelegate()
