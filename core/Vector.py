@@ -28,4 +28,5 @@ class Vector():
         Converti en array numpy
         """
         # TODO: sous optimal, devrait heriter de np.array plutot que creer des objets
-        return np.array([self.x, self.y])
+        # convention numpy: height, width
+        return np.array([self.y, self.x])

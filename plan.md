@@ -2,7 +2,8 @@
 
 ## JFG
 1. starter 1 agent
-2. Animation deplacement du serpent (?)
+2. refactorer command line (?)
+3. Animation deplacement du serpent (?)
 
 ## MDLS
 1. starter 1 agent

@@ -5,7 +5,7 @@
         "epsilonDecay": 0.99999,
         "lr": 0.01,
         "agent": "Agent47",
-        "episodes": 50000,
+        "episodes": 90000,
         "episodeMaxLen": 500
     },
 
@@ -14,14 +14,14 @@
         "rewards": {
             "move": -0.5,
             "eat": 10,
-            "collision": -5,
+            "collision": 0,
             "out_of_bounds": -20,
             "win": 30
         }
     },
 
     "simulation": {
-        "gridWidth": 15,
+        "gridWidth": 10,
         "gridHeight": 15
     },
 
