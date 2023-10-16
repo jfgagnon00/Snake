@@ -4,7 +4,7 @@ Projet fait dans le cadre du cours 420-A59 Algorithmes d'apprentissage par renfo
 
 # Installation
 
-1. Cloner se dépot.
+1. Cloner ce dépot.
 
 ```
 git clone https://github.com/jfgagnon00/Snake.git
@@ -18,7 +18,7 @@ git clone https://github.com/jfgagnon00/Snake.git
 source activate.sh
 ```
 
-ou créer un manuellement un environment avec venv:
+Ou créer un manuellement un environment avec venv:
 
 ```
 python3 -m venv .venv --prompt Snake
@@ -28,3 +28,14 @@ pip3 install -r requirements.txt
 
 # Utilisation
 
+Snake utilise la ligne de commande pour exposer ses fonctionalités. Les commandes sont simples et auto documntées. A la ligne de commande, pour jouer:
+
+```
+python play.py --help
+```
+
+Pour entraînement:
+
+```
+python train.py --help
+```
