@@ -6,11 +6,11 @@ from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
 def _onLeft(direction):
     if direction.y > 0:
         # serpent va vers le bas, tourne a droite pour devenir la gauche
-        return GameAction.TURN_RIGHT
+        return GameAction.TURN_CW
 
     if direction.y < 0:
         # serpent va vers le haut, tourne a gauche pour devenir la gauche
-        return GameAction.TURN_LEFT
+        return GameAction.TURN_CCW
 
     # serpent va vers la droite ou vers la gauche
     # ne pas permettre un retour en arriere
@@ -20,11 +20,11 @@ def _onLeft(direction):
 def _onRight(direction):
     if direction.y > 0:
         # serpent va vers le bas, tourne a gauche pour devenir la droite
-        return GameAction.TURN_LEFT
+        return GameAction.TURN_CCW
 
     if direction.y < 0:
         # serpent va vers le haut, tourne a droite pour devenir la droite
-        return GameAction.TURN_RIGHT
+        return GameAction.TURN_CW
 
     # serpent va vers la droite ou vers la gauche
     # ne pas permettre un retour en arriere
@@ -34,11 +34,11 @@ def _onRight(direction):
 def _onUp(direction):
     if direction.x > 0:
         # serpent va vers la droite, tourne a gauche pour devenir up
-        return GameAction.TURN_LEFT
+        return GameAction.TURN_CCW
 
     if direction.x < 0:
         # serpent va vers la gauche, tourne a droite pour devenir up
-        return GameAction.TURN_RIGHT
+        return GameAction.TURN_CW
 
     # serpent va vers le haut ou vers la bas
     # ne pas permettre un retour en arriere
@@ -48,11 +48,11 @@ def _onUp(direction):
 def _onDown(direction):
     if direction.x > 0:
         # serpent va vers la droite, tourne a droite pour devenir up
-        return GameAction.TURN_RIGHT
+        return GameAction.TURN_CW
 
     if direction.x < 0:
         # serpent va vers la gauche, tourne a gauche pour devenir up
-        return GameAction.TURN_LEFT
+        return GameAction.TURN_CCW
 
     # serpent va vers le haut ou vers la bas
     # ne pas permettre un retour en arriere

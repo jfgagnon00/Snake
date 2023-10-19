@@ -94,12 +94,12 @@ class GameSimulation():
         # la mise a jour va modifier le serpent aussi
         d = self._snake.direction
 
-        if action == GameAction.TURN_LEFT:
+        if action == GameAction.TURN_CCW:
             # tourne direction 90 degres CCW
             d.x, d.y = d.y, -d.x
             self._turnDelegate()
 
-        if action == GameAction.TURN_RIGHT:
+        if action == GameAction.TURN_CW:
             # tourne direction 90 degres CW
             d.x, d.y = -d.y, d.x
             self._turnDelegate()

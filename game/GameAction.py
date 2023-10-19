@@ -4,6 +4,6 @@ class GameAction(StrEnum):
     """
     Les actions possibles pour la tete du serpent
     """
-    TURN_LEFT = auto()
-    TURN_RIGHT = auto()
+    TURN_CCW = auto()
+    TURN_CW = auto()
     FORWARD = auto()
