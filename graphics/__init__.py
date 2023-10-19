@@ -2,19 +2,20 @@
 Gere l'afficahge de la simulation
 """
 
-
-import pygame
+from pygame import init as py_init, quit as py_quit
+from pygame.event import pump as py_eventPump
+from pygame.font import init as py_fontInit, quit as py_fontQuit
 
 from .GraphicWindow import GraphicWindow
 
 
 def init():
-    pygame.init()
-    pygame.font.init()
+    py_init()
+    py_fontInit()
 
 def quit():
-    pygame.font.quit()
-    pygame.quit()
+    py_fontQuit()
+    py_quit()
 
 def pumpEvents():
-    pygame.event.pump()
+    py_eventPump()

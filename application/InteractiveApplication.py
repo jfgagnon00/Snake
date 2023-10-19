@@ -1,50 +1,10 @@
-"""
-Responsable du jeu en mode interactif
-"""
-
-
-import click
-import os
-import pygame
-
-from ai.agents import AgentInteractive
-from configs import configsCreate
 from core import Delegate
 from game import GameSimulation
 from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
 
-from wrappers.ai.agents import AgentActionRecorder, AgentActionPlayback
-from wrappers.graphics import VideoWriter
+from .InputManager import _InputManager
+from .wrappers.ai.agents import AgentInteractive
 
-
-class InputManager():
-    def __init__(self):
-        self._keyDownDelegate = Delegate()
-        self._quitDelegate = Delegate()
-        self._anyKeyPressedDelegate = Delegate()
-
-    @property
-    def keyDownDelegate(self):
-        return self._keyDownDelegate
-
-    @property
-    def quitDelegate(self):
-        return self._quitDelegate
-
-    @property
-    def anyKeyPressedDelegate(self):
-        return self._anyKeyPressedDelegate
-
-    def update(self):
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                self._quitDelegate()
-
-            if e.type == pygame.KEYDOWN:
-                self._keyDownDelegate(e.key)
-
-            if e.type == pygame.KEYUP:
-                self._anyKeyPressedDelegate()
 
 class InteractiveApplication():
     """
@@ -66,16 +26,16 @@ class InteractiveApplication():
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
         self._simulationCounter = 0
 
-        self._inputManager = InputManager()
+        self.__inputManager = _InputManager()
         self._lastAnyKeyPressedCallable = None
 
         self._updateDelegate = Delegate()
         self._lastUpdateCallable = None
 
         # configure les delegates "statiques"
-        self._updateDelegate.register(self._inputManager.update)
-        self._inputManager.quitDelegate.register(self._onQuit)
-        self._inputManager.keyDownDelegate.register(self.agent.onKeyDown)
+        self._updateDelegate.register(self.__inputManager.update)
+        self.__inputManager.quitDelegate.register(self._onQuit)
+        self.__inputManager.keyDownDelegate.register(self.agent.onKeyDown)
 
         self._simulation.outOfBoundsDelegate.register(self._onLose)
         self._simulation.collisionDelegate.register(self._onLose)
@@ -140,12 +100,12 @@ class InteractiveApplication():
         self._importantMessage = message
 
         if not self._lastAnyKeyPressedCallable is None:
-            self._inputManager.anyKeyPressedDelegate.unregister(self._lastAnyKeyPressedCallable)
+            self.__inputManager.anyKeyPressedDelegate.unregister(self._lastAnyKeyPressedCallable)
 
         self._lastAnyKeyPressedCallable = newAnyKeyPressedCallable
 
         if not self._lastAnyKeyPressedCallable is None:
-            self._inputManager.anyKeyPressedDelegate.register(self._lastAnyKeyPressedCallable)
+            self.__inputManager.anyKeyPressedDelegate.register(self._lastAnyKeyPressedCallable)
 
     def _setUpdateState(self, newUpdateCallable):
         self._simulationCounter = 0
@@ -192,75 +152,3 @@ class InteractiveApplication():
     def _onQuit(self):
         self.agent.onSimulationDone(True)
         self._quit = True
-
-@click.command()
-@click.option("--windowSize",
-              "-w",
-              type=int,
-              help="Taille de la fenêtre d'affichage.")
-@click.option("--fpsDivider",
-              "-fd",
-              type=int,
-              help="Taille de la fenêtre d'affichage.")
-@click.option("--record",
-              "-r",
-              type=str,
-              help="Nom de fichier pour enregistrer des parties. Inclue le chemin. % sera remplacer par "
-                   "le numéro de partie. Le format est toujours json. Ex: recordings/game_%.json")
-@click.option("--recordN",
-              "-rn",
-              type=int,
-              help="Si record est spécifié, enregistre un épisode tout les N épisodes.")
-@click.option("--playback",
-              "-p",
-              type=str,
-              help="Nom de l'enregistrement a rejouer. Ex: recordings/game_%.json")
-@click.option("--mp4",
-              is_flag=True,
-              default=False,
-              help="Enregistre le playback dans un fichier .mp4.")
-def main(windowsize, fpsdivider, record, recordn, playback, mp4):
-    configs = configsCreate("config_overrides.json")
-
-    if not windowsize is None and windowsize > 0:
-        configs.graphics.windowSize = windowsize
-
-    if not fpsdivider is None and fpsdivider > 0:
-        configs.graphics.simulationFpsDivider = fpsdivider
-
-    if not playback is None and mp4:
-        configs.graphics.showWindow = False
-
-    application = InteractiveApplication(configs)
-
-    unattended = False
-    if not record is None:
-        # override agent pour gerer record
-        application.agent = AgentActionRecorder(application.agent, record, recordn)
-        application.window.caption += " - recording"
-    elif not playback is None:
-        # override agent pour gerer playback
-        application.agent = AgentActionPlayback(playback)
-        application.window.caption += " - playback"
-        if mp4:
-            # override window pour avoir enregistrement video
-            filename, _ = os.path.splitext(playback)
-            filename = f"{filename}.mp4"
-            fps = configs.graphics.fps / configs.graphics.simulationFpsDivider
-            application.window = VideoWriter(application.window, fps, filename)
-            unattended = True
-
-    if unattended:
-        application.runUnattended()
-        application.window.dispose()
-    else:
-        application.runAttended()
-
-if __name__ == "__main__":
-    # mettre le repertoire courant comme celui par defaut
-    # (facilite la gestion des chemins relatifs)
-    path = os.path.abspath(__file__)
-    path, _ = os.path.split(path)
-    os.chdir(path)
-
-    main()

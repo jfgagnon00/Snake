@@ -25,9 +25,7 @@ class AgentActionRecorder(AgentBase):
         """
         Redemarre la capture
         """
-        self._time = -1
-        self._seed = datetime.now().timestamp()
-        self._timedActions = []
+        self._resetInternal()
         random.seed(self._seed)
 
         self._agent.reset()
@@ -65,7 +63,14 @@ class AgentActionRecorder(AgentBase):
                     cls=_TimedActionEncoder,
                     indent=4)
 
+            self._resetInternal()
+
         self._agent.onSimulationDone(last)
 
     def _isEmpty(self):
         return len(self._timedActions) == 0
+
+    def _resetInternal(self):
+        self._time = -1
+        self._seed = datetime.now().timestamp()
+        self._timedActions = []

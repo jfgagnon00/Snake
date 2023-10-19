@@ -1,6 +1,6 @@
-from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
+from ai.agents.AgentBase import AgentBase
 from game import GameAction
-from .AgentBase import AgentBase
+from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
 
 
 def _onLeft(direction):
