@@ -40,7 +40,7 @@ def cli(ctx):
 @pass_config
 def play(configs, windowSize, fps, record, recordN):
     "Lance le jeu en mode interactif"
-    from application import InteractiveApplication
+    from application import ApplicationInteractive
     from application.wrappers.ai.agents import AgentActionRecorder
 
     if not windowSize is None and windowSize > 0:
@@ -53,7 +53,7 @@ def play(configs, windowSize, fps, record, recordN):
         divider = max(divider, 1)
         configs.graphics.simulationFpsDivider = divider
 
-    application = InteractiveApplication(configs)
+    application = ApplicationInteractive(configs)
 
     if not record is None:
         application.agent = AgentActionRecorder(application.agent,
@@ -75,7 +75,7 @@ def play(configs, windowSize, fps, record, recordN):
 @pass_config
 def replay(configs, windowSize, fps, recording):
     "Rejoue RECORDING en mode non interactif"
-    from application import InteractiveApplication
+    from application import ApplicationInteractive
     from application.wrappers.ai.agents import AgentActionPlayback
 
     if not windowSize is None and windowSize > 0:
@@ -88,7 +88,7 @@ def replay(configs, windowSize, fps, recording):
 
     configs.graphics.caption += " - playback"
 
-    application = InteractiveApplication(configs)
+    application = ApplicationInteractive(configs)
     application.agent = AgentActionPlayback(recording)
     application.runAttended()
 
@@ -104,7 +104,7 @@ def replay(configs, windowSize, fps, recording):
 @pass_config
 def render(configs, windowSize, fps, recording):
     "Convertie RECORDING dans un fichier mp4"
-    from application import InteractiveApplication
+    from application import ApplicationInteractive
     from application.wrappers.ai.agents import AgentActionPlayback
     from application.wrappers.graphics import VideoWriter
 
@@ -121,7 +121,7 @@ def render(configs, windowSize, fps, recording):
     filename, _ = os.path.splitext(recording)
     filename = f"{filename}.mp4"
 
-    application = InteractiveApplication(configs)
+    application = ApplicationInteractive(configs)
     application.agent = AgentActionPlayback(recording)
     application.window = VideoWriter(application.window,
                                      configs.graphics.fps,
@@ -174,7 +174,7 @@ def train(configs,
           episodeMaxLen,
           agent):
     "Entraine un agent"
-    from application import TrainApplication
+    from application import ApplicationTrain
     from application.wrappers.ai.agents import AgentActionRecorder
 
     configs.train.unattended = unattended
@@ -197,7 +197,7 @@ def train(configs,
     if not record is None:
         configs.graphics.caption += " - recording"
 
-    application = TrainApplication(configs)
+    application = ApplicationTrain(configs)
 
     if not record is None:
         application.agent = AgentActionRecorder(application.agent, record, recordN)

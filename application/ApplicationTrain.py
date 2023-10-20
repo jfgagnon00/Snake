@@ -6,7 +6,7 @@ from gymnasium import make as gym_Make
 from gymnasium.wrappers import TimeLimit as gym_TimeLimit
 
 
-class TrainApplication():
+class ApplicationTrain():
     """
     Responsable de l'entrainement des agents
     """

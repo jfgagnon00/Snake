@@ -6,7 +6,7 @@ from .InputManager import _InputManager
 from .wrappers.ai.agents import AgentInteractive
 
 
-class InteractiveApplication():
+class ApplicationInteractive():
     """
     Coordonne la simulation de tel sorte qu'un utiisateur
     peut y jouer a l'aide du clavier.
