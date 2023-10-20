@@ -14,6 +14,7 @@ class ApplicationInteractive():
     def __init__(self, configs):
         gfxInit()
 
+        self._episode = 0
         self._quit = False
         self._importantMessage = None
 
@@ -26,16 +27,16 @@ class ApplicationInteractive():
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
         self._simulationCounter = 0
 
-        self.__inputManager = _InputManager()
+        self._inputManager = _InputManager()
         self._lastAnyKeyPressedCallable = None
 
         self._updateDelegate = Delegate()
         self._lastUpdateCallable = None
 
         # configure les delegates "statiques"
-        self._updateDelegate.register(self.__inputManager.update)
-        self.__inputManager.quitDelegate.register(self._onQuit)
-        self.__inputManager.keyDownDelegate.register(self.agent.onKeyDown)
+        self._updateDelegate.register(self._inputManager.update)
+        self._inputManager.quitDelegate.register(self._onQuit)
+        self._inputManager.keyDownDelegate.register(self.agent.onKeyDown)
 
         self._simulation.outOfBoundsDelegate.register(self._onLose)
         self._simulation.collisionDelegate.register(self._onLose)
@@ -101,12 +102,12 @@ class ApplicationInteractive():
         self._importantMessage = message
 
         if not self._lastAnyKeyPressedCallable is None:
-            self.__inputManager.anyKeyPressedDelegate.unregister(self._lastAnyKeyPressedCallable)
+            self._inputManager.anyKeyPressedDelegate.unregister(self._lastAnyKeyPressedCallable)
 
         self._lastAnyKeyPressedCallable = newAnyKeyPressedCallable
 
         if not self._lastAnyKeyPressedCallable is None:
-            self.__inputManager.anyKeyPressedDelegate.register(self._lastAnyKeyPressedCallable)
+            self._inputManager.anyKeyPressedDelegate.register(self._lastAnyKeyPressedCallable)
 
     def _setUpdateState(self, newUpdateCallable):
         self._simulationCounter = 0
@@ -124,17 +125,18 @@ class ApplicationInteractive():
         self._setUpdateState(self._update)
 
     def _onResetSimulation(self):
+        self._episode += 1
         self._setAnyKeyPressedState(None)
         self._reset()
         self._setUpdateState(self._update)
 
     def _onLose(self):
-        self.agent.onSimulationDone(False)
+        self.agent.onEpisodeDone(self._episode)
         self._setAnyKeyPressedState(self._onResetSimulation, "LOSER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
 
     def _onWin(self):
-        self.agent.onSimulationDone(False)
+        self.agent.onEpisodeDone(self._episode)
         self._setAnyKeyPressedState(self._onResetSimulation, "WINNER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
         self.window.update(self._simulation)
@@ -151,5 +153,5 @@ class ApplicationInteractive():
         self.window.update(self._simulation)
 
     def _onQuit(self):
-        self.agent.onSimulationDone(True)
+        self.agent.onEpisodeDone(self._episode)
         self._quit = True

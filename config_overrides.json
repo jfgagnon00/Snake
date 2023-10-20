@@ -21,8 +21,8 @@
     },
 
     "simulation": {
-        "gridWidth": 10,
-        "gridHeight": 15
+        "gridWidth": 15,
+        "gridHeight": 10
     },
 
     "graphics": {

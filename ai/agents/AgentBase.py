@@ -7,11 +7,8 @@ class AgentBase():
 
     def reset(self):
         """
-        Appeler pour reseter les etats (ou quant une simulation va demarrer)
+        Appeler pour reseter les etats
         """
-        pass
-
-    def train(self, *args):
         pass
 
     def getAction(self, *args):
@@ -20,8 +17,20 @@ class AgentBase():
         """
         pass
 
-    def onSimulationDone(self, *args):
+    def onEpisodeDone(self, *args):
         """
-        Appeler quand la simulation est terminee mais avant reset
+        Appeler quand un episode/partie est termine
+        """
+        pass
+
+    def train(self, *args):
+        """
+        Appeler pour faire l'entrainement
+        """
+        pass
+
+    def save(self, *args):
+        """
+        Appeler pour sauvegarder l'etat courant
         """
         pass

@@ -37,11 +37,16 @@ def cli(ctx):
               "-rn",
               type=int,
               help="Si -r est spécifié, enregistre un épisode tout les N parties.")
+@click.option("agent",
+              "-a",
+              type=str,
+              help="Type de l'agent à utiliser.")
 @pass_config
-def play(configs, windowSize, fps, record, recordN):
+def play(configs, windowSize, fps, record, recordN, agent):
     "Lance le jeu en mode interactif"
+    import ai.agents as agents
     from application import ApplicationInteractive
-    from application.wrappers.ai.agents import AgentActionRecorder
+    from application.wrappers.ai.agents import AgentActionRecorder, AgentInteractive
 
     if not windowSize is None and windowSize > 0:
         configs.graphics.windowSize = windowSize
@@ -55,13 +60,22 @@ def play(configs, windowSize, fps, record, recordN):
 
     application = ApplicationInteractive(configs)
 
+    if not agent is None:
+        # instantier un agent a partir d'un string
+        # limiter aux classes de ai.agents pour le moment
+        agent_class = getattr(agents, agent)
+
+        if not agent_class is AgentInteractive:
+            application.agent = agent_class(configs.train, configs.simulation)
+
     if not record is None:
-        application.agent = AgentActionRecorder(application.agent,
-                                                record,
-                                                recordN)
         application.window.caption += " - recording"
+        application.agent = AgentActionRecorder(application.agent, record, recordN)
 
     application.runAttended()
+
+    if not record is None:
+        application.agent.save()
 
 @cli.command()
 @click.option("windowSize",
@@ -174,6 +188,8 @@ def train(configs,
           episodeMaxLen,
           agent):
     "Entraine un agent"
+    import ai.agents as agents
+
     from application import ApplicationTrain
     from application.wrappers.ai.agents import AgentActionRecorder
 
@@ -194,15 +210,26 @@ def train(configs,
     if not fps is None and fps > 0:
         configs.environment.renderFps = fps
 
+    agent = configs.train.agent if agent is None else agent
+
+    # instantier un agent a partir d'un string
+    # limiter aux classes de ai.agents pour le moment
+    agent_class = getattr(agents, agent)
+    agent = agent_class(configs.train, configs.simulation)
+
     if not record is None:
         configs.graphics.caption += " - recording"
+        agent = AgentActionRecorder(agent, record, recordN)
 
-    application = ApplicationTrain(configs)
+    application = ApplicationTrain(configs, agent)
 
     if not record is None:
-        application.agent = AgentActionRecorder(application.agent, record, recordN)
+        agent.saveDelegate.register(application.envStats.save)
 
     application.run()
+
+    if not record is None:
+        agent.save()
 
 if __name__ == "__main__":
     # mettre le repertoire courant comme celui par defaut

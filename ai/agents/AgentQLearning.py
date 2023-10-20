@@ -53,6 +53,22 @@ class Agent47(AgentBase):
         self._lossFnc = MSELoss()
         self._gameActions = list(GameAction)
 
+    def getAction(self, state):
+        if random() < self._epsilon:
+            gameAction = np_choice(self._gameActions)
+        else:
+            x = self._stateToTensor(state)
+            actions = self._model(x)
+            p = softmax(actions, dim=0).detach().numpy()
+            gameAction = np_choice(self._gameActions, p=p)
+
+        return GameAction(gameAction)
+
+    def onEpisodeDone(self, *args):
+        eps = self._epsilon * self._epsilonDecay
+        eps = max(eps, 0.01)
+        self._epsilon = eps
+
     def train(self, state, action, newState, reward, done):
         intAction = self._gameActions.index(action)
 
@@ -72,21 +88,9 @@ class Agent47(AgentBase):
         loss.backward()
         self._optimizer.step()
 
-    def getAction(self, state):
-        if random() < self._epsilon:
-            gameAction = np_choice(self._gameActions)
-        else:
-            x = self._stateToTensor(state)
-            actions = self._model(x)
-            p = softmax(actions, dim=0).detach().numpy()
-            gameAction = np_choice(self._gameActions, p=p)
-
-        return GameAction(gameAction)
-
-    def onSimulationDone(self, *args):
-        eps = self._epsilon * self._epsilonDecay
-        eps = max(eps, 0.01)
-        self._epsilon = eps
+    def save(self):
+        print("DQN +++++")
+        pass
 
     def _stateToTensor(self, state):
         x = state["occupancy_grid"]

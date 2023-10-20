@@ -5,7 +5,7 @@ class EnvironmentStats():
     """
     Encapsule un environment pour afficher ses statistiques
     """
-    def __init__(self, env, position):
+    def __init__(self, env, tqdmBasePosition):
         self._env = env
         self._episode = -1
 
@@ -19,11 +19,11 @@ class EnvironmentStats():
         self._maxLengthEpisode = -1
 
         self._episodeProgress = tqdm(bar_format="Max episode length: {desc} at {unit}",
-                                     position=position)
+                                     position=tqdmBasePosition)
         self._rewardProgress = tqdm(bar_format="Max cum. reward: {desc} at {unit}",
-                                    position=position + 1)
+                                    position=tqdmBasePosition + 1)
         self._lengthProgress = tqdm(bar_format="Max length: {desc} at {unit}",
-                                    position=position + 2)
+                                    position=tqdmBasePosition + 2)
         self._resetStats()
 
     def reset(self, **kwargs):
@@ -62,6 +62,9 @@ class EnvironmentStats():
 
     def close(self):
         self._env.close()
+
+    def save(self):
+        pass
 
     def _update(self):
         self._episodeProgress.set_description_str(str(self._maxEpisodeLength))

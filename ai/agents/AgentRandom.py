@@ -6,7 +6,7 @@ class AgentRandom(AgentBase):
     """
     Agent qui prend une action aléatoire.
     """
-    def __init__(self, trainConfig, simulationConfig):
+    def __init__(self, *args, **kwargs):
         super().__init__()
         self._actions = list(GameAction)
 

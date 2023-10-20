@@ -2,8 +2,9 @@ import json
 import os
 import random
 
-from datetime import datetime
 from ai.agents import AgentBase
+from core import Delegate
+from datetime import datetime
 from .TimedAction import _TimedAction, _TimedActionEncoder
 
 
@@ -15,11 +16,16 @@ class AgentActionRecorder(AgentBase):
     """
     def __init__(self, agent, recordPattern, recordN=None):
         super().__init__()
+        self._episode = 0
         self._agent = agent
-        self._simulationCount = -1
+        self._saveDelegate = Delegate()
         self._recordPattern = recordPattern
-        self._simulationCountModulo = 1 if recordN is None else int(recordN)
+        self._episodeCountModulo = 1 if recordN is None else int(recordN)
         self.reset()
+
+    @property
+    def saveDelegate(self):
+        return self._saveDelegate
 
     def reset(self):
         """
@@ -42,30 +48,31 @@ class AgentActionRecorder(AgentBase):
 
         return action
 
-    def onSimulationDone(self, last=False):
-        """
-        House keeping
-        """
-        self._simulationCount += 1
+    def onEpisodeDone(self, episode):
+        self._agent.onEpisodeDone(episode)
 
-        if not self._isEmpty() and \
-           (last or (self._simulationCount % self._simulationCountModulo) == 0):
-            filename = self._recordPattern.replace("%", f"{self._simulationCount:05d}")
+        self._episode = episode
+        if not self._isEmpty() and (episode % self._episodeCountModulo) == 0:
+            self.save()
 
-            path, _ = os.path.split(filename)
-            if not path is None:
-                os.makedirs(path, exist_ok=True)
+    def save(self):
+        self._agent.save()
 
-            with open(filename, "w") as file:
-                json.dump({"seed": self._seed,
-                          "timedActions": self._timedActions},
-                    file,
-                    cls=_TimedActionEncoder,
-                    indent=4)
+        filename = self._recordPattern.replace("%", str(self._episode))
 
-            self._resetInternal()
+        path, _ = os.path.split(filename)
+        if not path is None:
+            os.makedirs(path, exist_ok=True)
 
-        self._agent.onSimulationDone(last)
+        with open(filename, "w") as file:
+            json.dump({"seed": self._seed,
+                        "timedActions": self._timedActions},
+                file,
+                cls=_TimedActionEncoder,
+                indent=4)
+
+        self._resetInternal()
+        self._saveDelegate()
 
     def _isEmpty(self):
         return len(self._timedActions) == 0
