@@ -92,7 +92,7 @@ class SnakeEnvironment(Env):
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        return self._getObservaton(), self._getInfo()
+        return self._getObservations(), self._getInfo()
 
     def step(self, action):
         # reset recompense (les delegates vont le mettre la jour)
@@ -107,7 +107,7 @@ class SnakeEnvironment(Env):
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        return self._getObservaton(), self._reward, self._done, False, self._getInfo()
+        return self._getObservations(), self._reward, self._done, False, self._getInfo()
 
     def render(self):
         # rien a faire
@@ -117,14 +117,8 @@ class SnakeEnvironment(Env):
         if not self._window is None:
             gfxQuit()
 
-    def _getObservaton(self):
-        return {
-            "occupancy_grid": np.expand_dims(self._simulation.occupancyGrid, axis=-1).copy(),
-            "head_direction": self._simulation.snake.direction.to_numpy(),
-            "head_position": self._simulation.snake.head.to_numpy(),
-            "food_position": self._simulation.food.to_numpy(),
-            "length": self._simulation.snake.length,
-        }
+    def _getObservations(self):
+        return self._simulation.getObservations()
 
     def _getInfo(self):
         return {}

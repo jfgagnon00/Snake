@@ -149,6 +149,18 @@ class GameSimulation():
         self._setSnakeInGrid(True)
         self._moveDelegate()
 
+    def getObservations(self):
+        """
+        Retourne les etats internes sous forme standardisee
+        """
+        return {
+            "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=-1).copy(),
+            "head_direction": self.snake.direction.to_numpy(),
+            "head_position": self.snake.head.to_numpy(),
+            "food_position": self.food.to_numpy(),
+            "length": self.snake.length,
+        }
+
     def _setSnakeInGrid(self, show):
         # sous optimal, a changer
         value = GridOccupancy.SNAKE_BODY if show else GridOccupancy.EMPTY

@@ -1,4 +1,5 @@
 from ai.agents.AgentBase import AgentBase
+from core import Vector
 from game import GameAction
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
 
@@ -85,10 +86,16 @@ class AgentInteractive(AgentBase):
         if key in AgentInteractive._KEY_HANDLERS:
             self._lastKeyDown = key
 
-    def getAction(self, direction):
+    def getAction(self, observations):
         """
         Obtenir action a partir de l'etat.
         """
+        direction = observations["head_direction"]
+
+        # attention, convension numpy (row, col) == (y, x)
+        # donc flip les composantes pour logique interne
+        direction = Vector(direction[1], direction[0])
+
         if self._lastKeyDown in AgentInteractive._KEY_HANDLERS:
             handler = AgentInteractive._KEY_HANDLERS[self._lastKeyDown]
             return handler(direction)

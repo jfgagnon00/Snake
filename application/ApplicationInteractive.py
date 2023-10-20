@@ -1,3 +1,5 @@
+import numpy as np
+
 from core import Delegate
 from game import GameSimulation
 from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
@@ -92,7 +94,7 @@ class ApplicationInteractive():
         self._simulationCounter -= 1
         if self._simulationCounter <= 0:
             self._simulationCounter = self._simulationFpsDivider
-            action = self.agent.getAction(self._simulation._snake.direction)
+            action = self.agent.getAction(self._simulation.getObservations())
 
             # la simulation va lancer les evenements appropries
             # ceux-ci vont faire avancer les etats
