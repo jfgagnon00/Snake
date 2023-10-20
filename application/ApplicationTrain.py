@@ -1,9 +1,10 @@
 import ai # importe l'environnement "snake/SnakeEnvironment-v0"
 import ai.agents as agents
 
-from tqdm import tqdm
+from application.wrappers.ai.envs import EnvironmentStats
 from gymnasium import make as gym_Make
 from gymnasium.wrappers import TimeLimit as gym_TimeLimit
+from tqdm import trange
 
 
 class ApplicationTrain():
@@ -19,26 +20,31 @@ class ApplicationTrain():
                             simulationConfig=configs.simulation,
                             graphicsConfig=configs.graphics)
 
+        self._env = EnvironmentStats(self._env, 1)
+
         if configs.train.episodeMaxLen > 0:
             self._env = gym_TimeLimit(self._env,
                                       max_episode_steps=configs.train.episodeMaxLen)
 
     def run(self):
-        for e in tqdm(range(self._episodes)):
+        episodesIt = trange(self._episodes,
+                            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
+                            desc="Episodes")
+        for e in episodesIt:
             done = False
             self.agent.reset()
-            state, _ = self._env.reset()
+            observation, _ = self._env.reset()
 
             while not done:
-                action = self.agent.getAction(state)
+                action = self.agent.getAction(observation)
 
-                newState, reward, terminated, truncated, _ = self._env.step(action)
+                newObservation, reward, terminated, truncated, _ = self._env.step(action)
                 done = terminated or truncated
 
                 self._env.render()
-                self.agent.train(state, action, newState, reward, done)
+                self.agent.train(observation, action, newObservation, reward, done)
 
-                state = newState
+                observation = newObservation
 
             last = e == (self._episodes - 1)
             self.agent.onSimulationDone(last)

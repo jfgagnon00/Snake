@@ -54,6 +54,7 @@ class SnakeEnvironment(Env):
                                             high=np.array([simulationConfig.gridHeight - 1, simulationConfig.gridWidth - 1]),
                                             shape=(2,),
                                             dtype=int),
+                "length": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
             })
 
         self._renderMode = renderMode
@@ -86,12 +87,12 @@ class SnakeEnvironment(Env):
         super().reset(seed=seed)
 
         self._simulation.reset()
-        self._maybeUpdateWindow()
+        self._maybeUpdateWindow(reset=True)
 
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        return self._getState(), self._getInfo()
+        return self._getObservaton(), self._getInfo()
 
     def step(self, action):
         # reset recompense (les delegates vont le mettre la jour)
@@ -106,7 +107,7 @@ class SnakeEnvironment(Env):
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        return self._getState(), self._reward, self._done, False, self._getInfo()
+        return self._getObservaton(), self._reward, self._done, False, self._getInfo()
 
     def render(self):
         # rien a faire
@@ -116,12 +117,13 @@ class SnakeEnvironment(Env):
         if not self._window is None:
             gfxQuit()
 
-    def _getState(self):
+    def _getObservaton(self):
         return {
             "occupancy_grid": np.expand_dims(self._simulation.occupancyGrid, axis=-1).copy(),
             "head_direction": self._simulation.snake.direction.to_numpy(),
             "head_position": self._simulation.snake.head.to_numpy(),
             "food_position": self._simulation.food.to_numpy(),
+            "length": self._simulation.snake.length,
         }
 
     def _getInfo(self):
@@ -132,8 +134,10 @@ class SnakeEnvironment(Env):
         self._window.render()
         self._window.flip()
 
-    def _maybeUpdateWindow(self):
+    def _maybeUpdateWindow(self, reset=False):
         if not self._window is None:
+            if reset:
+                self._window.reset()
             self._window.update(self._simulation)
 
     def _onSnakeOutOfBounds(self):

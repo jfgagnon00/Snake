@@ -84,6 +84,7 @@ class ApplicationInteractive():
     def _reset(self):
         self.agent.reset()
         self._simulation.reset()
+        self.window.reset()
         self.window.update(self._simulation)
 
     def _update(self):

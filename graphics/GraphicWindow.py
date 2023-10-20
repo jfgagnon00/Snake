@@ -74,6 +74,9 @@ class GraphicWindow():
     def surface(self):
         return self._window
 
+    def reset(self):
+        self._frame = -1
+
     def update(self, gameEnvironment):
         self._frame += 1
         fps = int(self._clock.get_fps())
