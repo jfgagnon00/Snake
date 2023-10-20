@@ -12,11 +12,11 @@
     "environment": {
         "renderFps": 90,
         "rewards": {
-            "move": -0.5,
-            "eat": 10,
-            "collision": 0,
-            "out_of_bounds": -20,
-            "win": 30
+            "move": -0.01,
+            "eat": 1,
+            "collision": -1,
+            "out_of_bounds": -1,
+            "win": 1
         }
     },
 
@@ -30,8 +30,8 @@
         "clearColor": [0, 0, 0],
         "backgroundTileColorLight": [0, 255, 0],
         "backgroundTileColorDark": [0, 200, 0],
-        "simulationFpsDivider": 20,
-        "windowSize": 500,
+        "simulationFpsDivider": 15,
+        "windowSize": 625,
         "fontSize": 20,
         "fontColor":[255, 255, 255],
         "fontPath": "assets/arial.ttf",

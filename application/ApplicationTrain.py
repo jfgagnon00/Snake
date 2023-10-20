@@ -20,16 +20,14 @@ class ApplicationTrain():
                             simulationConfig=configs.simulation,
                             graphicsConfig=configs.graphics)
 
-        self._env = EnvironmentStats(self._env, 1)
+        self._env = EnvironmentStats(self._env, 0)
 
         if configs.train.episodeMaxLen > 0:
             self._env = gym_TimeLimit(self._env,
                                       max_episode_steps=configs.train.episodeMaxLen)
 
     def run(self):
-        episodesIt = trange(self._episodes,
-                            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
-                            desc="Episodes")
+        episodesIt = trange(self._episodes, desc="Episodes", position=3)
         for e in episodesIt:
             done = False
             self.agent.reset()

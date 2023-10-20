@@ -34,25 +34,30 @@ class EnvironmentStats():
     def step(self, *args):
         observation, reward, terinated, truncated, info = self._env.step(*args)
 
+        needUpdate = False
         self._episodeLength += 1
         if self._episodeLength > self._maxEpisodeLength:
             self._maxEpisodeLength = self._episodeLength
             self._maxEpisodeLengthEpisode = self._episode
+            needUpdate = True
 
         self._cumulativeReward += reward
         if self._cumulativeReward > self._maxCumulativeReward:
             self._maxCumulativeReward = self._cumulativeReward
             self._maxCumulativeRewardEpisode = self._episode
+            needUpdate = True
 
         if observation["length"] > self._maxLength:
             self._maxLength = observation["length"]
             self._maxLengthEpisode = self._episode
+            needUpdate = True
 
+        if needUpdate:
+            self._update()
 
         return observation, reward, terinated, truncated, info
 
     def render(self):
-        self._update()
         self._env.render()
 
     def close(self):
