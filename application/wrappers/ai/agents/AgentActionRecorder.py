@@ -3,7 +3,6 @@ import os
 import random
 
 from ai.agents import AgentBase
-from core import Delegate
 from datetime import datetime
 from .TimedAction import _TimedAction, _TimedActionEncoder
 
@@ -18,7 +17,6 @@ class AgentActionRecorder(AgentBase):
         super().__init__()
         self._episode = 0
         self._agent = agent
-        self._saveDelegate = Delegate()
         self._recordPattern = recordPattern
         self._episodeCountModulo = 1 if recordN is None else int(recordN)
         self.reset()
@@ -72,7 +70,6 @@ class AgentActionRecorder(AgentBase):
                 indent=4)
 
         self._resetInternal()
-        self._saveDelegate()
 
     def _isEmpty(self):
         return len(self._timedActions) == 0

@@ -10,7 +10,7 @@ class ApplicationTrain():
     """
     Responsable de l'entrainement des agents
     """
-    def __init__(self, configs, agent):
+    def __init__(self, configs, agent, statsFilename=None):
         self._episodes = configs.train.episodes
         self._agent = agent
         self._env = gym_Make("snake/SnakeEnvironment-v0",
@@ -18,12 +18,13 @@ class ApplicationTrain():
                             environmentConfig=configs.environment,
                             simulationConfig=configs.simulation,
                             graphicsConfig=configs.graphics)
-        self._envStats = EnvironmentStats(self._env, 1)
-        self._env = self._envStats
 
         if configs.train.episodeMaxLen > 0:
             self._env = gym_TimeLimit(self._env,
                                       max_episode_steps=configs.train.episodeMaxLen)
+
+        self._envStats = EnvironmentStats(self._env, 1, 0, statsFilename)
+        self._env = self._envStats
 
     @property
     def envStats(self):
@@ -34,7 +35,7 @@ class ApplicationTrain():
         for e in episodesIt:
             done = False
             self._agent.reset()
-            observations, _ = self._env.reset()
+            observations, _ = self._env.reset(options={"episode":e})
 
             while not done:
                 action = self._agent.getAction(observations)

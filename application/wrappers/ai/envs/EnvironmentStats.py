@@ -1,81 +1,105 @@
+import numpy as np
+import pandas as pd
+
 from tqdm import tqdm
 
+
+_ID = "Id"
+_EPISODE = "Episode"
+_EPISODE_LENGTH = "EpisodeLength"
+_SNAKE_LENGTH = "SnakeLength"
+_CUM_REWARD = "CumulativeReward"
 
 class EnvironmentStats():
     """
     Encapsule un environment pour afficher ses statistiques
     """
-    def __init__(self, env, tqdmBasePosition):
+    def __init__(self, env, tqdmBasePosition, id, filename):
         self._env = env
         self._episode = -1
-
-        self._maxCumulativeReward = -1000
-        self._maxCumulativeRewardEpisode = -1
-
-        self._maxEpisodeLength = -1
-        self._maxEpisodeLengthEpisode = -1
-
-        self._maxLength = -1
-        self._maxLengthEpisode = -1
+        self._id = id
+        self._filename = filename
+        self._stats = None
+        self._maxStats = None
+        self._maxEpisode = None
+        self._saved = False
 
         self._episodeProgress = tqdm(bar_format="Max episode length: {desc} at {unit}",
                                      position=tqdmBasePosition)
+
         self._rewardProgress = tqdm(bar_format="Max cum. reward: {desc} at {unit}",
                                     position=tqdmBasePosition + 1)
+
         self._lengthProgress = tqdm(bar_format="Max length: {desc} at {unit}",
                                     position=tqdmBasePosition + 2)
-        self._resetStats()
 
-    def reset(self, **kwargs):
-        self._episode += 1
-        self._resetStats()
-        return self._env.reset(**kwargs)
+    def reset(self, options=None):
+        if not options is None and "episode" in options:
+            self._episode = options["episode"]
+        else:
+            self._episode += 1
+
+        self.save()
+        self._newEpisode()
+
+        return self._env.reset(options=options)
 
     def step(self, *args):
-        observation, reward, terinated, truncated, info = self._env.step(*args)
+        observations, reward, terinated, truncated, info = self._env.step(*args)
 
-        needUpdate = False
-        self._episodeLength += 1
-        if self._episodeLength > self._maxEpisodeLength:
-            self._maxEpisodeLength = self._episodeLength
-            self._maxEpisodeLengthEpisode = self._episode
-            needUpdate = True
+        # self._stats.loc[0, _EPISODE_LENGTH] += 1
+        # self._stats.loc[0, _SNAKE_LENGTH] = observations["length"]
+        # self._stats.loc[0, _CUM_REWARD] += reward
 
-        self._cumulativeReward += reward
-        if self._cumulativeReward > self._maxCumulativeReward:
-            self._maxCumulativeReward = self._cumulativeReward
-            self._maxCumulativeRewardEpisode = self._episode
-            needUpdate = True
+        # forceUpdate = False
+        # if self._maxStats is None:
+        #     self._maxStats = self._stats.copy()
+        #     self._maxEpisode = self._newDataFrame()
+        #     self._maxEpisode.loc[:,:] = self._episode
+        #     forceUpdate = True
 
-        if observation["length"] > self._maxLength:
-            self._maxLength = observation["length"]
-            self._maxLengthEpisode = self._episode
-            needUpdate = True
+        # greater = self._stats > self._maxStats
 
-        if needUpdate:
-            self._update()
+        # self._maxStats[greater] = self._stats[greater]
+        # self._maxEpisode[greater] = self._episode
 
-        return observation, reward, terinated, truncated, info
+        # if greater.iloc[0,2:].any(axis=0) or forceUpdate:
+        #     # self._update()
+        #     pass
+
+        return observations, reward, terinated, truncated, info
 
     def render(self):
         self._env.render()
 
     def close(self):
         self._env.close()
+        self.save()
 
     def save(self):
-        pass
+        return
+        if not self._stats is None and \
+           not self._filename is None:
+            if self._saved:
+                self._stats.to_csv(self._filename, mode="a", index=False, header=False)
+            else:
+                self._stats.to_csv(self._filename, mode="w", index=False)
+
+            self._saved = True
 
     def _update(self):
-        self._episodeProgress.set_description_str(str(self._maxEpisodeLength))
-        self._episodeProgress.unit = str(self._maxEpisodeLengthEpisode)
+        self._episodeProgress.set_description_str(str(self._maxStats.loc[0, _EPISODE_LENGTH]))
+        self._episodeProgress.unit = str(self._maxEpisode.loc[0, _EPISODE_LENGTH])
 
-        self._rewardProgress.set_description_str(str(self._maxCumulativeReward))
-        self._rewardProgress.unit = str(self._maxCumulativeRewardEpisode)
+        self._rewardProgress.set_description_str(str(self._maxStats.loc[0, _CUM_REWARD]))
+        self._rewardProgress.unit = str(self._maxEpisode.loc[0, _CUM_REWARD])
 
-        self._lengthProgress.set_description_str(str(self._maxLength))
-        self._lengthProgress.unit = str(self._maxLengthEpisode)
+        self._lengthProgress.set_description_str(str(self._maxStats.loc[0, _SNAKE_LENGTH]))
+        self._lengthProgress.unit = str(self._maxEpisode.loc[0, _SNAKE_LENGTH])
 
-    def _resetStats(self):
-        self._cumulativeReward = 0
-        self._episodeLength = 0
+    def _newEpisode(self):
+        self._stats = self._newDataFrame()
+
+    def _newDataFrame(self):
+        return pd.DataFrame([[self._id, self._episode, 0, 0, 0.0]],
+                            columns=[_ID, _EPISODE, _EPISODE_LENGTH, _SNAKE_LENGTH, _CUM_REWARD])

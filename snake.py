@@ -221,12 +221,10 @@ def train(configs,
         configs.graphics.caption += " - recording"
         agent = AgentActionRecorder(agent, record, recordN)
 
-    application = ApplicationTrain(configs, agent)
+        path, _ = os.path.splitext(record)
+        record = f"{path}.csv"
 
-    if not record is None:
-        agent.saveDelegate.register(application.envStats.save)
-
-    application.run()
+    ApplicationTrain(configs, agent, record).run()
 
     if not record is None:
         agent.save()

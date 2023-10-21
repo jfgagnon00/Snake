@@ -89,7 +89,6 @@ class Agent47(AgentBase):
         self._optimizer.step()
 
     def save(self):
-        print("DQN +++++")
         pass
 
     def _stateToTensor(self, state):
