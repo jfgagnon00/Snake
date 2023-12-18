@@ -14,6 +14,9 @@ class VideoWriter():
         w, h = graphicWindow.size
         self._initSubProcess(filename, fps, w, h)
 
+    def reset(self):
+        self._graphicWindow.reset()
+
     def update(self, gameEnvironment):
         self._graphicWindow.update(gameEnvironment)
 
