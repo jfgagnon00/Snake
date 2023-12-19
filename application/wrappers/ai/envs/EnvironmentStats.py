@@ -23,15 +23,17 @@ class EnvironmentStats():
         self._maxStats = None
         self._maxEpisode = None
         self._saved = False
+        self._showStats = True
 
-        self._episodeProgress = tqdm(bar_format="Max episode length: {desc} at {unit}",
-                                     position=tqdmBasePosition)
+        if self._showStats:
+            self._episodeProgress = tqdm(bar_format="Max episode length: {desc} at {unit}",
+                                        position=tqdmBasePosition)
 
-        self._rewardProgress = tqdm(bar_format="Max cum. reward: {desc} at {unit}",
-                                    position=tqdmBasePosition + 1)
+            self._rewardProgress = tqdm(bar_format="Max cum. reward: {desc} at {unit}",
+                                        position=tqdmBasePosition + 1)
 
-        self._lengthProgress = tqdm(bar_format="Max length: {desc} at {unit}",
-                                    position=tqdmBasePosition + 2)
+            self._lengthProgress = tqdm(bar_format="Max length: {desc} at {unit}",
+                                        position=tqdmBasePosition + 2)
 
     def reset(self, options=None):
         if not options is None and "episode" in options:
@@ -87,14 +89,15 @@ class EnvironmentStats():
             self._saved = True
 
     def _update(self):
-        self._episodeProgress.set_description_str(str(self._maxStats.loc[0, _EPISODE_LENGTH]))
-        self._episodeProgress.unit = str(self._maxEpisode.loc[0, _EPISODE_LENGTH])
+        if self._showStats:
+            self._episodeProgress.set_description_str(str(self._maxStats.loc[0, _EPISODE_LENGTH]))
+            self._episodeProgress.unit = str(self._maxEpisode.loc[0, _EPISODE_LENGTH])
 
-        self._rewardProgress.set_description_str(str(self._maxStats.loc[0, _CUM_REWARD]))
-        self._rewardProgress.unit = str(self._maxEpisode.loc[0, _CUM_REWARD])
+            self._rewardProgress.set_description_str(str(self._maxStats.loc[0, _CUM_REWARD]))
+            self._rewardProgress.unit = str(int(self._maxEpisode.loc[0, _CUM_REWARD]))
 
-        self._lengthProgress.set_description_str(str(self._maxStats.loc[0, _SNAKE_LENGTH]))
-        self._lengthProgress.unit = str(self._maxEpisode.loc[0, _SNAKE_LENGTH])
+            self._lengthProgress.set_description_str(str(self._maxStats.loc[0, _SNAKE_LENGTH]))
+            self._lengthProgress.unit = str(self._maxEpisode.loc[0, _SNAKE_LENGTH])
 
     def _newEpisode(self):
         self._stats = self._newDataFrame()

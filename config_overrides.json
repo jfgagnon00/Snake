@@ -1,20 +1,19 @@
 {
     "train": {
-        "alpha": 0.01,
         "gamma": 0.9,
         "epsilon": 0.9,
         "epsilonDecay": 0.95,
         "lr": 0.01,
         "agent": "Agent47",
-        "episodes": 500,
-        "episodeMaxLen": 50
+        "episodes": 400,
+        "episodeMaxLen": 500
     },
 
     "environment": {
-        "renderFps": 30,
+        "renderFps": 120,
         "rewards": {
-            "move": -0.01,
-            "eat": 1,
+            "move": -0.5,
+            "eat": 10,
             "collision": -10,
             "out_of_bounds": -10,
             "win": 100

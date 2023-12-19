@@ -1,10 +1,11 @@
 import numpy as np
 
+from collections import deque
 from game import GameAction
 from numpy.linalg import norm
 from numpy.random import choice as np_choice
 from random import random, choice as py_choice
-from torch import argmax, from_numpy
+from torch import argmax, from_numpy, no_grad
 from torch.nn import L1Loss, Linear, Module, MSELoss, ReLU, Sequential
 from torch.nn.functional import softmax
 from torch.optim import Adam
@@ -34,27 +35,17 @@ class Agent47(AgentBase):
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
 
-        numInputs = 6 # simulationConfig.gridWidth * simulationConfig.gridHeight
+        numInputs = 10
         numOutput = len(GameAction)
 
-        def div2Generator(x, stop):
-            while True:
-                x //= 2
-                if x > stop:
-                    yield x
-                else:
-                    break
+        self._memory = deque(maxlen=50000)
 
-        self._alpha = trainConfig.alpha
         self._gamma = trainConfig.gamma
         self._epsilon = trainConfig.epsilon
         self._epsilonDecay = trainConfig.epsilonDecay
-        self._episodes = trainConfig.episodes
-        self._episode = 0
 
         self._model = _QNet(numInputs,
-                        #   [x for x in div2Generator(numInputs, numOutput * 2)],
-                          [numInputs for _ in range(8)],
+                          [256],
                           numOutput)
         self._optimizer = Adam(self._model.parameters(), lr=trainConfig.lr)
         self._lossFnc = MSELoss()
@@ -68,34 +59,31 @@ class Agent47(AgentBase):
             actions = self._model(x)
             intAction = actions.argmax().item()
             gameAction = self._gameActions[intAction]
-            # p = softmax(actions, dim=0).detach().numpy()
-            # gameAction = np_choice(self._gameActions, p=p)
-
-        # gameAction = np_choice(self._gameActions)
 
         return GameAction(gameAction)
 
     def onEpisodeDone(self, *args):
-        eps = self._epsilon * self._epsilonDecay
-        eps = max(eps, 0.01)
-        # eps = self._epsilon / (self._episode + 1)
-        self._episode += 1
-        self._epsilon = eps
+        # do long memory train
+        self._epsilon *= self._epsilonDecay
 
     def train(self, state, action, newState, reward, done):
         intAction = self._gameActions.index(action)
 
         x = self._stateToTensor(state)
         q = self._model(x)
-        q_target = q.clone()
 
-        # if done:
-        #     q_target[intAction] = reward
-        # else:
-        x_new = self._stateToTensor(newState)
-        q_new = self._model(x_new)
-        a_new = q_new.argmax()
-        q_target[intAction] += self._alpha * (reward + self._gamma * q_new[a_new] - q_target[intAction])
+        with no_grad():
+            q_target = q.clone()
+            if done:
+                x_new = None
+                q_target[intAction] = reward
+            else:
+                x_new = self._stateToTensor(newState)
+                q_new = self._model(x_new)
+                a_new = q_new.argmax()
+                q_target[intAction] = reward + self._gamma * q_new[a_new]
+
+        self._memory.append((x, intAction, x_new, reward, done))
 
         self._optimizer.zero_grad()
         loss = self._lossFnc(q_target, q)
@@ -111,29 +99,59 @@ class Agent47(AgentBase):
         # x = from_numpy(x.reshape(-1))
         # x = convert_image_dtype(x)
 
-        # juste position tete normalisee avec direction food tout concatenee
+        # juste position tete normalisee avec direction food tout concatene
         grid = state["occupancy_grid"]
         head_p = state["head_position"]
         head_d = state["head_direction"]
         food_d = state["food_position"] - state["head_position"]
 
-        head_p = head_p / grid.shape[:2]
-        food_d = food_d / norm(food_d)
+        head_np = head_p / grid.shape[:2]
+        food_nd = food_d / norm(food_d)
 
-        x = np.concatenate((head_p, head_d, food_d), dtype=np.float32)
-        x = from_numpy(x)
+        head_ccw_d = np.array((-head_d[1], head_d[0]))
 
-        # print(type(x))
-        # print(x.shape)
-        # print(x)
-        # print(state.keys())
+        col_head_d = self._first_collision(grid, head_p, head_d)
+        col_ccw_d = self._first_collision(grid, head_p, head_ccw_d)
+        col_cw_d = self._first_collision(grid, head_p, -head_ccw_d)
 
-        # state["head_position"] - state["food_position"]
+        # print()
+        # print(grid.shape)
+        # print(head_p, head_d)
+        # print(col_head_d)
+        # print(col_ccw_d)
+        # print(col_cw_d)
 
-        # print(  )
-        # print(  )
+        # # print(type(x))
+        # # print(x.shape)
+        # # print(x)
+        # # print(state.keys())
+
+        # print()
+        # print()
 
         # exit(1)
 
-
+        x = np.concatenate((head_d,
+                            food_nd,
+                            col_head_d,
+                            col_ccw_d,
+                            col_cw_d), dtype=np.float32)
+        x = from_numpy(x)
         return x
+
+    def _first_collision(self, grid, start, dir):
+        c = np.copy(start)
+
+        while True:
+            if c[0] <= 0 or c[0] >= (grid.shape[0] - 1):
+                break
+
+            if c[1] <= 0 or c[1] >= (grid.shape[1] - 1):
+                break
+
+            if not np.array_equal(c, start) and grid[c[0], c[1], 0] != 0:
+                break
+
+            c = c + dir
+
+        return (c - start) / grid.shape[:2]
