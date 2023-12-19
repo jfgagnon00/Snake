@@ -47,25 +47,24 @@ class EnvironmentStats():
     def step(self, *args):
         observations, reward, terinated, truncated, info = self._env.step(*args)
 
-        # self._stats.loc[0, _EPISODE_LENGTH] += 1
-        # self._stats.loc[0, _SNAKE_LENGTH] = observations["length"]
-        # self._stats.loc[0, _CUM_REWARD] += reward
+        self._stats.loc[0, _EPISODE_LENGTH] += 1
+        self._stats.loc[0, _SNAKE_LENGTH] = observations["length"]
+        self._stats.loc[0, _CUM_REWARD] += reward
 
-        # forceUpdate = False
-        # if self._maxStats is None:
-        #     self._maxStats = self._stats.copy()
-        #     self._maxEpisode = self._newDataFrame()
-        #     self._maxEpisode.loc[:,:] = self._episode
-        #     forceUpdate = True
+        forceUpdate = False
+        if self._maxStats is None:
+            self._maxStats = self._stats.copy()
+            self._maxEpisode = self._newDataFrame()
+            self._maxEpisode.loc[:,:] = self._episode
+            forceUpdate = True
 
-        # greater = self._stats > self._maxStats
+        greater = self._stats > self._maxStats
 
-        # self._maxStats[greater] = self._stats[greater]
-        # self._maxEpisode[greater] = self._episode
+        self._maxStats[greater] = self._stats[greater]
+        self._maxEpisode[greater] = self._episode
 
-        # if greater.iloc[0,2:].any(axis=0) or forceUpdate:
-        #     # self._update()
-        #     pass
+        if greater.iloc[0,2:].any(axis=0) or forceUpdate:
+            self._update()
 
         return observations, reward, terinated, truncated, info
 
