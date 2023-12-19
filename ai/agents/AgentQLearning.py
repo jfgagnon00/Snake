@@ -1,13 +1,22 @@
 import numpy as np
+import os
 
 from collections import deque
 from game import GameAction
 from numpy.linalg import norm
 from numpy.random import choice as np_choice
-from random import random, choice as py_choice
-from torch import argmax, from_numpy, no_grad
-from torch.nn import L1Loss, Linear, Module, MSELoss, ReLU, Sequential
-from torch.nn.functional import softmax
+from random import random, sample as py_sample
+from torch import from_numpy, \
+                no_grad, \
+                nonzero as torch_nonzero, \
+                tensor, \
+                save, \
+                unsqueeze, \
+                vstack, \
+                bool as torch_bool, \
+                int32 as torch_int32, \
+                float32 as torch_float32
+from torch.nn import Linear, Module, MSELoss, ReLU, Sequential
 from torch.optim import Adam
 from torchvision.transforms.functional import convert_image_dtype
 
@@ -32,13 +41,16 @@ class _QNet(Module):
         return self._net(x)
 
 class Agent47(AgentBase):
+    MEMORY_SIZE = 50000
+    BATCH_SIZE = 2500
+
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
 
-        numInputs = 10
+        numInputs = 12
         numOutput = len(GameAction)
 
-        self._memory = deque(maxlen=50000)
+        self._memory = deque(maxlen=Agent47.MEMORY_SIZE)
 
         self._gamma = trainConfig.gamma
         self._epsilon = trainConfig.epsilon
@@ -63,35 +75,63 @@ class Agent47(AgentBase):
         return GameAction(gameAction)
 
     def onEpisodeDone(self, *args):
-        # do long memory train
+        # reentraine avec vieux samples en mode batch
+        if len(self._memory) > Agent47.BATCH_SIZE:
+            batch = py_sample(self._memory, Agent47.BATCH_SIZE)
+        else:
+            batch = self._memory
+
+        if len(batch) > 0:
+            states, intActions, newStates, rewards, dones = zip(*batch)
+
+            self._train(vstack(states),
+                        tensor(intActions, dtype=torch_int32),
+                        vstack(newStates),
+                        unsqueeze(tensor(rewards, dtype=torch_float32), 0),
+                        tensor(dones, dtype=torch_bool))
+
         self._epsilon *= self._epsilonDecay
 
     def train(self, state, action, newState, reward, done):
-        intAction = self._gameActions.index(action)
-
+        # entraine avec chaque experience
         x = self._stateToTensor(state)
-        q = self._model(x)
-
-        with no_grad():
-            q_target = q.clone()
-            if done:
-                x_new = None
-                q_target[intAction] = reward
-            else:
-                x_new = self._stateToTensor(newState)
-                q_new = self._model(x_new)
-                a_new = q_new.argmax()
-                q_target[intAction] = reward + self._gamma * q_new[a_new]
+        intAction = self._gameActions.index(action)
+        x_new = self._stateToTensor(newState)
 
         self._memory.append((x, intAction, x_new, reward, done))
+
+        self._train(unsqueeze(x, 0),
+                    tensor(intAction, dtype=torch_int32),
+                    unsqueeze(x_new, 0),
+                    unsqueeze(tensor(reward, dtype=torch_float32), 0),
+                    tensor(done, dtype=torch_bool))
+
+    def save(self, *args):
+        path, filename = os.path.split(args[0])
+        filename, _ = os.path.splitext(filename)
+
+        os.makedirs(path, exist_ok=True)
+
+        filename = os.path.join(path, f"{filename}.pth")
+        save(self._model.state_dict(), filename)
+
+    def _train(self, states, intActions, newStates, rewards, dones):
+        q = self._model(states)
+
+        with no_grad():
+            q_new = self._model(newStates)
+            q_new = q_new.max(dim=1)[0]
+
+            done_indices = torch_nonzero(dones)
+            q_new[done_indices] = 0
+
+            q_target = q.clone()
+            q_target[:, intActions] = rewards + self._gamma * q_new
 
         self._optimizer.zero_grad()
         loss = self._lossFnc(q_target, q)
         loss.backward()
         self._optimizer.step()
-
-    def save(self):
-        pass
 
     def _stateToTensor(self, state):
         # occupancy grid flattened
@@ -99,7 +139,7 @@ class Agent47(AgentBase):
         # x = from_numpy(x.reshape(-1))
         # x = convert_image_dtype(x)
 
-        # juste position tete normalisee avec direction food tout concatene
+        # positions/directions normalisees concatenees
         grid = state["occupancy_grid"]
         head_p = state["head_position"]
         head_d = state["head_direction"]
@@ -114,32 +154,16 @@ class Agent47(AgentBase):
         col_ccw_d = self._first_collision(grid, head_p, head_ccw_d)
         col_cw_d = self._first_collision(grid, head_p, -head_ccw_d)
 
-        # print()
-        # print(grid.shape)
-        # print(head_p, head_d)
-        # print(col_head_d)
-        # print(col_ccw_d)
-        # print(col_cw_d)
-
-        # # print(type(x))
-        # # print(x.shape)
-        # # print(x)
-        # # print(state.keys())
-
-        # print()
-        # print()
-
-        # exit(1)
-
-        x = np.concatenate((head_d,
+        x = np.concatenate((head_np,
+                            head_d,
                             food_nd,
                             col_head_d,
                             col_ccw_d,
                             col_cw_d), dtype=np.float32)
-        x = from_numpy(x)
-        return x
+        return from_numpy(x)
 
     def _first_collision(self, grid, start, dir):
+        # TODO: move dans simulation
         c = np.copy(start)
 
         while True:

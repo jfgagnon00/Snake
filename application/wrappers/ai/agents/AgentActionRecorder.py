@@ -54,9 +54,9 @@ class AgentActionRecorder(AgentBase):
             self.save()
 
     def save(self):
-        self._agent.save()
-
         filename = self._recordPattern.replace("%", str(self._episode))
+
+        self._agent.save(filename)
 
         path, _ = os.path.split(filename)
         if not path is None:
