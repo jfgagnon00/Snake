@@ -73,6 +73,9 @@ class Agent47(AgentBase):
 
         return GameAction(gameAction)
 
+    def onEpisodeBegin(self, episode, stats):
+        stats.loc[0, "Epsilon"] = self._epsilon
+
     def onEpisodeDone(self, *args):
         # entraine avec vieux samples en mode batch
         if len(self._memory) > Agent47.BATCH_SIZE:

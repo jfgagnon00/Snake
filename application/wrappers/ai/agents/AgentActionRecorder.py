@@ -46,6 +46,9 @@ class AgentActionRecorder(AgentBase):
 
         return action
 
+    def onEpisodeBegin(self, *args):
+        self._agent.onEpisodeBegin(*args)
+
     def onEpisodeDone(self, episode):
         self._agent.onEpisodeDone(episode)
 

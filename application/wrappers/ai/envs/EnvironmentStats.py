@@ -14,7 +14,7 @@ class EnvironmentStats():
     """
     Encapsule un environment pour afficher ses statistiques
     """
-    def __init__(self, env, tqdmBasePosition, id, filename):
+    def __init__(self, env, tqdmBasePosition, id, filename, showStats=True):
         self._env = env
         self._episode = -1
         self._id = id
@@ -23,7 +23,7 @@ class EnvironmentStats():
         self._maxStats = None
         self._maxEpisode = None
         self._saved = False
-        self._showStats = True
+        self._showStats = showStats
 
         if self._showStats:
             self._episodeProgress = tqdm(bar_format="Max episode length: {desc} at {unit}",
@@ -34,6 +34,10 @@ class EnvironmentStats():
 
             self._lengthProgress = tqdm(bar_format="Max length: {desc} at {unit}",
                                         position=tqdmBasePosition + 2)
+
+    @property
+    def statsDataFrame(self):
+        return self._stats
 
     def reset(self, options=None):
         if not options is None and "episode" in options:

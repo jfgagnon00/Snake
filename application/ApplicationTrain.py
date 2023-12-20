@@ -26,7 +26,7 @@ class ApplicationTrain():
         else:
             self._timeLimit = None
 
-        self._envStats = EnvironmentStats(self._env, 1, 0, statsFilename)
+        self._envStats = EnvironmentStats(self._env, 1, 0, statsFilename, showStats=True)
         self._env = self._envStats
 
     @property
@@ -39,6 +39,8 @@ class ApplicationTrain():
             done = False
             self._agent.reset()
             observations, _ = self._env.reset(options={"episode":e})
+
+            self._agent.onEpisodeBegin(e, self._envStats.statsDataFrame)
 
             while not done:
                 action = self._agent.getAction(observations)

@@ -17,6 +17,12 @@ class AgentBase():
         """
         pass
 
+    def onEpisodeBegin(self, *args):
+        """
+        Appeler quand un episode/partie demarre (tout de suite apres reset)
+        """
+        pass
+
     def onEpisodeDone(self, *args):
         """
         Appeler quand un episode/partie est termine
