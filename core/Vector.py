@@ -1,5 +1,7 @@
 import numpy as np
 
+from math import sqrt
+
 class Vector():
     """
     Represente un vecteur/point 2D
@@ -22,6 +24,10 @@ class Vector():
 
     def __neg__(self):
         return Vector(-self.x, -self.y)
+
+    @property
+    def length(self):
+        return sqrt(self.x*self.x + self.y*self.y)
 
     def to_numpy(self):
         """
