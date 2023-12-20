@@ -20,8 +20,11 @@ class ApplicationTrain():
                             graphicsConfig=configs.graphics)
 
         if configs.train.episodeMaxLen > 0:
-            self._env = gym_TimeLimit(self._env,
+            self._timeLimit = gym_TimeLimit(self._env,
                                       max_episode_steps=configs.train.episodeMaxLen)
+            self._env = self._timeLimit
+        else:
+            self._timeLimit = None
 
         self._envStats = EnvironmentStats(self._env, 1, 0, statsFilename)
         self._env = self._envStats
@@ -42,6 +45,11 @@ class ApplicationTrain():
 
                 newObservations, reward, terminated, truncated, _ = self._env.step(action)
                 done = terminated or truncated
+
+                if not self._timeLimit is None and reward > 0:
+                    # time limit quand il n'y a pas progression dans le jeu
+                    # reset quand il y en a
+                    self._timeLimit._elapsed_steps = 0
 
                 self._env.render()
                 self._agent.train(observations, action, newObservations, reward, done)

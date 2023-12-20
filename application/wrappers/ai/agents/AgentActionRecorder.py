@@ -53,6 +53,9 @@ class AgentActionRecorder(AgentBase):
         if not self._isEmpty() and (episode % self._episodeCountModulo) == 0:
             self.save()
 
+    def train(self, *args):
+        self._agent.train(*args)
+
     def save(self):
         filename = self._recordPattern.replace("%", str(self._episode))
 

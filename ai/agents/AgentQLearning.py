@@ -3,7 +3,6 @@ import os
 
 from collections import deque
 from game import GameAction
-from numpy.linalg import norm
 from numpy.random import choice as np_choice
 from random import random, sample as py_sample
 from torch import from_numpy, \
@@ -47,7 +46,7 @@ class Agent47(AgentBase):
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
 
-        numInputs = 12
+        numInputs = 10
         numOutput = len(GameAction)
 
         self._memory = deque(maxlen=Agent47.MEMORY_SIZE)
@@ -75,7 +74,7 @@ class Agent47(AgentBase):
         return GameAction(gameAction)
 
     def onEpisodeDone(self, *args):
-        # reentraine avec vieux samples en mode batch
+        # entraine avec vieux samples en mode batch
         if len(self._memory) > Agent47.BATCH_SIZE:
             batch = py_sample(self._memory, Agent47.BATCH_SIZE)
         else:
@@ -83,7 +82,6 @@ class Agent47(AgentBase):
 
         if len(batch) > 0:
             states, intActions, newStates, rewards, dones = zip(*batch)
-
             self._train(vstack(states),
                         tensor(intActions, dtype=torch_int32),
                         vstack(newStates),
@@ -141,41 +139,22 @@ class Agent47(AgentBase):
 
         # positions/directions normalisees concatenees
         grid = state["occupancy_grid"]
-        head_p = state["head_position"]
+        grid_size = grid.shape[:2]
+
         head_d = state["head_direction"]
+
         food_d = state["food_position"] - state["head_position"]
+        food_d[0] = np.sign(food_d[0])
+        food_d[1] = np.sign(food_d[1])
 
-        head_np = head_p / grid.shape[:2]
-        food_nd = food_d / norm(food_d)
+        col_forward = state["collision_forward"] / grid_size
+        col_ccw = state["collision_ccw"] / grid_size
+        col_cw = state["collision_cw"] / grid_size
 
-        head_ccw_d = np.array((-head_d[1], head_d[0]))
-
-        col_head_d = self._first_collision(grid, head_p, head_d)
-        col_ccw_d = self._first_collision(grid, head_p, head_ccw_d)
-        col_cw_d = self._first_collision(grid, head_p, -head_ccw_d)
-
-        x = np.concatenate((head_np,
-                            head_d,
-                            food_nd,
-                            col_head_d,
-                            col_ccw_d,
-                            col_cw_d), dtype=np.float32)
+        x = np.concatenate((head_d,
+                            food_d,
+                            col_forward,
+                            col_ccw,
+                            col_cw),
+                            dtype=np.float32)
         return from_numpy(x)
-
-    def _first_collision(self, grid, start, dir):
-        # TODO: move dans simulation
-        c = np.copy(start)
-
-        while True:
-            if c[0] <= 0 or c[0] >= (grid.shape[0] - 1):
-                break
-
-            if c[1] <= 0 or c[1] >= (grid.shape[1] - 1):
-                break
-
-            if not np.array_equal(c, start) and grid[c[0], c[1], 0] != 0:
-                break
-
-            c = c + dir
-
-        return (c - start) / grid.shape[:2]

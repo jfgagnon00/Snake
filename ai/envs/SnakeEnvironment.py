@@ -55,6 +55,19 @@ class SnakeEnvironment(Env):
                                             shape=(2,),
                                             dtype=int),
                 "length": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
+                "score": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
+                "collision_forward": spaces.Box(low=np.array([-simulationConfig.gridHeight, -simulationConfig.gridWidth]),
+                                            high=np.array([simulationConfig.gridHeight, simulationConfig.gridWidth]),
+                                            shape=(2,),
+                                            dtype=int),
+                "collision_ccw": spaces.Box(low=np.array([-simulationConfig.gridHeight, -simulationConfig.gridWidth]),
+                                            high=np.array([simulationConfig.gridHeight, simulationConfig.gridWidth]),
+                                            shape=(2,),
+                                            dtype=int),
+                "collision_cw": spaces.Box(low=np.array([-simulationConfig.gridHeight, -simulationConfig.gridWidth]),
+                                            high=np.array([simulationConfig.gridHeight, simulationConfig.gridWidth]),
+                                            shape=(2,),
+                                            dtype=int),
             })
 
         self._renderMode = renderMode

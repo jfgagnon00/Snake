@@ -159,6 +159,10 @@ class GameSimulation():
             "head_position": self.snake.head.to_numpy(),
             "food_position": self.food.to_numpy(),
             "length": self.snake.length,
+            "score": self.score,
+            "collision_forward": self._raycast(self.snake.direction).to_numpy(),
+            "collision_ccw": self._raycast(Vector(self.snake.direction.y, -self.snake.direction.x)).to_numpy(),
+            "collision_cw": self._raycast(Vector(-self.snake.direction.y, self.snake.direction.x)).to_numpy(),
         }
 
     def _setSnakeInGrid(self, show):
@@ -196,3 +200,21 @@ class GameSimulation():
         # placer dans la grille
         self._food = Vector(x, y)
         self._occupancyGrid[y, x] = GridOccupancy.FOOD
+
+    def _raycast(self, direction):
+        c = Vector(self.snake.head.x, self.snake.head.y)
+
+        while True:
+            if c.x <= 0 or c.x >= (self._occupancyGridWidth - 1):
+                break
+
+            if c.y <= 0 or c.y >= (self._occupancyGridHeight - 1):
+                break
+
+            if c != self.snake.head and self._occupancyGrid[c.y, c.x] != GridOccupancy.EMPTY:
+                break
+
+            c = c + direction
+
+        return c - self.snake.head
+

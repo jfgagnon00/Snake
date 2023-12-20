@@ -78,7 +78,6 @@ class EnvironmentStats():
         self.save()
 
     def save(self):
-        return
         if not self._stats is None and \
            not self._filename is None:
             if self._saved:
