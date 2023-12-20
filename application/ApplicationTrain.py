@@ -1,6 +1,7 @@
 import ai # importe l'environnement "snake/SnakeEnvironment-v0"
 
 from application.wrappers.ai.envs import EnvironmentStats
+from datetime import datetime
 from gymnasium import make as gym_Make
 from gymnasium.wrappers import TimeLimit as gym_TimeLimit
 from tqdm import trange
@@ -34,6 +35,7 @@ class ApplicationTrain():
         return self._envStats
 
     def run(self):
+        start = None
         episodesIt = trange(self._episodes, desc="Episodes", position=0)
         for e in episodesIt:
             done = False
@@ -41,6 +43,12 @@ class ApplicationTrain():
             observations, _ = self._env.reset(options={"episode":e})
 
             self._agent.onEpisodeBegin(e, self._envStats.statsDataFrame)
+
+            if start is None:
+                start = datetime.now()
+
+            dt = datetime.now() - start
+            self._envStats.statsDataFrame.loc[0, "ElapseSeconds"] = dt.seconds
 
             while not done:
                 action = self._agent.getAction(observations)

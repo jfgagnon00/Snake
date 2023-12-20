@@ -56,7 +56,7 @@ class Agent47(AgentBase):
         self._epsilonDecay = trainConfig.epsilonDecay
 
         self._model = _QNet(numInputs,
-                          [256],
+                          [64],
                           numOutput)
         self._optimizer = Adam(self._model.parameters(), lr=trainConfig.lr)
         self._lossFnc = MSELoss()
