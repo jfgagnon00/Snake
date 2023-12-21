@@ -15,14 +15,14 @@ from torch import from_numpy, \
                 bool as torch_bool, \
                 int32 as torch_int32, \
                 float32 as torch_float32
-from torch.nn import Linear, Module, MSELoss, ReLU, Sequential
+from torch.nn import Linear, Module, MSELoss, ReLU, Sequential, Conv2d
 from torch.optim import Adam
 from torchvision.transforms.functional import convert_image_dtype
 
 from .AgentBase import AgentBase
 
 
-class _QNet(Module):
+class _LinearNet(Module):
     def __init__(self, numInputs, hiddenLayers, numOutput):
         super().__init__()
 
@@ -39,6 +39,20 @@ class _QNet(Module):
     def forward(self, x):
         return self._net(x)
 
+class _ConvNet(Module):
+    def __init__(self):
+        super().__init__()
+
+        self._net = Sequential()
+
+        # self._net.append(Conv2d(prevSize, size))
+        # self._net.append(ReLU())
+
+        self._net.append(Linear(2, 2))
+
+    def forward(self, x):
+        return self._net(x)
+
 class Agent47(AgentBase):
     MEMORY_SIZE = 50000
     BATCH_SIZE = 2500
@@ -46,21 +60,23 @@ class Agent47(AgentBase):
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
 
-        numInputs = 10
-        numOutput = len(GameAction)
-
         self._memory = deque(maxlen=Agent47.MEMORY_SIZE)
 
         self._gamma = trainConfig.gamma
         self._epsilon = trainConfig.epsilon
         self._epsilonDecay = trainConfig.epsilonDecay
 
-        self._model = _QNet(numInputs,
-                          [64],
-                          numOutput)
+        self._gridStack = None
+        self._model = _LinearNet(10,
+                                 [64],
+                                 len(GameAction))
+
         self._optimizer = Adam(self._model.parameters(), lr=trainConfig.lr)
         self._lossFnc = MSELoss()
         self._gameActions = list(GameAction)
+
+    def reset(self):
+        self._gridStack = None
 
     def getAction(self, state):
         if random() < self._epsilon:
@@ -135,29 +151,37 @@ class Agent47(AgentBase):
         self._optimizer.step()
 
     def _stateToTensor(self, state):
-        # occupancy grid flattened
-        # x = state["occupancy_grid"]
-        # x = from_numpy(x.reshape(-1))
-        # x = convert_image_dtype(x)
+        if False:
+            x = state["occupancy_grid"]
 
-        # positions/directions normalisees concatenees
-        grid = state["occupancy_grid"]
-        grid_size = grid.shape[:2]
+            if self._gridStack is None:
+                self._gridStack = x.copy()
+            else:
+                self._gridStack = np.append(self._gridStack[:,:,-3:], x, axis=2)
 
-        head_d = state["head_direction"]
+            x = from_numpy(self._gridStack)
+            x = convert_image_dtype(x)
 
-        food_d = state["food_position"] - state["head_position"]
-        food_d[0] = np.sign(food_d[0])
-        food_d[1] = np.sign(food_d[1])
+            return x
+        else:
+            # positions/directions normalisees concatenees
+            grid = state["occupancy_grid"]
+            grid_size = grid.shape[1:]
 
-        col_forward = state["collision_forward"] / grid_size
-        col_ccw = state["collision_ccw"] / grid_size
-        col_cw = state["collision_cw"] / grid_size
+            head_d = state["head_direction"]
 
-        x = np.concatenate((head_d,
-                            food_d,
-                            col_forward,
-                            col_ccw,
-                            col_cw),
-                            dtype=np.float32)
-        return from_numpy(x)
+            food_d = state["food_position"] - state["head_position"]
+            food_d[0] = np.sign(food_d[0])
+            food_d[1] = np.sign(food_d[1])
+
+            col_forward = state["collision_forward"] / grid_size
+            col_ccw = state["collision_ccw"] / grid_size
+            col_cw = state["collision_cw"] / grid_size
+
+            x = np.concatenate((head_d,
+                                food_d,
+                                col_forward,
+                                col_ccw,
+                                col_cw),
+                                dtype=np.float32)
+            return from_numpy(x)

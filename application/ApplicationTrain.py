@@ -27,7 +27,11 @@ class ApplicationTrain():
         else:
             self._timeLimit = None
 
-        self._envStats = EnvironmentStats(self._env, 1, 0, statsFilename, showStats=True)
+        self._envStats = EnvironmentStats(self._env,
+                                          1,
+                                          0,
+                                          statsFilename,
+                                          showStats=configs.train.showStats)
         self._env = self._envStats
 
     @property

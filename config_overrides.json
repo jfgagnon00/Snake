@@ -1,28 +1,29 @@
 {
     "train": {
-        "gamma": 0.9,
-        "epsilon": 0.99,
+        "gamma": 0.99,
+        "epsilon": 1.0,
         "epsilonDecay": 0.95,
         "lr": 0.01,
         "agent": "Agent47",
         "episodes": 900,
-        "episodeMaxLen": 300
+        "episodeMaxLen": 120,
+        "showStats": true
     },
 
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "move": -1,
-            "eat": 100,
+            "move": -0.5,
+            "eat": 10,
             "collision": -10,
             "out_of_bounds": -10,
-            "win": 100
+            "win": 10
         }
     },
 
     "simulation": {
-        "gridWidth": 8,
-        "gridHeight": 5
+        "gridWidth": 6,
+        "gridHeight": 6
     },
 
     "graphics": {

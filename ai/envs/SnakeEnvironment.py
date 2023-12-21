@@ -40,7 +40,7 @@ class SnakeEnvironment(Env):
         self.observation_space = spaces.Dict({
                 "occupancy_grid": spaces.Box(low=0,
                                              high=255,
-                                             shape=(simulationConfig.gridHeight, simulationConfig.gridWidth, 1),
+                                             shape=(1, simulationConfig.gridHeight, simulationConfig.gridWidth),
                                              dtype=np.uint8),
                 "head_direction": spaces.Box(low=-1,
                                              high=1,

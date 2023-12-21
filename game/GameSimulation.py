@@ -154,7 +154,8 @@ class GameSimulation():
         Retourne les etats internes sous forme standardisee
         """
         return {
-            "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=-1).copy(),
+            # shape est (Channel, Height, Width)
+            "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=0).copy(),
             "head_direction": self.snake.direction.to_numpy(),
             "head_position": self.snake.head.to_numpy(),
             "food_position": self.food.to_numpy(),
