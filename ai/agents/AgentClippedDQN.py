@@ -71,7 +71,7 @@ class _ConvNet(Module):
     def forward(self, x):
         return self._net(x)
 
-class Agent47(AgentBase):
+class AgentClippedDQN(AgentBase):
     MEMORY_SIZE = 50000
     BATCH_SIZE = 2500
 
@@ -83,7 +83,7 @@ class Agent47(AgentBase):
         self._epsilonDecay = trainConfig.epsilonDecay
         self._gameActions = list(GameAction)
 
-        self._replayBuffer = deque(maxlen=Agent47.MEMORY_SIZE)
+        self._replayBuffer = deque(maxlen=AgentClippedDQN.MEMORY_SIZE)
 
         # clipped DQN
         self._models = [self._buildModel(trainConfig.lr),
@@ -110,7 +110,7 @@ class Agent47(AgentBase):
         self._epsilon *= self._epsilonDecay
 
         # entraine avec vieux samples en mode batch
-        size = min(len(self._replayBuffer), Agent47.BATCH_SIZE)
+        size = min(len(self._replayBuffer), AgentClippedDQN.BATCH_SIZE)
         if size > 0:
             batch = py_sample(self._replayBuffer, size)
             states, intActions, newStates, rewards, dones = zip(*batch)
