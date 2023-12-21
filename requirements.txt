@@ -27,6 +27,7 @@ requests==2.31.0
 six==1.16.0
 sympy==1.12
 torch==2.0.1
+torch-summary==1.4.5
 torchvision==0.15.2
 tqdm==4.66.1
 typing_extensions==4.8.0

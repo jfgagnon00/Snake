@@ -8,16 +8,17 @@ from random import random, sample as py_sample
 from torch import from_numpy, \
                 no_grad, \
                 nonzero as torch_nonzero, \
+                min as torch_min, \
                 tensor, \
                 save, \
                 unsqueeze, \
                 vstack, \
-                bool as torch_bool, \
-                int32 as torch_int32, \
+                int64 as torch_int64, \
                 float32 as torch_float32
-from torch.nn import Linear, Module, MSELoss, ReLU, Sequential, Conv2d
+from torch.nn import Linear, Module, MSELoss, ReLU, Sequential, Conv2d, MaxPool2d, Flatten
 from torch.optim import Adam
 from torchvision.transforms.functional import convert_image_dtype
+from torchsummary import summary
 
 from .AgentBase import AgentBase
 
@@ -45,10 +46,27 @@ class _ConvNet(Module):
 
         self._net = Sequential()
 
-        # self._net.append(Conv2d(prevSize, size))
-        # self._net.append(ReLU())
+        self._net.append(Conv2d(1, 8, 5, padding='same'))
+        self._net.append(ReLU())
 
-        self._net.append(Linear(2, 2))
+        self._net.append(Conv2d(8, 16, 5, padding='same'))
+        self._net.append(ReLU())
+
+        self._net.append(Conv2d(16, 32, 5, padding='same'))
+        self._net.append(ReLU())
+
+        self._net.append(Flatten())
+
+        self._net.append(Linear(1152, 512))
+        self._net.append(ReLU())
+
+        self._net.append(Linear(512, 256))
+        self._net.append(ReLU())
+
+        self._net.append(Linear(256, 128))
+        self._net.append(ReLU())
+
+        self._net.append(Linear(128, len(GameAction)))
 
     def forward(self, x):
         return self._net(x)
@@ -60,31 +78,27 @@ class Agent47(AgentBase):
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
 
-        self._memory = deque(maxlen=Agent47.MEMORY_SIZE)
-
         self._gamma = trainConfig.gamma
         self._epsilon = trainConfig.epsilon
         self._epsilonDecay = trainConfig.epsilonDecay
-
-        self._gridStack = None
-        self._model = _LinearNet(10,
-                                 [64],
-                                 len(GameAction))
-
-        self._optimizer = Adam(self._model.parameters(), lr=trainConfig.lr)
-        self._lossFnc = MSELoss()
         self._gameActions = list(GameAction)
 
-    def reset(self):
-        self._gridStack = None
+        self._replayBuffer = deque(maxlen=Agent47.MEMORY_SIZE)
+
+        # clipped DQN
+        self._models = [self._buildModel(trainConfig.lr),
+                        self._buildModel(trainConfig.lr)]
+
+        if False:
+            summary(self._models[0][0], (1, 6, 6))
 
     def getAction(self, state):
         if random() < self._epsilon:
             gameAction = np_choice(self._gameActions)
         else:
             x = self._stateToTensor(state)
-            actions = self._model(x)
-            intAction = actions.argmax().item()
+            q = self._evalModel(0, x)
+            intAction = q.argmax().item()
             gameAction = self._gameActions[intAction]
 
         return GameAction(gameAction)
@@ -93,21 +107,18 @@ class Agent47(AgentBase):
         stats.loc[0, "Epsilon"] = self._epsilon
 
     def onEpisodeDone(self, *args):
-        # entraine avec vieux samples en mode batch
-        if len(self._memory) > Agent47.BATCH_SIZE:
-            batch = py_sample(self._memory, Agent47.BATCH_SIZE)
-        else:
-            batch = self._memory
+        self._epsilon *= self._epsilonDecay
 
-        if len(batch) > 0:
+        # entraine avec vieux samples en mode batch
+        size = min(len(self._replayBuffer), Agent47.BATCH_SIZE)
+        if size > 0:
+            batch = py_sample(self._replayBuffer, size)
             states, intActions, newStates, rewards, dones = zip(*batch)
             self._train(vstack(states),
-                        tensor(intActions, dtype=torch_int32),
+                        tensor(intActions, dtype=torch_int64).view(-1, 1),
                         vstack(newStates),
-                        unsqueeze(tensor(rewards, dtype=torch_float32), 0),
-                        tensor(dones, dtype=torch_bool))
-
-        self._epsilon *= self._epsilonDecay
+                        tensor(rewards, dtype=torch_float32),
+                        tensor(dones, dtype=torch_float32))
 
     def train(self, state, action, newState, reward, done):
         # entraine avec chaque experience
@@ -115,13 +126,13 @@ class Agent47(AgentBase):
         intAction = self._gameActions.index(action)
         x_new = self._stateToTensor(newState)
 
-        self._memory.append((x, intAction, x_new, reward, done))
+        self._replayBuffer.append((x, intAction, x_new, reward, done))
 
-        self._train(unsqueeze(x, 0),
-                    tensor(intAction, dtype=torch_int32),
-                    unsqueeze(x_new, 0),
-                    unsqueeze(tensor(reward, dtype=torch_float32), 0),
-                    tensor(done, dtype=torch_bool))
+        self._train(x,
+                    tensor(intAction, dtype=torch_int64).view(-1, 1),
+                    x_new,
+                    tensor(reward, dtype=torch_float32),
+                    tensor(done, dtype=torch_float32))
 
     def save(self, *args):
         path, filename = os.path.split(args[0])
@@ -130,39 +141,56 @@ class Agent47(AgentBase):
         os.makedirs(path, exist_ok=True)
 
         filename = os.path.join(path, f"{filename}.pth")
-        save(self._model.state_dict(), filename)
+        save(self._models[0][0].state_dict(), filename)
 
     def _train(self, states, intActions, newStates, rewards, dones):
-        q = self._model(states)
+        # gather fait un lookup, donc enleve les dimensions
+        q0 = self._evalModel(0, states).gather(1, intActions)
+        q1 = self._evalModel(1, states).gather(1, intActions)
 
         with no_grad():
-            q_new = self._model(newStates)
-            q_new = q_new.max(dim=1)[0]
+            q0_new = self._evalModel(0, newStates)
+            q1_new = self._evalModel(1, newStates)
+            q_new = torch_min(
+                q0_new.max(dim=1)[0],
+                q1_new.max(dim=1)[0]
+            )
 
-            done_indices = torch_nonzero(dones)
-            q_new[done_indices] = 0
+            q_target = rewards + self._gamma * (1 - dones) * q_new
+            q_target = q_target.view(-1, 1)
 
-            q_target = q.clone()
-            q_target[:, intActions] = rewards + self._gamma * q_new
+        self._optimizeModel(0, q0, q_target)
+        self._optimizeModel(1, q1, q_target)
 
-        self._optimizer.zero_grad()
-        loss = self._lossFnc(q_target, q)
-        loss.backward()
-        self._optimizer.step()
+    def _buildModel(self, lr):
+        model = _LinearNet(10, [64], len(self._gameActions))
+        return model, \
+               Adam(model.parameters(), lr=lr), \
+               MSELoss()
+
+    def _evalModel(self, index, x):
+        return self._models[index][0](x)
+
+    def _optimizeModel(self, index, predicate, target):
+        optimizer = self._models[index][1]
+        loss = self._models[index][2]
+
+        optimizer.zero_grad()
+        loss(predicate, target).backward()
+        optimizer.step()
 
     def _stateToTensor(self, state):
         if False:
             x = state["occupancy_grid"]
 
-            if self._gridStack is None:
-                self._gridStack = x.copy()
-            else:
-                self._gridStack = np.append(self._gridStack[:,:,-3:], x, axis=2)
+            # if self._gridStack is None:
+            #     self._gridStack = x.copy()
+            # else:
+            #     self._gridStack = np.append(self._gridStack[:,:,-3:], x, axis=2)
+            # x = from_numpy(self._gridStack)
 
-            x = from_numpy(self._gridStack)
+            x = from_numpy(x)
             x = convert_image_dtype(x)
-
-            return x
         else:
             # positions/directions normalisees concatenees
             grid = state["occupancy_grid"]
@@ -184,4 +212,6 @@ class Agent47(AgentBase):
                                 col_ccw,
                                 col_cw),
                                 dtype=np.float32)
-            return from_numpy(x)
+            x = from_numpy(x)
+
+        return unsqueeze(x, 0)
