@@ -13,7 +13,7 @@ class GameSimulation():
     La simulation evolue sur une grille discrete.
     """
     def __init__(self, simulationConfig):
-        self._occupancyGridWidth = max(5, simulationConfig.gridWidth)
+        self._occupancyGridWidth = max(6, simulationConfig.gridWidth)
         self._occupancyGridHeight = max(5, simulationConfig.gridHeight)
 
         self._outOfBoundsDelegate = Delegate()
@@ -78,7 +78,7 @@ class GameSimulation():
         # numpy est transpose par rapport au sens naturel
         # l'acces a _occupancyGrid suivra la convention numpy
         shape = (self._occupancyGridHeight, self._occupancyGridWidth)
-        self._occupancyGrid = np.zeros(shape=shape, dtype=np.uint8)
+        self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
         self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
 
         # placer le serpent dans la grille
@@ -156,6 +156,7 @@ class GameSimulation():
         return {
             # shape est (Channel, Height, Width)
             "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=0).copy(),
+            "occupancy_stack": self._getStack(),
             "head_direction": self.snake.direction.to_numpy(),
             "head_position": self.snake.head.to_numpy(),
             "food_position": self.food.to_numpy(),
@@ -170,8 +171,8 @@ class GameSimulation():
         # sous optimal, a changer
         value = GridOccupancy.SNAKE_BODY if show else GridOccupancy.EMPTY
 
-        for i, p in enumerate(self._snake.bodyParts):
-            self._occupancyGrid[p.y, p.x] = value
+        for p in self._snake.bodyParts:
+            self._occupancyGrid[p.y, p.x] = value if show else GridOccupancy.EMPTY
 
         if show:
             head = self._snake.head
@@ -218,4 +219,56 @@ class GameSimulation():
             c = c + direction
 
         return c - self.snake.head
+
+    def _getStack(self):
+        grid = self.occupancyGrid
+
+        d = self._snake.direction
+        if d.x == 0:
+            if d.y == -1:
+                grid = np.rot90(grid, k=1)
+            else:
+                grid = np.rot90(grid, k=-1)
+
+        if d.y == 0 and d.x == -1:
+            grid = np.rot90(grid, k=2)
+
+        shape = (3, self._occupancyGridHeight, self._occupancyGridWidth)
+        occupancyStack = np.zeros(shape=shape, dtype=np.int32)
+
+        # len_ = len(self._snake.bodyParts) - 1
+
+        # for i in reversed(range(len_)):
+        #     a = self._snake.bodyParts[i + 1]
+        #     b = self._snake.bodyParts[i + 0]
+        #     ab = b - a
+        #     GameSimulation._fillStack(occupancyStack, ab, a)
+
+        # GameSimulation._fillStack(occupancyStack,
+        #                          self._snake.direction,
+        #                          self._snake.head)
+
+        collision = np.logical_or(grid == GridOccupancy.SNAKE_BODY,
+                                  grid == GridOccupancy.SNAKE_TAIL)
+
+        occupancyStack[0] = np.where(collision, 1, 0)
+        occupancyStack[1] = np.where(grid == GridOccupancy.SNAKE_HEAD, 1, 0)
+        occupancyStack[2] = np.where(grid == GridOccupancy.FOOD, 1, 0)
+
+
+        return occupancyStack
+
+    # @staticmethod
+    # def _fillStack(occupancyStack, dir, p):
+    #     if dir.x == 0:
+    #         if dir.y > 0:
+    #             occupancyStack[Direction.S, p.y, p.x] = 1
+    #         else:
+    #             occupancyStack[Direction.N, p.y, p.x] = 1
+
+    #     if dir.y == 0:
+    #         if dir.x > 0:
+    #             occupancyStack[Direction.E, p.y, p.x] = 1
+    #         else:
+    #             occupancyStack[Direction.W, p.y, p.x] = 1
 

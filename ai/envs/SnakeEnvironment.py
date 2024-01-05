@@ -38,10 +38,14 @@ class SnakeEnvironment(Env):
 
         self.action_space = spaces.Discrete(len(GameAction))
         self.observation_space = spaces.Dict({
-                "occupancy_grid": spaces.Box(low=0,
+                "occupancy_grid": spaces.Box(low=-1,
                                              high=255,
                                              shape=(1, simulationConfig.gridHeight, simulationConfig.gridWidth),
-                                             dtype=np.uint8),
+                                             dtype=np.int32),
+                "occupancy_stack": spaces.Box(low=0,
+                                              high=1,
+                                              shape=(3, simulationConfig.gridHeight, simulationConfig.gridWidth),
+                                              dtype=np.int32),
                 "head_direction": spaces.Box(low=-1,
                                              high=1,
                                              shape=(2,),

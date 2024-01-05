@@ -1,23 +1,27 @@
 {
     "train": {
+        "alpha": 0.8,
+        "beta": 0.1,
+        "betaAnnealingSteps": 20000,
         "gamma": 0.99,
         "epsilon": 1.0,
         "epsilonDecay": 0.95,
-        "lr": 0.01,
+        "lr": 0.005,
         "agent": "AgentClippedDQN",
-        "episodes": 1200,
-        "episodeMaxLen": 120,
-        "showStats": true
+        "episodes": 6000,
+        "episodeMaxLen": 72,
+        "showStats": true,
+        "useConv": true
     },
 
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "move": -0.5,
+            "move": -0.05,
             "eat": 10,
-            "collision": -10,
+            "collision": -100,
             "out_of_bounds": -10,
-            "win": 10
+            "win": 100
         }
     },
 

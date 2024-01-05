@@ -1,9 +1,10 @@
 import ai # importe l'environnement "snake/SnakeEnvironment-v0"
 
-from application.wrappers.ai.envs import EnvironmentStats
+from application.wrappers.ai.envs import EnvironmentStats, EnvironmentOccupancyGrid
 from datetime import datetime
 from gymnasium import make as gym_Make
 from gymnasium.wrappers import TimeLimit as gym_TimeLimit
+from gymnasium.wrappers.frame_stack import FrameStack as gym_FrameStack
 from tqdm import trange
 
 
@@ -33,6 +34,9 @@ class ApplicationTrain():
                                           statsFilename,
                                           showStats=configs.train.showStats)
         self._env = self._envStats
+
+        # self._env = EnvironmentOccupancyGrid(self._env)
+        # self._env = gym_FrameStack(self._env, num_stack=4)
 
     @property
     def envStats(self):

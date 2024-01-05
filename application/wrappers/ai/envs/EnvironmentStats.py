@@ -1,3 +1,4 @@
+import gymnasium as gym
 import numpy as np
 import pandas as pd
 
@@ -10,12 +11,13 @@ _EPISODE_LENGTH = "EpisodeLength"
 _SNAKE_LENGTH = "SnakeLength"
 _CUM_REWARD = "CumulativeReward"
 
-class EnvironmentStats():
+class EnvironmentStats(gym.ObservationWrapper):
     """
     Encapsule un environment pour afficher ses statistiques
     """
     def __init__(self, env, tqdmBasePosition, id, filename, showStats=True):
-        self._env = env
+        gym.ObservationWrapper.__init__(self, env)
+
         self._episode = -1
         self._id = id
         self._filename = filename
@@ -35,11 +37,13 @@ class EnvironmentStats():
             self._lengthProgress = tqdm(bar_format="Max length: {desc} at {unit}",
                                         position=tqdmBasePosition + 2)
 
+        self.observation_space = env.observation_space
+
     @property
     def statsDataFrame(self):
         return self._stats
 
-    def reset(self, options=None):
+    def reset(self, *args, seed=None, options=None):
         if not options is None and "episode" in options:
             self._episode = options["episode"]
         else:
@@ -48,10 +52,10 @@ class EnvironmentStats():
         self.save()
         self._newEpisode()
 
-        return self._env.reset(options=options)
+        return self.env.reset(*args, seed=seed, options=options)
 
     def step(self, *args):
-        observations, reward, terinated, truncated, info = self._env.step(*args)
+        observations, reward, terinated, truncated, info = self.env.step(*args)
 
         self._stats.loc[0, _EPISODE_LENGTH] += 1
         self._stats.loc[0, _SNAKE_LENGTH] = observations["length"]
@@ -74,11 +78,14 @@ class EnvironmentStats():
 
         return observations, reward, terinated, truncated, info
 
+    def observation(self, observation):
+        return observation
+
     def render(self):
-        self._env.render()
+        self.env.render()
 
     def close(self):
-        self._env.close()
+        self.env.close()
         self.save()
 
     def save(self):
