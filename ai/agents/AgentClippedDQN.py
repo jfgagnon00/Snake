@@ -9,6 +9,7 @@ from random import random
 from torch import from_numpy, \
                 no_grad, \
                 min as torch_min, \
+                maximum as torch_maximum, \
                 tensor, \
                 save, \
                 unsqueeze, \
@@ -66,13 +67,14 @@ class _ConvNet(Module):
 
         self._net.append(Flatten())
 
-        # self._net.append(Linear(3*3*10, 200))
+        self._net.append(Linear(10*6*6, 512))
+        self._net.append(LeakyReLU())
+
+        # self._net.append(Linear(256, 256))
         # self._net.append(LeakyReLU())
 
-        # self._net.append(Linear(200, 100))
-        # self._net.append(LeakyReLU())
-
-        self._net.append(Linear(10*6*6, len(GameAction)))
+        # self._net.append(Linear(10*6*6, len(GameAction)))
+        self._net.append(Linear(512, len(GameAction)))
 
     def forward(self, x):
         return self._net(x)
@@ -80,25 +82,26 @@ class _ConvNet(Module):
 class AgentClippedDQN(AgentBase):
     MEMORY_SIZE = 50_000
     BATCH_SIZE = 64
-    BATCH_STEPS = 1
 
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
 
+        # misc parameters
+        self._gameActions = list(GameAction)
+        self._useConv = trainConfig.useConv
+
+        # replay buffer priority
         self._alpha = trainConfig.alpha
         self._beta = trainConfig.beta
         self._betaAnnealingSteps = trainConfig.betaAnnealingSteps
-        self._gamma = trainConfig.gamma
-        self._epsilon = trainConfig.epsilon
-        self._epsilonDecay = trainConfig.epsilonDecay
-        self._useConv = trainConfig.useConv
-
-        self._gameActions = list(GameAction)
-
+        self._maxPriority = 1
         self._replayBuffer = deque(maxlen=AgentClippedDQN.MEMORY_SIZE)
         self._replayBufferPriority = deque(maxlen=AgentClippedDQN.MEMORY_SIZE)
 
         # clipped DQN
+        self._gamma = trainConfig.gamma
+        self._epsilon = trainConfig.epsilon
+        self._epsilonDecay = trainConfig.epsilonDecay
         self._models = [self._buildModel(trainConfig.lr),
                         self._buildModel(trainConfig.lr)]
 
@@ -123,51 +126,21 @@ class AgentClippedDQN(AgentBase):
     def onEpisodeDone(self, *args):
         self._epsilon *= self._epsilonDecay
 
-        # entraine avec vieux samples en mode batch
-        assert len(self._replayBuffer) == len(self._replayBufferPriority)
-
-        replaySize = len(self._replayBuffer)
-        batch_size = min(replaySize, AgentClippedDQN.BATCH_SIZE)
-        if batch_size > 0:
-            beta = self._beta + (1.0 - self._beta) * replaySize / self._betaAnnealingSteps
-            beta = min(1.0, beta)
-
-            for _ in range(AgentClippedDQN.BATCH_STEPS):
-                props = np.array(self._replayBufferPriority) ** self._alpha
-                props = props / props.sum()
-
-                batchIndices = np_choice(replaySize, batch_size, p=props)
-
-                batch = [self._replayBuffer[i] for i in batchIndices]
-                states, intActions, newStates, rewards, dones = zip(*batch)
-
-                weights = (replaySize * props[batchIndices]) ** -beta
-                weights = weights / weights.max()
-
-                errors = self._train(vstack(states),
-                            tensor(intActions, dtype=torch_int64).view(-1, 1),
-                            vstack(newStates),
-                            tensor(rewards, dtype=torch_float32),
-                            tensor(dones, dtype=torch_float32),
-                            tensor(weights, dtype=torch_float32))
-
-                for i, j in enumerate(batchIndices):
-                    self._replayBufferPriority[j] = errors[i, 0]
-
     def train(self, state, action, newState, reward, done):
-        # entraine avec chaque experience
         x = self._stateToTensor(state)
         intAction = self._gameActions.index(action)
         x_new = self._stateToTensor(newState)
 
-        error = self._train(x,
-                    tensor(intAction, dtype=torch_int64).view(-1, 1),
-                    x_new,
-                    tensor(reward, dtype=torch_float32),
-                    tensor(done, dtype=torch_float32))
+        # error = self._train(x,
+        #             tensor(intAction, dtype=torch_int64).view(-1, 1),
+        #             x_new,
+        #             tensor(reward, dtype=torch_float32),
+        #             tensor(done, dtype=torch_float32))
 
         self._replayBuffer.append((x, intAction, x_new, reward, done))
-        self._replayBufferPriority.append(error[0, 0])
+        self._replayBufferPriority.append(self._maxPriority)
+
+        self._trainBatch()
 
     def save(self, *args):
         path, filename = os.path.split(args[0])
@@ -177,6 +150,38 @@ class AgentClippedDQN(AgentBase):
 
         filename = os.path.join(path, f"{filename}.pth")
         save(self._models[0][0].state_dict(), filename)
+
+    def _trainBatch(self):
+        assert len(self._replayBuffer) == len(self._replayBufferPriority)
+
+        replaySize = len(self._replayBuffer)
+
+        if replaySize >= AgentClippedDQN.BATCH_SIZE:
+            # TODO: implementation tres lente, a refaire
+            props = np.array(self._replayBufferPriority) ** self._alpha
+            props = props / props.sum()
+
+            batchIndices = np_choice(replaySize, AgentClippedDQN.BATCH_SIZE, p=props)
+
+            batch = [self._replayBuffer[i] for i in batchIndices]
+            states, intActions, newStates, rewards, dones = zip(*batch)
+
+            beta = self._beta + (1.0 - self._beta) * replaySize / self._betaAnnealingSteps
+            beta = min(1.0, beta)
+            weights = (replaySize * props[batchIndices]) ** -beta
+            weights = weights / weights.max()
+
+            errors = self._train(vstack(states),
+                                tensor(intActions, dtype=torch_int64).view(-1, 1),
+                                vstack(newStates),
+                                tensor(rewards, dtype=torch_float32),
+                                tensor(dones, dtype=torch_float32),
+                                tensor(weights, dtype=torch_float32))
+
+            for i, j in enumerate(batchIndices):
+                error = errors[i, 0]
+                self._maxPriority = max(error, self._maxPriority)
+                self._replayBufferPriority[j] = error
 
     def _train(self, states, intActions, newStates, rewards, dones, weights=None):
         # gather fait un lookup, donc enleve les dimensions
@@ -194,16 +199,16 @@ class AgentClippedDQN(AgentBase):
             q_target = rewards + self._gamma * (1 - dones) * q_new
             q_target = q_target.view(-1, 1)
 
-        self._optimizeModel(0, q0, q_target, weights)
-        self._optimizeModel(1, q1, q_target, weights)
+        e0 = self._optimizeModel(0, q0, q_target, weights)
+        e1 = self._optimizeModel(1, q1, q_target, weights)
 
-        return (q0.detach() - q_target).abs().numpy() + 1e-6
+        return torch_maximum(e0, e1).detach().numpy() + 1e-6
 
     def _buildModel(self, lr):
         if self._useConv:
             model = _ConvNet()
         else:
-            model = _LinearNet(3 * 6 * 6, [2048], len(self._gameActions))
+            model = _LinearNet(114, [512, 512], len(self._gameActions))
 
         return model, Adam(model.parameters(), lr=lr)
 
@@ -214,12 +219,14 @@ class AgentClippedDQN(AgentBase):
         optimizer = self._models[index][1]
 
         optimizer.zero_grad()
-        loss = (predicate - target) ** 2
+        error = loss = (predicate - target) ** 2
         if not weights is None:
             loss = loss * weights
         loss = loss.mean()
         loss.backward()
         optimizer.step()
+
+        return error
 
     def _stateToTensor(self, state):
         if self._useConv:
@@ -229,7 +236,6 @@ class AgentClippedDQN(AgentBase):
             grid = state["occupancy_stack"]
             x = from_numpy( grid.flatten().astype(np.float32) )
         else:
-            # positions/directions normalisees concatenees
             grid = state["occupancy_grid"]
             grid_size = grid.shape[1:]
 
@@ -241,13 +247,15 @@ class AgentClippedDQN(AgentBase):
             head_ccw = 1 if head_d[0] > 0 else 0
             head_cw = 1 if head_d[0] < 0 else 0
 
-            food_d = state["food_position"] - state["head_position"]
-            # food_d = food_d / grid_size
-            # food_d[0] = np.sign(food_d[0])
-            # food_d[1] = np.sign(food_d[1])
-            food_forward = 1 if food_d[1] > 0 else 0
-            food_ccw = 1 if food_d[0] > 0 else 0
-            food_cw = 1 if food_d[0] < 0 else 0
+            if state["food_position"] is None:
+                food_forward = 0
+                food_ccw = 0
+                food_cw = 0
+            else:
+                food_d = state["food_position"] - state["head_position"]
+                food_forward = 1 if food_d[1] > 0 else 0
+                food_ccw = 1 if food_d[0] > 0 else 0
+                food_cw = 1 if food_d[0] < 0 else 0
 
             # col_forward = state["collision_forward"] / grid_size
             # col_ccw = state["collision_ccw"] / grid_size
@@ -260,9 +268,8 @@ class AgentClippedDQN(AgentBase):
                         #   norm(col_cw)),
                           dtype=np.float32)
 
-            gg = grid / length
-            gg = np.where(gg < 0, -1, 1)
-            x = np.concatenate((x, gg.flatten().astype(np.float32)))
+            stack = state["occupancy_stack"]
+            x = np.concatenate((x, stack.flatten().astype(np.float32)))
             x = from_numpy(x)
 
         return unsqueeze(x, 0)

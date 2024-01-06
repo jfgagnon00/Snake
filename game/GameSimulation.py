@@ -159,7 +159,7 @@ class GameSimulation():
             "occupancy_stack": self._getStack(),
             "head_direction": self.snake.direction.to_numpy(),
             "head_position": self.snake.head.to_numpy(),
-            "food_position": self.food.to_numpy(),
+            "food_position": None if self.food is None else self.food.to_numpy(),
             "length": self.snake.length,
             "score": self.score,
             "collision_forward": self._raycast(self.snake.direction).to_numpy(),
@@ -236,18 +236,6 @@ class GameSimulation():
         shape = (3, self._occupancyGridHeight, self._occupancyGridWidth)
         occupancyStack = np.zeros(shape=shape, dtype=np.int32)
 
-        # len_ = len(self._snake.bodyParts) - 1
-
-        # for i in reversed(range(len_)):
-        #     a = self._snake.bodyParts[i + 1]
-        #     b = self._snake.bodyParts[i + 0]
-        #     ab = b - a
-        #     GameSimulation._fillStack(occupancyStack, ab, a)
-
-        # GameSimulation._fillStack(occupancyStack,
-        #                          self._snake.direction,
-        #                          self._snake.head)
-
         collision = np.logical_or(grid == GridOccupancy.SNAKE_BODY,
                                   grid == GridOccupancy.SNAKE_TAIL)
 
@@ -255,20 +243,4 @@ class GameSimulation():
         occupancyStack[1] = np.where(grid == GridOccupancy.SNAKE_HEAD, 1, 0)
         occupancyStack[2] = np.where(grid == GridOccupancy.FOOD, 1, 0)
 
-
         return occupancyStack
-
-    # @staticmethod
-    # def _fillStack(occupancyStack, dir, p):
-    #     if dir.x == 0:
-    #         if dir.y > 0:
-    #             occupancyStack[Direction.S, p.y, p.x] = 1
-    #         else:
-    #             occupancyStack[Direction.N, p.y, p.x] = 1
-
-    #     if dir.y == 0:
-    #         if dir.x > 0:
-    #             occupancyStack[Direction.E, p.y, p.x] = 1
-    #         else:
-    #             occupancyStack[Direction.W, p.y, p.x] = 1
-
