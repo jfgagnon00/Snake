@@ -6,7 +6,7 @@ Encapsule les options du command line pour demarrer l'application dans le mode d
 import click
 import os
 
-from snake.core import MetaObject, RandomProxy
+from .core import MetaObject, RandomProxy
 
 
 # enlever le message d'init de pygame
@@ -44,9 +44,9 @@ def cli(ctx):
 @pass_config
 def play(configs, windowSize, fps, record, recordN, agent):
     "Lance le jeu en mode interactif"
-    import ai.agents as agents
-    from application import ApplicationInteractive
-    from application.wrappers.ai.agents import AgentActionRecorder, AgentInteractive
+    import snake.ai.agents as agents
+    from .application import ApplicationInteractive
+    from .application.wrappers.ai.agents import AgentActionRecorder, AgentInteractive
 
     if not windowSize is None and windowSize > 0:
         configs.graphics.windowSize = windowSize
@@ -89,8 +89,8 @@ def play(configs, windowSize, fps, record, recordN, agent):
 @pass_config
 def replay(configs, windowSize, fps, recording):
     "Rejoue RECORDING en mode non interactif"
-    from application import ApplicationInteractive
-    from application.wrappers.ai.agents import AgentActionPlayback
+    from .application import ApplicationInteractive
+    from .application.wrappers.ai.agents import AgentActionPlayback
 
     if not windowSize is None and windowSize > 0:
         configs.graphics.windowSize = windowSize
@@ -118,9 +118,9 @@ def replay(configs, windowSize, fps, recording):
 @pass_config
 def render(configs, windowSize, fps, recording):
     "Convertie RECORDING dans un fichier mp4"
-    from application import ApplicationInteractive
-    from application.wrappers.ai.agents import AgentActionPlayback
-    from application.wrappers.graphics import VideoWriter
+    from .application import ApplicationInteractive
+    from .application.wrappers.ai.agents import AgentActionPlayback
+    from .application.wrappers.graphics import VideoWriter
 
     configs.graphics.showWindow = False
     configs.graphics.simulationFpsDivider = 1
@@ -188,10 +188,10 @@ def train(configs,
           episodeMaxLen,
           agent):
     "Entraine un agent"
-    import ai.agents as agents
+    import snake.ai.agents as agents
 
-    from application import ApplicationTrain
-    from application.wrappers.ai.agents import AgentActionRecorder
+    from .application import ApplicationTrain
+    from .application.wrappers.ai.agents import AgentActionRecorder
 
     configs.train.unattended = unattended
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from core import Delegate, Vector, RandomProxy
+from snake.core import Delegate, Vector, RandomProxy
 from .GameAction import GameAction
 from .GameSnake import GameSnake
 from .GridOccupancy import GridOccupancy

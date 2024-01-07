@@ -4,7 +4,7 @@ from pygame.rect import Rect
 from pygame.sprite import Group
 
 
-from core import Vector
+from snake.core import Vector
 from .Sprite import _Sprite
 
 # types utilitaires pour gerer l'affichage des differents sprites du serpent
