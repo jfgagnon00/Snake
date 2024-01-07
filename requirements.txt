@@ -1,3 +1,7 @@
+# local package
+-e .
+
+# specifique au projet snake
 certifi==2023.7.22
 charset-normalizer==3.2.0
 click==8.1.7

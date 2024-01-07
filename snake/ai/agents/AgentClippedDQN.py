@@ -57,12 +57,6 @@ class _ConvNet(Module):
         self._net.append(Conv2d(3, 10, 3, padding=1))
         self._net.append(LeakyReLU())
 
-        # self._net.append(Conv2d(10, 10, 3, padding=1))
-        # self._net.append(LeakyReLU())
-
-        # self._net.append(Conv2d(10, 10, 3, padding=1))
-        # self._net.append(LeakyReLU())
-
         # self._net.append(MaxPool2d(2))
 
         self._net.append(Flatten())
@@ -70,18 +64,14 @@ class _ConvNet(Module):
         self._net.append(Linear(10*6*6, 512))
         self._net.append(LeakyReLU())
 
-        # self._net.append(Linear(256, 256))
-        # self._net.append(LeakyReLU())
-
-        # self._net.append(Linear(10*6*6, len(GameAction)))
         self._net.append(Linear(512, len(GameAction)))
 
     def forward(self, x):
         return self._net(x)
 
 class AgentClippedDQN(AgentBase):
-    MEMORY_SIZE = 50_000
-    BATCH_SIZE = 64
+    MEMORY_SIZE = 9184
+    BATCH_SIZE = 32
 
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
@@ -130,12 +120,6 @@ class AgentClippedDQN(AgentBase):
         x = self._stateToTensor(state)
         intAction = self._gameActions.index(action)
         x_new = self._stateToTensor(newState)
-
-        # error = self._train(x,
-        #             tensor(intAction, dtype=torch_int64).view(-1, 1),
-        #             x_new,
-        #             tensor(reward, dtype=torch_float32),
-        #             tensor(done, dtype=torch_float32))
 
         self._replayBuffer.append((x, intAction, x_new, reward, done))
         self._replayBufferPriority.append(self._maxPriority)

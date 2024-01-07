@@ -31,17 +31,17 @@ pip3 install -r requirements.txt
 Snake utilise la ligne de commande pour exposer ses fonctionalités. Les commandes sont simples et auto documntées. A la ligne de commande, pour jouer:
 
 ```
-python snake.py play --help
+python -m snake play --help
 ```
 
 Pour entraînement:
 
 ```
-python snake.py train --help
+python -m snake train --help
 ```
 
 Aide en génrale:
 
 ```
-python snake.py --help
+python -m snake --help
 ```

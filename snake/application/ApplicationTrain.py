@@ -69,7 +69,7 @@ class ApplicationTrain():
                 observations = newObservations
 
             dt = datetime.now() - start
-            self._envStats.statsDataFrame.loc[0, "ElapseSeconds"] = dt.seconds
+            self._envStats.statsDataFrame.loc[0, "EpisodeMS"] = dt.microseconds / 1000
             self._agent.onEpisodeDone(e)
             self._onEpisodeDone()
 

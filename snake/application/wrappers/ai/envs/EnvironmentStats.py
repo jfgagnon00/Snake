@@ -74,12 +74,13 @@ class EnvironmentStats(gym.ObservationWrapper):
             self._maxEpisode.iloc[:,:] = self._episode
             forceUpdate = True
 
-        greater = self._stats >= self._maxStats
+        greater = self._stats > self._maxStats
+        greaterEqual = self._stats >= self._maxStats
 
-        self._maxStats[greater] = self._stats[greater]
-        self._maxEpisode[greater] = self._episode
+        self._maxStats[greaterEqual] = self._stats[greaterEqual]
+        self._maxEpisode[greaterEqual] = self._episode
 
-        if greater.iloc[0,2:].any(axis=0) or forceUpdate:
+        if greaterEqual.iloc[0,2:4].any(axis=0) or forceUpdate:
             self._update()
 
         if greater.loc[0, _SCORE]:
