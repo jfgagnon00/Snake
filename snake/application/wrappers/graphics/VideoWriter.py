@@ -3,7 +3,7 @@ from subprocess import Popen, PIPE
 from pygame.surfarray import array3d
 
 
-class VideoWriter():
+class VideoWriter(object):
     """
     Encapsule une GraphicWindow et enregistre son
     rendu dans un fichier video.

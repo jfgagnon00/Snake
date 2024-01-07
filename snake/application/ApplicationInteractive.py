@@ -1,14 +1,14 @@
 import numpy as np
 
-from core import Delegate
-from game import GameSimulation
-from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
+from snake.core import Delegate
+from snake.game import GameSimulation
+from snake.graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
 
 from .InputManager import _InputManager
 from .wrappers.ai.agents import AgentInteractive
 
 
-class ApplicationInteractive():
+class ApplicationInteractive(object):
     """
     Coordonne la simulation de tel sorte qu'un utiisateur
     peut y jouer a l'aide du clavier.

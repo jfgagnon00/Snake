@@ -1,4 +1,4 @@
-from core import MetaObject
+from snake.core import MetaObject
 from .ConfigEnvironment import ConfigEnvironment, Rewards
 from .ConfigGraphics import ConfigGraphics
 from .ConfigSimulation import ConfigSimulation

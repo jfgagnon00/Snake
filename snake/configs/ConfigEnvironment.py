@@ -7,7 +7,7 @@ class Rewards(StrEnum):
     OUT_OF_BOUNDS = auto()
     WIN = auto()
 
-class ConfigEnvironment():
+class ConfigEnvironment(object):
     def __init__(self):
         self.renderFps = 0
         self.rewards = {

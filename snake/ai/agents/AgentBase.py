@@ -1,4 +1,4 @@
-class AgentBase():
+class AgentBase(object):
     """
     Classe de base pour tous les agents.
     """

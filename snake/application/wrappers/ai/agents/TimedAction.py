@@ -3,10 +3,10 @@ Gere la serialisation des actions pour l'enregistrement/playback
 """
 
 from json import JSONDecoder, JSONEncoder
-from game import GameAction
+from snake.game import GameAction
 
 
-class _TimedAction():
+class _TimedAction(object):
     def __init__(self, time, action):
         self.time = time
         self.action = action

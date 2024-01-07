@@ -10,7 +10,7 @@ from .GraphicFood import _GraphicFood
 from .GraphicSnake import _GraphicSnake
 
 
-class GraphicWindow():
+class GraphicWindow(object):
     """
     Encapsule les objets pygame pour l'affichage et
     l'animation de GameSimulation

@@ -1,4 +1,4 @@
-class ConfigTrain():
+class ConfigTrain(object):
     def __init__(self):
         self.alpha = 0.0
         self.beta = 0.0

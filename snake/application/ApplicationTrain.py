@@ -1,13 +1,14 @@
-import ai # importe l'environnement "snake/SnakeEnvironment-v0"
+import snake.ai # importe l'environnement "snake/SnakeEnvironment-v0"
 
-from application.wrappers.ai.envs import EnvironmentStats, EnvironmentOccupancyGrid
 from datetime import datetime
 from gymnasium import make as gym_Make
 from gymnasium.wrappers import TimeLimit as gym_TimeLimit
 from tqdm import trange
+from snake.application.wrappers.ai.envs import EnvironmentStats, \
+                                               EnvironmentOccupancyGrid
 
 
-class ApplicationTrain():
+class ApplicationTrain(object):
     """
     Responsable de l'entrainement des agents
     """

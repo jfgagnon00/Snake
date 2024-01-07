@@ -1,5 +1,4 @@
-
-class Delegate():
+class Delegate(object):
     """
     Encapsule le design pattern delegation. Enregistre une
     liste de callable qui seront notifies lors de l'appel

@@ -1,7 +1,7 @@
 from collections import deque
 
 
-class GameSnake():
+class GameSnake(object):
     """
     Represente le serpent
     """

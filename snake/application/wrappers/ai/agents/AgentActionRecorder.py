@@ -1,8 +1,8 @@
 import json
 import os
 
-from ai.agents import AgentBase
-from core import RandomProxy
+from snake.ai.agents import AgentBase
+from snake.core import RandomProxy
 from .Random import _RandomRecorder
 from .TimedAction import _TimedAction, _TimedActionEncoder
 

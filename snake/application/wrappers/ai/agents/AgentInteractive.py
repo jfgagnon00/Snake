@@ -1,7 +1,7 @@
-from ai.agents.AgentBase import AgentBase
-from core import Vector
-from game import GameAction
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
+from snake.ai.agents.AgentBase import AgentBase
+from snake.core import Vector
+from snake.game import GameAction
 
 
 def _onLeft(direction):

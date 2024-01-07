@@ -2,8 +2,8 @@ import gymnasium as gym
 import numpy as np
 import pandas as pd
 
-from core import Delegate
 from tqdm import tqdm
+from snake.core import Delegate
 
 
 _ID = "Id"

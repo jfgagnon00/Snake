@@ -41,7 +41,7 @@ def _getEdgeFromDir(outDir):
 def _getKey(spriteType, edge1, edge2):
         return int(spriteType) | (int(edge1) << 3) | (int(edge2) << 6)
 
-class _GraphicSnake():
+class _GraphicSnake(object):
     """
     Responsable de l'affchage de tous le serpent (tete et corps).
     """

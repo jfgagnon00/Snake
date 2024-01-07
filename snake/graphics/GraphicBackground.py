@@ -4,7 +4,7 @@ from pygame.sprite import Group
 from .Sprite import _Sprite
 
 
-class _GraphicBackground():
+class _GraphicBackground(object):
     """
     Represente le damier du background
     """

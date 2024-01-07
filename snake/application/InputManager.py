@@ -1,8 +1,8 @@
-from core import Delegate
+from snake.core import Delegate
 from pygame import QUIT, KEYDOWN, KEYUP
 from pygame.event import get as py_eventGet
 
-class _InputManager():
+class _InputManager(object):
     def __init__(self):
         self._keyDownDelegate = Delegate()
         self._quitDelegate = Delegate()

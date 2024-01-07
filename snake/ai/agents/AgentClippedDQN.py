@@ -2,10 +2,8 @@ import numpy as np
 import os
 
 from collections import deque
-from game import GameAction
 from numpy.linalg import norm
 from numpy.random import choice as np_choice
-from random import random
 from torch import from_numpy, \
                 no_grad, \
                 min as torch_min, \
@@ -28,7 +26,8 @@ from torch.optim import Adam
 from torchvision.transforms.functional import convert_image_dtype
 from torchsummary import summary
 
-from .AgentBase import AgentBase
+from snake.game import GameAction
+from snake.ai.agents.AgentBase import AgentBase
 
 
 class _LinearNet(Module):

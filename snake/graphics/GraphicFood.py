@@ -2,7 +2,7 @@ from pygame.sprite import Group
 
 from .Sprite import _Sprite
 
-class _GraphicFood():
+class _GraphicFood(object):
     """
     Represente la nourriture
     """

@@ -1,6 +1,6 @@
-from game import GameAction
-from random import choice
-from .AgentBase import AgentBase
+from snake.core import RandomProxy
+from snake.game import GameAction
+from snake.ai.agents.AgentBase import AgentBase
 
 class AgentRandom(AgentBase):
     """
@@ -9,7 +9,8 @@ class AgentRandom(AgentBase):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self._actions = list(GameAction)
+        self._actionsIndex = range(len(self._actions))
 
     def getAction(self, *args):
-        action = choice(self._actions)
-        return GameAction(action)
+        action = RandomProxy.choice(self._actionsIndex)
+        return GameAction(self._actions[action])

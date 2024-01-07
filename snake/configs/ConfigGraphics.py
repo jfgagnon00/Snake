@@ -1,4 +1,4 @@
-class ConfigGraphics():
+class ConfigGraphics(object):
     """
     Represente les configurations pour tout ce qui
     correspond a l'affichage

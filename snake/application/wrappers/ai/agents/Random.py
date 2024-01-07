@@ -2,7 +2,7 @@
 Utilitaires pour RandomProxy pour l'enregistrement/playback
 """
 
-from core import RandomBase
+from snake.core import RandomBase
 
 
 class _RandomRecorder(RandomBase):

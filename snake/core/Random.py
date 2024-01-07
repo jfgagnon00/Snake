@@ -6,7 +6,7 @@ import random
 
 from abc import ABC, abstractmethod
 
-class RandomProxy:
+class RandomProxy(object):
     # instance du proxy a utiliser
     instance = None
 

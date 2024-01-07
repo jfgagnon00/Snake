@@ -1,11 +1,11 @@
 import numpy as np
 
-from configs import Rewards
 from copy import deepcopy
 from gymnasium import Env, spaces
-from game import GameAction
-from game import GameSimulation
-from graphics import GraphicWindow, init as gfxInit, quit as gfxQuit, pumpEvents
+from snake.configs import Rewards
+from snake.game import GameAction
+from snake.game import GameSimulation
+from snake.graphics import GraphicWindow, init as gfxInit, quit as gfxQuit, pumpEvents
 
 
 class SnakeEnvironment(Env):

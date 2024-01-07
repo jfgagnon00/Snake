@@ -2,7 +2,7 @@ import numpy as np
 
 from math import sqrt
 
-class Vector():
+class Vector(object):
     """
     Represente un vecteur/point 2D
     """

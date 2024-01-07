@@ -6,7 +6,7 @@ from .GameSnake import GameSnake
 from .GridOccupancy import GridOccupancy
 
 
-class GameSimulation():
+class GameSimulation(object):
     """
     Responsable de la logique de simulation du jeu de serpent.
     La simulation evolue sur une grille discrete.

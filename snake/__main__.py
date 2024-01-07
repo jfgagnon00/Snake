@@ -6,7 +6,7 @@ Encapsule les options du command line pour demarrer l'application dans le mode d
 import click
 import os
 
-from core import MetaObject, RandomProxy
+from snake.core import MetaObject, RandomProxy
 
 
 # enlever le message d'init de pygame
@@ -17,7 +17,7 @@ pass_config = click.make_pass_decorator(MetaObject)
 @click.group()
 @click.pass_context
 def cli(ctx):
-    from configs import configsCreate
+    from .configs import configsCreate
     ctx.obj = configsCreate("config_overrides.json")
 
 @cli.command()

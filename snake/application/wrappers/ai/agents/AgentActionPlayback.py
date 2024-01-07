@@ -1,7 +1,7 @@
 import json
 
-from ai.agents import AgentBase
-from core import RandomProxy
+from snake.ai.agents import AgentBase
+from snake.core import RandomProxy
 from .Random import _RandomPlayback
 from .TimedAction import _TimedActionDecoder
 
