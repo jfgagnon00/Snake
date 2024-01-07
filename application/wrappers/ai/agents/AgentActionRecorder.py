@@ -1,9 +1,9 @@
 import json
 import os
-import random
 
 from ai.agents import AgentBase
-from datetime import datetime
+from core import RandomProxy
+from .Random import _RandomRecorder
 from .TimedAction import _TimedAction, _TimedActionEncoder
 
 
@@ -19,15 +19,16 @@ class AgentActionRecorder(AgentBase):
         self._agent = agent
         self._recordPattern = recordPattern
         self._episodeCountModulo = 1 if recordN is None else int(recordN)
+        self._randomRecorder = RandomProxy.instance = _RandomRecorder(RandomProxy.instance)
         self.reset()
 
     def reset(self):
         """
         Redemarre la capture
         """
-        self._resetInternal()
-        random.seed(self._seed)
-
+        self._time = -1
+        self._timedActions = []
+        self._randomRecorder.reset()
         self._agent.reset()
 
     def getAction(self, *args):
@@ -65,16 +66,11 @@ class AgentActionRecorder(AgentBase):
             os.makedirs(path, exist_ok=True)
 
         with open(filename, "w") as file:
-            json.dump({"seed": self._seed,
-                        "timedActions": self._timedActions},
-                file,
-                cls=_TimedActionEncoder,
-                indent=4)
+            json.dump({"timedActions": self._timedActions,
+                       "random_choices": self._randomRecorder.choices},
+                       file,
+                       cls=_TimedActionEncoder,
+                       indent=4)
 
     def _isEmpty(self):
         return len(self._timedActions) == 0
-
-    def _resetInternal(self):
-        self._time = -1
-        self._seed = datetime.now().timestamp()
-        self._timedActions = []

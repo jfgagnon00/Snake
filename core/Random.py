@@ -31,4 +31,4 @@ class _DefaultRandom(RandomBase):
     Implementation par default pour RandomProxy
     """
     def choice(self, *args):
-        return random.choice(*args)
+        return int(random.choice(*args))

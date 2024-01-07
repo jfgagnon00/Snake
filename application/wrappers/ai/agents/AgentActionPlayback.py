@@ -1,7 +1,8 @@
 import json
-import random
 
 from ai.agents import AgentBase
+from core import RandomProxy
+from .Random import _RandomPlayback
 from .TimedAction import _TimedActionDecoder
 
 
@@ -14,8 +15,11 @@ class AgentActionPlayback(AgentBase):
         super().__init__()
         with open(filename, "r") as file:
             dict_ = json.load(file, cls=_TimedActionDecoder)
-            self._seed = dict_["seed"]
             self._timedActions = dict_["timedActions"]
+            random_choices = dict_["random_choices"]
+
+        self._randomPlayback = RandomProxy.instance = _RandomPlayback(random_choices)
+
         self.reset()
 
     def reset(self):
@@ -26,7 +30,6 @@ class AgentActionPlayback(AgentBase):
         self._nextTime = -1
         self._nextIndex = 0
         self._next()
-        random.seed(self._seed)
 
     def getAction(self, *args):
         """

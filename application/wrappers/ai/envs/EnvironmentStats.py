@@ -9,7 +9,7 @@ from tqdm import tqdm
 _ID = "Id"
 _EPISODE = "Episode"
 _EPISODE_LENGTH = "EpisodeLength"
-_SNAKE_LENGTH = "SnakeLength"
+_SCORE = "Score"
 _CUM_REWARD = "CumulativeReward"
 
 class EnvironmentStats(gym.ObservationWrapper):
@@ -21,7 +21,7 @@ class EnvironmentStats(gym.ObservationWrapper):
 
         self._episode = -1
         self._id = id
-        self._filename = filename
+        self._filename = filename.replace("%", "stats")
         self._stats = None
         self._maxStats = None
         self._maxEpisode = None
@@ -36,8 +36,8 @@ class EnvironmentStats(gym.ObservationWrapper):
             self._rewardProgress = tqdm(bar_format="Max cum. reward: {desc} at {unit}",
                                         position=tqdmBasePosition + 1)
 
-            self._lengthProgress = tqdm(bar_format="Max length: {desc} at {unit}",
-                                        position=tqdmBasePosition + 2)
+            self._scoreProgress = tqdm(bar_format="Max score: {desc} at {unit}",
+                                       position=tqdmBasePosition + 2)
 
         self.observation_space = env.observation_space
 
@@ -64,7 +64,7 @@ class EnvironmentStats(gym.ObservationWrapper):
         observations, reward, terinated, truncated, info = self.env.step(*args)
 
         self._stats.loc[0, _EPISODE_LENGTH] += 1
-        self._stats.loc[0, _SNAKE_LENGTH] = observations["score"]
+        self._stats.loc[0, _SCORE] = observations["score"]
         self._stats.loc[0, _CUM_REWARD] += reward
 
         forceUpdate = False
@@ -74,7 +74,7 @@ class EnvironmentStats(gym.ObservationWrapper):
             self._maxEpisode.iloc[:,:] = self._episode
             forceUpdate = True
 
-        greater = self._stats > self._maxStats
+        greater = self._stats >= self._maxStats
 
         self._maxStats[greater] = self._stats[greater]
         self._maxEpisode[greater] = self._episode
@@ -82,7 +82,7 @@ class EnvironmentStats(gym.ObservationWrapper):
         if greater.iloc[0,2:].any(axis=0) or forceUpdate:
             self._update()
 
-        if greater.loc[0, _SNAKE_LENGTH]:
+        if greater.loc[0, _SCORE]:
             self._newMaxStatsDelegate()
 
         return observations, reward, terinated, truncated, info
@@ -115,12 +115,12 @@ class EnvironmentStats(gym.ObservationWrapper):
             self._rewardProgress.set_description_str(str(self._maxStats.loc[0, _CUM_REWARD]))
             self._rewardProgress.unit = str(int(self._maxEpisode.loc[0, _CUM_REWARD]))
 
-            self._lengthProgress.set_description_str(str(self._maxStats.loc[0, _SNAKE_LENGTH]))
-            self._lengthProgress.unit = str(self._maxEpisode.loc[0, _SNAKE_LENGTH])
+            self._scoreProgress.set_description_str(str(self._maxStats.loc[0, _SCORE]))
+            self._scoreProgress.unit = str(self._maxEpisode.loc[0, _SCORE])
 
     def _newEpisode(self):
         self._stats = self._newDataFrame()
 
     def _newDataFrame(self):
         return pd.DataFrame([[self._id, self._episode, 0, 0, 0.0]],
-                            columns=[_ID, _EPISODE, _EPISODE_LENGTH, _SNAKE_LENGTH, _CUM_REWARD])
+                            columns=[_ID, _EPISODE, _EPISODE_LENGTH, _SCORE, _CUM_REWARD])
