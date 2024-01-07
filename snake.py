@@ -6,7 +6,7 @@ Encapsule les options du command line pour demarrer l'application dans le mode d
 import click
 import os
 
-from core import MetaObject
+from core import MetaObject, RandomProxy
 
 
 # enlever le message d'init de pygame
@@ -235,5 +235,8 @@ if __name__ == "__main__":
     path = os.path.abspath(__file__)
     path, _ = os.path.split(path)
     os.chdir(path)
+
+    # initialiser random
+    RandomProxy.init()
 
     cli()

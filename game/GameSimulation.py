@@ -1,7 +1,6 @@
 import numpy as np
-import random
 
-from core import Delegate, Vector
+from core import Delegate, Vector, RandomProxy
 from .GameAction import GameAction
 from .GameSnake import GameSnake
 from .GridOccupancy import GridOccupancy
@@ -188,7 +187,7 @@ class GameSimulation():
         freeCells = allCells[freeCells.reshape(-1)]
 
         # prendre une cellule au hasard
-        cellIndex = random.choice(freeCells)
+        cellIndex = RandomProxy.choice(freeCells)
 
         # transformer index en coordonnees
         x = cellIndex % self._occupancyGridWidth
