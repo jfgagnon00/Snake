@@ -1,3 +1,5 @@
+from snake.assets import _resolvePath
+
 class ConfigGraphics(object):
     """
     Represente les configurations pour tout ce qui
@@ -39,3 +41,9 @@ class ConfigGraphics(object):
         self.caption = ""
         self.iconPath = ""
         self.showWindow = True
+
+    def resolvePaths(self):
+        self.fontPath = _resolvePath(self.fontPath)
+        self.snakeSpritesPath = _resolvePath(self.snakeSpritesPath)
+        self.foodSpritePath = _resolvePath(self.foodSpritePath)
+        self.iconPath = _resolvePath(self.iconPath)

@@ -9,8 +9,6 @@ import os
 from .core import MetaObject, RandomProxy
 
 
-# enlever le message d'init de pygame
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 pass_config = click.make_pass_decorator(MetaObject)
 
 
@@ -230,11 +228,8 @@ def train(configs,
         agent.save()
 
 if __name__ == "__main__":
-    # mettre le repertoire courant comme celui par defaut
-    # (facilite la gestion des chemins relatifs)
-    path = os.path.abspath(__file__)
-    path, _ = os.path.split(path)
-    os.chdir(path)
+    # enlever le message d'init de pygame
+    os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
     # initialiser random
     RandomProxy.init()

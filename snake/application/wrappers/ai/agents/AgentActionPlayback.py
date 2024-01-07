@@ -30,6 +30,7 @@ class AgentActionPlayback(AgentBase):
         self._nextTime = -1
         self._nextIndex = 0
         self._next()
+        self._randomPlayback.reset()
 
     def getAction(self, *args):
         """

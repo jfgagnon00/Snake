@@ -37,6 +37,7 @@ def configsCreate(configOverrides):
 
     # ce flag ne peut etre overrider par les configs
     gfxConfig.showWindow = True
+    gfxConfig.resolvePaths()
 
     return MetaObject.from_kwargs(environment=envConfig,
                                   graphics=gfxConfig,
