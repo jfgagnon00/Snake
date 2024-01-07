@@ -90,13 +90,13 @@ class AgentClippedDQN(AgentBase):
         self._gameActions = list(GameAction)
         self._useConv = trainConfig.useConv
 
-        # replay buffer priority
+        # priority replay buffer
         self._alpha = trainConfig.alpha
         self._beta = trainConfig.beta
         self._betaAnnealingSteps = trainConfig.betaAnnealingSteps
-        self._maxPriority = 1
         self._replayBuffer = deque(maxlen=AgentClippedDQN.MEMORY_SIZE)
         self._replayBufferPriority = deque(maxlen=AgentClippedDQN.MEMORY_SIZE)
+        self._maxPriority = 1
 
         # clipped DQN
         self._gamma = trainConfig.gamma

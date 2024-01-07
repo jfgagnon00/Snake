@@ -4,7 +4,6 @@ from application.wrappers.ai.envs import EnvironmentStats, EnvironmentOccupancyG
 from datetime import datetime
 from gymnasium import make as gym_Make
 from gymnasium.wrappers import TimeLimit as gym_TimeLimit
-from gymnasium.wrappers.frame_stack import FrameStack as gym_FrameStack
 from tqdm import trange
 
 
@@ -33,17 +32,17 @@ class ApplicationTrain():
                                           0,
                                           statsFilename,
                                           showStats=configs.train.showStats)
+        self._envStats.newMaxStatsDelegate.register(self._onNewMaxStats)
         self._env = self._envStats
 
         # self._env = EnvironmentOccupancyGrid(self._env)
-        # self._env = gym_FrameStack(self._env, num_stack=4)
 
     @property
     def envStats(self):
         return self._envStats
 
     def run(self):
-        start = None
+        self._forceSaveEpisode = False
         episodesIt = trange(self._episodes, desc="Episodes", position=0)
         for e in episodesIt:
             done = False
@@ -51,12 +50,7 @@ class ApplicationTrain():
             observations, _ = self._env.reset(options={"episode":e})
 
             self._agent.onEpisodeBegin(e, self._envStats.statsDataFrame)
-
-            if start is None:
-                start = datetime.now()
-
-            dt = datetime.now() - start
-            self._envStats.statsDataFrame.loc[0, "ElapseSeconds"] = dt.seconds
+            start = datetime.now()
 
             while not done:
                 action = self._agent.getAction(observations)
@@ -74,6 +68,17 @@ class ApplicationTrain():
 
                 observations = newObservations
 
+            dt = datetime.now() - start
+            self._envStats.statsDataFrame.loc[0, "ElapseSeconds"] = dt.seconds
             self._agent.onEpisodeDone(e)
+            self._onEpisodeDone()
 
         self._env.close()
+
+    def _onNewMaxStats(self):
+        self._forceSaveEpisode = True
+
+    def _onEpisodeDone(self):
+        if self._forceSaveEpisode:
+            self._forceSaveEpisode = False
+            self._agent.save()

@@ -21,10 +21,6 @@ class AgentActionRecorder(AgentBase):
         self._episodeCountModulo = 1 if recordN is None else int(recordN)
         self.reset()
 
-    @property
-    def saveDelegate(self):
-        return self._saveDelegate
-
     def reset(self):
         """
         Redemarre la capture
@@ -74,8 +70,6 @@ class AgentActionRecorder(AgentBase):
                 file,
                 cls=_TimedActionEncoder,
                 indent=4)
-
-        self._resetInternal()
 
     def _isEmpty(self):
         return len(self._timedActions) == 0

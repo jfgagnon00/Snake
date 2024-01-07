@@ -23,6 +23,7 @@ class AgentActionPlayback(AgentBase):
         Redemarre la capture
         """
         self._time = -1
+        self._nextTime = -1
         self._nextIndex = 0
         self._next()
         random.seed(self._seed)
