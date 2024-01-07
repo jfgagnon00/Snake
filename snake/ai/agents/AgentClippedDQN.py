@@ -4,6 +4,7 @@ import os
 from collections import deque
 from numpy.linalg import norm
 from numpy.random import choice as np_choice
+from random import random
 from torch import from_numpy, \
                 no_grad, \
                 min as torch_min, \
