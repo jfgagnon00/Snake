@@ -54,14 +54,14 @@ class _ConvNet(Module):
 
         self._net = Sequential()
 
-        self._net.append(Conv2d(3, 10, 3, padding=1))
+        self._net.append(Conv2d(3, 16, 3, padding=1))
         self._net.append(LeakyReLU())
 
         # self._net.append(MaxPool2d(2))
 
         self._net.append(Flatten())
 
-        self._net.append(Linear(10*6*6, 512))
+        self._net.append(Linear(16*6*6, 512))
         self._net.append(LeakyReLU())
 
         self._net.append(Linear(512, len(GameAction)))
@@ -70,8 +70,8 @@ class _ConvNet(Module):
         return self._net(x)
 
 class AgentClippedDQN(AgentBase):
-    MEMORY_SIZE = 9184
-    BATCH_SIZE = 32
+    MEMORY_SIZE = 32_000
+    BATCH_SIZE = 64
 
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
@@ -168,10 +168,6 @@ class AgentClippedDQN(AgentBase):
                 self._replayBufferPriority[j] = error
 
     def _train(self, states, intActions, newStates, rewards, dones, weights=None):
-        # gather fait un lookup, donc enleve les dimensions
-        q0 = self._evalModel(0, states).gather(1, intActions)
-        q1 = self._evalModel(1, states).gather(1, intActions)
-
         with no_grad():
             q0_new = self._evalModel(0, newStates)
             q1_new = self._evalModel(1, newStates)
@@ -183,6 +179,10 @@ class AgentClippedDQN(AgentBase):
             q_target = rewards + self._gamma * (1 - dones) * q_new
             q_target = q_target.view(-1, 1)
 
+        # gather fait un lookup, donc enleve les dimensions
+        q0 = self._evalModel(0, states).gather(1, intActions)
+        q1 = self._evalModel(1, states).gather(1, intActions)
+
         e0 = self._optimizeModel(0, q0, q_target, weights)
         e1 = self._optimizeModel(1, q1, q_target, weights)
 
@@ -193,6 +193,8 @@ class AgentClippedDQN(AgentBase):
             model = _ConvNet()
         else:
             model = _LinearNet(114, [512, 512], len(self._gameActions))
+
+        model.train()
 
         return model, Adam(model.parameters(), lr=lr)
 
