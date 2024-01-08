@@ -11,6 +11,7 @@ from torch import from_numpy, \
                 maximum as torch_maximum, \
                 tensor, \
                 save, \
+                load, \
                 unsqueeze, \
                 vstack, \
                 int64 as torch_int64, \
@@ -132,8 +133,20 @@ class AgentClippedDQN(AgentBase):
 
         os.makedirs(path, exist_ok=True)
 
-        filename = os.path.join(path, f"{filename}.pth")
-        save(self._models[0][0].state_dict(), filename)
+        file = os.path.join(path, f"{filename}-0.pth")
+        save(self._models[0][0].state_dict(), file)
+
+        file = os.path.join(path, f"{filename}-1.pth")
+        save(self._models[1][0].state_dict(), file)
+
+    def load(self, *args):
+        filename = args[0]
+
+        file = load(f"{filename}-0.pth")
+        self._models[0][0].load_state_dict(file)
+
+        file = load(f"{filename}-1.pth")
+        self._models[1][0].load_state_dict(file)
 
     def _trainBatch(self):
         assert len(self._replayBuffer) == len(self._replayBufferPriority)

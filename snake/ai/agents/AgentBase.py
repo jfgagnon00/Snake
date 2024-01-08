@@ -40,3 +40,9 @@ class AgentBase(object):
         Appeler pour sauvegarder l'etat courant
         """
         pass
+
+    def load(self, *args):
+        """
+        Appeler pour charger
+        """
+        pass

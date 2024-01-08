@@ -70,7 +70,7 @@ class ApplicationTrain(object):
                 observations = newObservations
 
             dt = datetime.now() - start
-            self._envStats.statsDataFrame.loc[0, "EpisodeMS"] = dt.microseconds / 1000
+            self._envStats.statsDataFrame.loc[0, "EpisodeDuration"] = dt.total_seconds()
             self._agent.onEpisodeDone(e)
             self._onEpisodeDone()
 

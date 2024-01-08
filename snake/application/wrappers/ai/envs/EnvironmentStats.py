@@ -83,7 +83,7 @@ class EnvironmentStats(gym.ObservationWrapper):
         if greaterEqual.iloc[0,2:4].any(axis=0) or forceUpdate:
             self._update()
 
-        if greater.loc[0, _SCORE]:
+        if greater.loc[0, _CUM_REWARD]:
             self._newMaxStatsDelegate()
 
         return observations, reward, terinated, truncated, info

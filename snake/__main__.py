@@ -175,6 +175,10 @@ def render(configs, windowSize, fps, recording):
               "-a",
               type=str,
               help="Type de l'agent à utiliser.")
+@click.option("model",
+              "-m",
+              type=str,
+              help="Model a autiliser pour initialiser.")
 @pass_config
 def train(configs,
           windowSize,
@@ -184,7 +188,8 @@ def train(configs,
           unattended,
           episodes,
           episodeMaxLen,
-          agent):
+          agent,
+          model):
     "Entraine un agent"
     import snake.ai.agents as agents
 
@@ -214,6 +219,9 @@ def train(configs,
     # limiter aux classes de ai.agents pour le moment
     agent_class = getattr(agents, agent)
     agent = agent_class(configs.train, configs.simulation)
+
+    if model is not None:
+        agent.load(model)
 
     if not record is None:
         configs.graphics.caption += " - recording"
