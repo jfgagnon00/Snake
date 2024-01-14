@@ -2,7 +2,6 @@ import numpy as np
 import os
 
 from collections import deque
-from numpy.linalg import norm
 from numpy.random import choice as np_choice
 from random import random
 from torch import from_numpy, \
@@ -16,59 +15,13 @@ from torch import from_numpy, \
                 vstack, \
                 int64 as torch_int64, \
                 float32 as torch_float32
-from torch.nn import Linear, \
-                    Module, \
-                    ReLU, \
-                    Sequential, \
-                    Conv2d, \
-                    Flatten, \
-                    LeakyReLU, \
-                    MaxPool2d
 from torch.optim import Adam
-from torchvision.transforms.functional import convert_image_dtype
 from torchsummary import summary
 
 from snake.game import GameAction
 from snake.ai.agents.AgentBase import AgentBase
+from snake.ai.nets import _LinearNet, _ConvNet
 
-
-class _LinearNet(Module):
-    def __init__(self, numInputs, hiddenLayers, numOutput):
-        super().__init__()
-
-        self._net = Sequential()
-
-        prevSize = numInputs
-        for size in hiddenLayers:
-            self._net.append(Linear(prevSize, size))
-            self._net.append(LeakyReLU())
-            prevSize = size
-
-        self._net.append(Linear(prevSize, numOutput))
-
-    def forward(self, x):
-        return self._net(x)
-
-class _ConvNet(Module):
-    def __init__(self):
-        super().__init__()
-
-        self._net = Sequential()
-
-        self._net.append(Conv2d(3, 16, 3, padding=1))
-        self._net.append(LeakyReLU())
-
-        self._net.append(Conv2d(16, 32, 3, padding=1))
-        self._net.append(LeakyReLU())
-
-        # self._net.append(MaxPool2d(2))
-
-        self._net.append(Flatten())
-
-        self._net.append(Linear(32*10*10, len(GameAction)))
-
-    def forward(self, x):
-        return self._net(x)
 
 class AgentClippedDQN(AgentBase):
     MEMORY_SIZE = 32_000
@@ -93,8 +46,12 @@ class AgentClippedDQN(AgentBase):
         self._gamma = trainConfig.gamma
         self._epsilon = trainConfig.epsilon
         self._epsilonDecay = trainConfig.epsilonDecay
-        self._models = [self._buildModel(trainConfig.lr),
-                        self._buildModel(trainConfig.lr)]
+        self._models = [self._buildModel(trainConfig.lr,
+                                         simulationConfig.gridWidth,
+                                         simulationConfig.gridHeight),
+                        self._buildModel(trainConfig.lr,
+                                         simulationConfig.gridWidth,
+                                         simulationConfig.gridHeight)]
 
         if False:
             summary(self._models[0][0], (3, 6, 6))
@@ -203,9 +160,9 @@ class AgentClippedDQN(AgentBase):
 
         return torch_maximum(e0, e1).detach().numpy() + 1e-6
 
-    def _buildModel(self, lr):
+    def _buildModel(self, lr, width, height):
         if self._useConv:
-            model = _ConvNet()
+            model = _ConvNet(width, height, len(self._gameActions))
         else:
             model = _LinearNet(114, [512, 512], len(self._gameActions))
 

@@ -6,10 +6,11 @@
         "gamma": 0.99,
         "epsilon": 1.0,
         "epsilonDecay": 0.95,
+        "nStep": 3,
         "lr": 0.005,
         "agent": "AgentClippedDQN",
-        "episodes": 6000,
-        "episodeMaxLen": 90,
+        "episodes": 3000,
+        "episodeMaxLen": 72,
         "showStats": true,
         "useConv": true
     },
@@ -26,8 +27,8 @@
     },
 
     "simulation": {
-        "gridWidth": 10,
-        "gridHeight": 10
+        "gridWidth": 6,
+        "gridHeight": 6
     },
 
     "graphics": {
