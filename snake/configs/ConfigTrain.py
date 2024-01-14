@@ -11,6 +11,6 @@ class ConfigTrain(object):
         self.agent = "AgentRandom"
         self.unattended = False
         self.episodes = 1
-        self.episodeMaxLen = 0
+        self.maxVisitCount = 0
         self.showStats = True
         self.useConv = False

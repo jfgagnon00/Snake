@@ -24,7 +24,7 @@ from snake.ai.PriorityReplayBuffer import _PriorityReplayBuffer
 
 class AgentClippedDQN(AgentBase):
     MEMORY_SIZE = 32_000
-    BATCH_SIZE = 64
+    BATCH_SIZE = 32
 
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
@@ -139,7 +139,7 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, lr, width, height):
         if self._useConv:
-            model = _ConvNet(width, height, len(self._gameActions))
+            model = _ConvNet(width, height, 1, len(self._gameActions))
         else:
             model = _LinearNet(114, [512, 512], len(self._gameActions))
 
@@ -165,10 +165,10 @@ class AgentClippedDQN(AgentBase):
 
     def _stateToTensor(self, state):
         if self._useConv:
-            grid = state["occupancy_stack"]
-            x = from_numpy(grid.astype(np.float32))
+            grid = state["occupancy_grid"]
+            x = from_numpy(grid.astype(np.float32) / 255)
         elif False:
-            grid = state["occupancy_stack"]
+            grid = state["occupancy_grid"]
             x = from_numpy( grid.flatten().astype(np.float32) )
         else:
             grid = state["occupancy_grid"]
@@ -192,19 +192,11 @@ class AgentClippedDQN(AgentBase):
                 food_ccw = 1 if food_d[0] > 0 else 0
                 food_cw = 1 if food_d[0] < 0 else 0
 
-            # col_forward = state["collision_forward"] / grid_size
-            # col_ccw = state["collision_ccw"] / grid_size
-            # col_cw = state["collision_cw"] / grid_size
-
             x = np.array((head_forward, head_ccw, head_cw,
                           food_forward, food_ccw, food_cw),
-                        #   norm(col_forward),
-                        #   norm(col_ccw),
-                        #   norm(col_cw)),
                           dtype=np.float32)
 
-            stack = state["occupancy_stack"]
-            x = np.concatenate((x, stack.flatten().astype(np.float32)))
+            x = np.concatenate((x, grid.flatten().astype(np.float32)))
             x = from_numpy(x)
 
         return unsqueeze(x, 0)

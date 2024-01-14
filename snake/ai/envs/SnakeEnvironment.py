@@ -26,7 +26,8 @@ class SnakeEnvironment(Env):
                  renderMode=None,
                  environmentConfig=None,
                  simulationConfig=None,
-                 graphicsConfig=None):
+                 graphicsConfig=None,
+                 trainConfig=None):
         super().__init__()
 
         assert not environmentConfig is None
@@ -42,10 +43,6 @@ class SnakeEnvironment(Env):
                                              high=255,
                                              shape=(1, simulationConfig.gridHeight, simulationConfig.gridWidth),
                                              dtype=np.int32),
-                "occupancy_stack": spaces.Box(low=0,
-                                              high=1,
-                                              shape=(3, simulationConfig.gridHeight, simulationConfig.gridWidth),
-                                              dtype=np.int32),
                 "head_direction": spaces.Box(low=-1,
                                              high=1,
                                              shape=(2,),
@@ -60,18 +57,6 @@ class SnakeEnvironment(Env):
                                             dtype=int),
                 "length": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
                 "score": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
-                "collision_forward": spaces.Box(low=np.array([-simulationConfig.gridHeight, -simulationConfig.gridWidth]),
-                                            high=np.array([simulationConfig.gridHeight, simulationConfig.gridWidth]),
-                                            shape=(2,),
-                                            dtype=int),
-                "collision_ccw": spaces.Box(low=np.array([-simulationConfig.gridHeight, -simulationConfig.gridWidth]),
-                                            high=np.array([simulationConfig.gridHeight, simulationConfig.gridWidth]),
-                                            shape=(2,),
-                                            dtype=int),
-                "collision_cw": spaces.Box(low=np.array([-simulationConfig.gridHeight, -simulationConfig.gridWidth]),
-                                            high=np.array([simulationConfig.gridHeight, simulationConfig.gridWidth]),
-                                            shape=(2,),
-                                            dtype=int),
             })
 
         self._renderMode = renderMode
@@ -92,6 +77,7 @@ class SnakeEnvironment(Env):
         self._rewards = deepcopy(environmentConfig.rewards)
         self._reward = 0
         self._done = False
+        self._maxVisitCount = 0 if trainConfig is None else trainConfig.maxVisitCount
 
         # configuer les delegates pour gerer les recompenses
         self._simulation.outOfBoundsDelegate.register(self._onSnakeOutOfBounds)
@@ -120,11 +106,22 @@ class SnakeEnvironment(Env):
         # les evenements appropries seront lances par les delegates et feront avancer les etats
         self._simulation.apply(action)
 
+        # detection de boucle infinie: empecher serpent de passer plus de
+        # self._maxVisitCount fois au meme endroit. Moins restrictif que
+        # longueur d'episode et plus efficace
+        truncated = self._simulation.occupancyGridCount.max() > self._maxVisitCount
+        if truncated and self._maxVisitCount > 0:
+            self._reward = self._rewards[Rewards.TRUNCATED]
+
         # faire affichage si besoin
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
-        return self._getObservations(), self._reward, self._done, False, self._getInfo()
+        return self._getObservations(), \
+               self._reward, \
+               self._done, \
+               truncated, \
+               self._getInfo()
 
     def render(self):
         # rien a faire

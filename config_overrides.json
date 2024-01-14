@@ -9,8 +9,8 @@
         "nStep": 3,
         "lr": 0.005,
         "agent": "AgentClippedDQN",
-        "episodes": 3000,
-        "episodeMaxLen": 72,
+        "episodes": 1000,
+        "maxVisitCount": 3,
         "showStats": true,
         "useConv": true
     },
@@ -22,7 +22,8 @@
             "eat": 100,
             "collision": -100,
             "out_of_bounds": -100,
-            "win": 500
+            "win": 500,
+            "truncated": -100
         }
     },
 

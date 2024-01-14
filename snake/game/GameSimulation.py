@@ -41,6 +41,14 @@ class GameSimulation(object):
         return self._occupancyGrid
 
     @property
+    def occupancyGridCount(self):
+        """
+        Retourne une reference sur le nombre de foix une cellule a ete visitee.
+        Attention, prendre la convention d'acces numpy
+        """
+        return self._occupancyGridCount
+
+    @property
     def outOfBoundsDelegate(self):
         return self._outOfBoundsDelegate
 
@@ -78,6 +86,7 @@ class GameSimulation(object):
         # l'acces a _occupancyGrid suivra la convention numpy
         shape = (self._occupancyGridHeight, self._occupancyGridWidth)
         self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
+        self._occupancyGridCount = np.zeros(shape=shape, dtype=np.int32)
         self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
 
         # placer le serpent dans la grille
@@ -113,6 +122,8 @@ class GameSimulation(object):
             self._snake.bodyParts.appendleft(head)
             self._setSnakeInGrid(True)
             self._score += 1
+
+            self._occupancyGridCount = np.zeros(shape=(self._occupancyGridHeight, self._occupancyGridWidth), dtype=np.int32)
 
             cellCount = self._occupancyGridWidth * self._occupancyGridHeight
             if len(self._snake.bodyParts) == cellCount:
@@ -155,15 +166,11 @@ class GameSimulation(object):
         return {
             # shape est (Channel, Height, Width)
             "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=0).copy(),
-            "occupancy_stack": self._getStack(),
             "head_direction": self.snake.direction.to_numpy(),
             "head_position": self.snake.head.to_numpy(),
             "food_position": None if self.food is None else self.food.to_numpy(),
             "length": self.snake.length,
             "score": self.score,
-            "collision_forward": self._raycast(self.snake.direction).to_numpy(),
-            "collision_ccw": self._raycast(Vector(self.snake.direction.y, -self.snake.direction.x)).to_numpy(),
-            "collision_cw": self._raycast(Vector(-self.snake.direction.y, self.snake.direction.x)).to_numpy(),
         }
 
     def _setSnakeInGrid(self, show):
@@ -176,9 +183,7 @@ class GameSimulation(object):
         if show:
             head = self._snake.head
             self._occupancyGrid[head.y, head.x] = GridOccupancy.SNAKE_HEAD
-
-            tail = self._snake.tail
-            self._occupancyGrid[tail.y, tail.x] = GridOccupancy.SNAKE_TAIL
+            self._occupancyGridCount[head.y, head.x] += 1
 
     def _placeFood(self):
         # trouver les cellules libres a partir de _occupancyGrid
@@ -201,45 +206,3 @@ class GameSimulation(object):
         # placer dans la grille
         self._food = Vector(x, y)
         self._occupancyGrid[y, x] = GridOccupancy.FOOD
-
-    def _raycast(self, direction):
-        c = Vector(self.snake.head.x, self.snake.head.y)
-
-        while True:
-            if c.x <= 0 or c.x >= (self._occupancyGridWidth - 1):
-                break
-
-            if c.y <= 0 or c.y >= (self._occupancyGridHeight - 1):
-                break
-
-            if c != self.snake.head and self._occupancyGrid[c.y, c.x] != GridOccupancy.EMPTY:
-                break
-
-            c = c + direction
-
-        return c - self.snake.head
-
-    def _getStack(self):
-        grid = self.occupancyGrid
-
-        d = self._snake.direction
-        if d.x == 0:
-            if d.y == -1:
-                grid = np.rot90(grid, k=1)
-            else:
-                grid = np.rot90(grid, k=-1)
-
-        if d.y == 0 and d.x == -1:
-            grid = np.rot90(grid, k=2)
-
-        shape = (3, self._occupancyGridHeight, self._occupancyGridWidth)
-        occupancyStack = np.zeros(shape=shape, dtype=np.int32)
-
-        collision = np.logical_or(grid == GridOccupancy.SNAKE_BODY,
-                                  grid == GridOccupancy.SNAKE_TAIL)
-
-        occupancyStack[0] = np.where(collision, 1, 0)
-        occupancyStack[1] = np.where(grid == GridOccupancy.SNAKE_HEAD, 1, 0)
-        occupancyStack[2] = np.where(grid == GridOccupancy.FOOD, 1, 0)
-
-        return occupancyStack

@@ -6,6 +6,7 @@ class Rewards(StrEnum):
     COLLISION = auto()
     OUT_OF_BOUNDS = auto()
     WIN = auto()
+    TRUNCATED = auto()
 
 class ConfigEnvironment(object):
     def __init__(self):
@@ -16,4 +17,5 @@ class ConfigEnvironment(object):
             Rewards.COLLISION: -10,
             Rewards.OUT_OF_BOUNDS: -10,
             Rewards.WIN: 30,
+            Rewards.TRUNCATED: -10,
         }
