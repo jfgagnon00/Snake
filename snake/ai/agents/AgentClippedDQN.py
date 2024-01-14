@@ -1,9 +1,7 @@
 import numpy as np
 import os
 
-from collections import deque
-from numpy.random import choice as np_choice
-from random import random
+from random import random, choice
 from torch import from_numpy, \
                 no_grad, \
                 min as torch_min, \
@@ -21,6 +19,7 @@ from torchsummary import summary
 from snake.game import GameAction
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _LinearNet, _ConvNet
+from snake.ai.PriorityReplayBuffer import _PriorityReplayBuffer
 
 
 class AgentClippedDQN(AgentBase):
@@ -35,12 +34,10 @@ class AgentClippedDQN(AgentBase):
         self._useConv = trainConfig.useConv
 
         # priority replay buffer
-        self._alpha = trainConfig.alpha
-        self._beta = trainConfig.beta
-        self._betaAnnealingSteps = trainConfig.betaAnnealingSteps
-        self._replayBuffer = deque(maxlen=AgentClippedDQN.MEMORY_SIZE)
-        self._replayBufferPriority = deque(maxlen=AgentClippedDQN.MEMORY_SIZE)
-        self._maxPriority = 1
+        self._replayBuffer = _PriorityReplayBuffer(AgentClippedDQN.MEMORY_SIZE,
+                                                   trainConfig.alpha,
+                                                   trainConfig.beta,
+                                                   trainConfig.betaAnnealingSteps)
 
         # clipped DQN
         self._gamma = trainConfig.gamma
@@ -59,7 +56,7 @@ class AgentClippedDQN(AgentBase):
 
     def getAction(self, state):
         if random() < self._epsilon:
-            gameAction = np_choice(self._gameActions)
+            gameAction = choice(self._gameActions)
         else:
             x = self._stateToTensor(state)
             q = self._evalModel(0, x)
@@ -75,13 +72,11 @@ class AgentClippedDQN(AgentBase):
         self._epsilon *= self._epsilonDecay
 
     def train(self, state, action, newState, reward, done):
-        x = self._stateToTensor(state)
-        intAction = self._gameActions.index(action)
-        x_new = self._stateToTensor(newState)
-
-        self._replayBuffer.append((x, intAction, x_new, reward, done))
-        self._replayBufferPriority.append(self._maxPriority)
-
+        self._replayBuffer.append(self._stateToTensor(state),
+                                  self._gameActions.index(action),
+                                  self._stateToTensor(newState),
+                                  reward,
+                                  done)
         self._trainBatch()
 
     def save(self, *args):
@@ -108,36 +103,18 @@ class AgentClippedDQN(AgentBase):
         self._models[1][0].load_state_dict(states, strict=False)
 
     def _trainBatch(self):
-        assert len(self._replayBuffer) == len(self._replayBufferPriority)
-
         replaySize = len(self._replayBuffer)
 
         if replaySize >= AgentClippedDQN.BATCH_SIZE:
-            # TODO: implementation tres lente, a refaire
-            props = np.array(self._replayBufferPriority) ** self._alpha
-            props = props / props.sum()
-
-            batchIndices = np_choice(replaySize, AgentClippedDQN.BATCH_SIZE, p=props)
-
-            batch = [self._replayBuffer[i] for i in batchIndices]
-            states, intActions, newStates, rewards, dones = zip(*batch)
-
-            beta = self._beta + (1.0 - self._beta) * replaySize / self._betaAnnealingSteps
-            beta = min(1.0, beta)
-            weights = (replaySize * props[batchIndices]) ** -beta
-            weights = weights / weights.max()
-
+            samples = self._replayBuffer.sample(AgentClippedDQN.BATCH_SIZE)
+            states, intActions, newStates, rewards, dones, weights, indices = samples
             errors = self._train(vstack(states),
-                                tensor(intActions, dtype=torch_int64).view(-1, 1),
-                                vstack(newStates),
-                                tensor(rewards, dtype=torch_float32),
-                                tensor(dones, dtype=torch_float32),
-                                tensor(weights, dtype=torch_float32))
-
-            for i, j in enumerate(batchIndices):
-                error = errors[i, 0]
-                self._maxPriority = max(error, self._maxPriority)
-                self._replayBufferPriority[j] = error
+                                 tensor(intActions, dtype=torch_int64).view(-1, 1),
+                                 vstack(newStates),
+                                 tensor(rewards, dtype=torch_float32),
+                                 tensor(dones, dtype=torch_float32),
+                                 tensor(weights, dtype=torch_float32))
+            self._replayBuffer.updatePriorities(indices, errors)
 
     def _train(self, states, intActions, newStates, rewards, dones, weights=None):
         with no_grad():
