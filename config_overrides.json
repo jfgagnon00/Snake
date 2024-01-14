@@ -9,7 +9,7 @@
         "lr": 0.005,
         "agent": "AgentClippedDQN",
         "episodes": 6000,
-        "episodeMaxLen": 72,
+        "episodeMaxLen": 90,
         "showStats": true,
         "useConv": true
     },
@@ -17,7 +17,7 @@
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "move": -0.1,
+            "move": 0,
             "eat": 100,
             "collision": -100,
             "out_of_bounds": -100,
@@ -26,8 +26,8 @@
     },
 
     "simulation": {
-        "gridWidth": 6,
-        "gridHeight": 6
+        "gridWidth": 10,
+        "gridHeight": 10
     },
 
     "graphics": {

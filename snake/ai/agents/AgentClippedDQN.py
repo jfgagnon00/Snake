@@ -58,14 +58,14 @@ class _ConvNet(Module):
         self._net.append(Conv2d(3, 16, 3, padding=1))
         self._net.append(LeakyReLU())
 
+        self._net.append(Conv2d(16, 32, 3, padding=1))
+        self._net.append(LeakyReLU())
+
         # self._net.append(MaxPool2d(2))
 
         self._net.append(Flatten())
 
-        self._net.append(Linear(16*6*6, 512))
-        self._net.append(LeakyReLU())
-
-        self._net.append(Linear(512, len(GameAction)))
+        self._net.append(Linear(32*10*10, len(GameAction)))
 
     def forward(self, x):
         return self._net(x)
@@ -142,11 +142,13 @@ class AgentClippedDQN(AgentBase):
     def load(self, *args):
         filename = args[0]
 
-        file = load(f"{filename}-0.pth")
-        self._models[0][0].load_state_dict(file)
+        states = load(f"{filename}-0.pth")
+        states = {k:v for k, v in states.items() if "_net.0" in k}
+        self._models[0][0].load_state_dict(states, strict=False)
 
-        file = load(f"{filename}-1.pth")
-        self._models[1][0].load_state_dict(file)
+        states = load(f"{filename}-1.pth")
+        states = {k:v for k, v in states.items() if "_net.0" in k}
+        self._models[1][0].load_state_dict(states, strict=False)
 
     def _trainBatch(self):
         assert len(self._replayBuffer) == len(self._replayBufferPriority)
