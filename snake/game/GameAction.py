@@ -1,9 +1,13 @@
-from enum import StrEnum, auto
+from enum import Enum
 
-class GameAction(StrEnum):
+from snake.core import Vector
+
+
+class GameAction(Enum):
     """
     Les actions possibles pour la tete du serpent
     """
-    TURN_CCW = auto()
-    TURN_CW = auto()
-    FORWARD = auto()
+    NORTH = Vector(0, -1)
+    SOUTH = Vector(0,  1)
+    EAST = Vector( 1, 0)
+    WEST = Vector(-1, 0)

@@ -6,6 +6,7 @@ class ConfigTrain(object):
         self.gamma = 0.0
         self.epsilon = 0.0
         self.epsilonDecay = 0.0
+        self.epsilonMin = 0.0
         self.nStep = 1
         self.lr = 0.0
         self.agent = "AgentRandom"
@@ -14,3 +15,5 @@ class ConfigTrain(object):
         self.maxVisitCount = 0
         self.showStats = True
         self.useConv = False
+        self.frameStack = 1
+        self.useFrameStack = False

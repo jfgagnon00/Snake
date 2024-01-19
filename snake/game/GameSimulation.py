@@ -87,7 +87,7 @@ class GameSimulation(object):
         shape = (self._occupancyGridHeight, self._occupancyGridWidth)
         self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
         self._occupancyGridCount = np.zeros(shape=shape, dtype=np.int32)
-        self._snake = GameSnake(Vector(4, 1), Vector(1, 0))
+        self._snake = GameSnake(Vector(3, 1), Vector(1, 0))
 
         # placer le serpent dans la grille
         self._setSnakeInGrid(True)
@@ -102,14 +102,10 @@ class GameSimulation(object):
         # la mise a jour va modifier le serpent aussi
         d = self._snake.direction
 
-        if action == GameAction.TURN_CCW:
-            # tourne direction 90 degres CCW
-            d.x, d.y = d.y, -d.x
-            self._turnDelegate()
+        winding = Vector.winding(self._snake.direction, action.value)
 
-        if action == GameAction.TURN_CW:
-            # tourne direction 90 degres CW
-            d.x, d.y = -d.y, d.x
+        if winding != 0:
+            self._snake.direction = action.value
             self._turnDelegate()
 
         # bouger la tete dans la nouvelle direction
@@ -166,9 +162,9 @@ class GameSimulation(object):
         return {
             # shape est (Channel, Height, Width)
             "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=0).copy(),
-            "head_direction": self.snake.direction.to_numpy(),
-            "head_position": self.snake.head.to_numpy(),
-            "food_position": None if self.food is None else self.food.to_numpy(),
+            "head_direction": self.snake.direction.toNumpy(),
+            "head_position": self.snake.head.toNumpy(),
+            "food_position": None if self.food is None else self.food.toNumpy(),
             "length": self.snake.length,
             "score": self.score,
         }

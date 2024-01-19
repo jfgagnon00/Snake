@@ -4,61 +4,11 @@ from snake.core import Vector
 from snake.game import GameAction
 
 
-def _onLeft(direction):
-    if direction.y > 0:
-        # serpent va vers le bas, tourne a droite pour devenir la gauche
-        return GameAction.TURN_CW
+def _getAction(direction, action):
+    if Vector.winding(direction, action.value) != 0:
+        return action
 
-    if direction.y < 0:
-        # serpent va vers le haut, tourne a gauche pour devenir la gauche
-        return GameAction.TURN_CCW
-
-    # serpent va vers la droite ou vers la gauche
-    # ne pas permettre un retour en arriere
-    # donc garder la direction
-    return GameAction.FORWARD
-
-def _onRight(direction):
-    if direction.y > 0:
-        # serpent va vers le bas, tourne a gauche pour devenir la droite
-        return GameAction.TURN_CCW
-
-    if direction.y < 0:
-        # serpent va vers le haut, tourne a droite pour devenir la droite
-        return GameAction.TURN_CW
-
-    # serpent va vers la droite ou vers la gauche
-    # ne pas permettre un retour en arriere
-    # donc garder la direction
-    return GameAction.FORWARD
-
-def _onUp(direction):
-    if direction.x > 0:
-        # serpent va vers la droite, tourne a gauche pour devenir up
-        return GameAction.TURN_CCW
-
-    if direction.x < 0:
-        # serpent va vers la gauche, tourne a droite pour devenir up
-        return GameAction.TURN_CW
-
-    # serpent va vers le haut ou vers la bas
-    # ne pas permettre un retour en arriere
-    # donc garder la direction
-    return GameAction.FORWARD
-
-def _onDown(direction):
-    if direction.x > 0:
-        # serpent va vers la droite, tourne a droite pour devenir up
-        return GameAction.TURN_CW
-
-    if direction.x < 0:
-        # serpent va vers la gauche, tourne a gauche pour devenir up
-        return GameAction.TURN_CCW
-
-    # serpent va vers le haut ou vers la bas
-    # ne pas permettre un retour en arriere
-    # donc garder la direction
-    return GameAction.FORWARD
+    return GameAction(direction)
 
 class AgentInteractive(AgentBase):
     """
@@ -66,10 +16,10 @@ class AgentInteractive(AgentBase):
     Note: specialiser pour play.py. Ne pas utiliser comme agent conventionel.
     """
     _KEY_HANDLERS = {
-        K_LEFT: _onLeft,
-        K_RIGHT: _onRight,
-        K_UP: _onUp,
-        K_DOWN: _onDown
+        K_LEFT: lambda d: _getAction(d, GameAction.WEST),
+        K_RIGHT: lambda d: _getAction(d, GameAction.EAST),
+        K_UP: lambda d: _getAction(d, GameAction.NORTH),
+        K_DOWN: lambda d: _getAction(d, GameAction.SOUTH)
     }
 
     def __init__(self):
@@ -91,13 +41,10 @@ class AgentInteractive(AgentBase):
         Obtenir action a partir de l'etat.
         """
         direction = observations["head_direction"]
-
-        # attention, convension numpy (row, col) == (y, x)
-        # donc flip les composantes pour logique interne
-        direction = Vector(direction[1], direction[0])
+        direction = Vector.fromNumpy(direction)
 
         if self._lastKeyDown in AgentInteractive._KEY_HANDLERS:
             handler = AgentInteractive._KEY_HANDLERS[self._lastKeyDown]
             return handler(direction)
 
-        return GameAction.FORWARD
+        return GameAction(direction)

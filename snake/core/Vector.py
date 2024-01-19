@@ -29,10 +29,35 @@ class Vector(object):
     def length(self):
         return sqrt(self.x*self.x + self.y*self.y)
 
-    def to_numpy(self):
+    def toNumpy(self):
         """
         Converti en array numpy
         """
         # TODO: sous optimal, devrait heriter de np.array plutot que creer des objets
         # convention numpy: height, width
         return np.array([self.y, self.x])
+
+    @staticmethod
+    def fromNumpy(v):
+        return Vector(v[1], v[0])
+
+    @staticmethod
+    def dot(a, b):
+        return a.x * b.x + a.y + b.y
+
+    @staticmethod
+    def winding(a, b):
+        """
+        Retourne  1 si a tourne vers b de maniere CCW
+        Retourne -1 si a tourne vers b de maniere CW
+        Retourne  0 si a et b sont paralleles
+        """
+        k = a.x * b.y - a.y * b.x
+
+        if k > 0:
+            return 1
+
+        if k < 0:
+            return -1
+
+        return 0

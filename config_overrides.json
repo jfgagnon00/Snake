@@ -3,27 +3,30 @@
         "alpha": 0.8,
         "beta": 0.1,
         "betaAnnealingSteps": 20000,
-        "gamma": 0.99,
-        "epsilon": 1.0,
+        "gamma": 0.95,
+        "epsilon": 0.01,
         "epsilonDecay": 0.95,
-        "nStep": 3,
+        "epsilonMin": 0.0,
+        "nStep": 2,
         "lr": 0.005,
         "agent": "AgentClippedDQN",
-        "episodes": 1000,
-        "maxVisitCount": 3,
+        "episodes": 3000,
+        "maxVisitCount": 7,
         "showStats": true,
-        "useConv": true
+        "useConv": false,
+        "useFrameStack": false,
+        "frameStack": 3
     },
 
     "environment": {
         "renderFps": 200,
         "rewards": {
             "move": 0,
-            "eat": 100,
-            "collision": -100,
-            "out_of_bounds": -100,
-            "win": 500,
-            "truncated": -100
+            "eat": 200,
+            "collision": -200,
+            "out_of_bounds": -200,
+            "win": 400,
+            "truncated": -200
         }
     },
 

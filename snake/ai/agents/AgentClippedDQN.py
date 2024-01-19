@@ -16,15 +16,16 @@ from torch import from_numpy, \
 from torch.optim import Adam
 from torchsummary import summary
 
-from snake.game import GameAction
+from snake.game import GameAction, GridOccupancy
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _LinearNet, _ConvNet
 from snake.ai.PriorityReplayBuffer import _PriorityReplayBuffer
+from snake.ai.NStepPriorityReplayBuffer import _NStepPriorityReplayBuffer
 
 
 class AgentClippedDQN(AgentBase):
-    MEMORY_SIZE = 32_000
-    BATCH_SIZE = 32
+    MEMORY_SIZE = 64_000
+    BATCH_SIZE = 64
 
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
@@ -34,24 +35,29 @@ class AgentClippedDQN(AgentBase):
         self._useConv = trainConfig.useConv
 
         # priority replay buffer
-        self._replayBuffer = _PriorityReplayBuffer(AgentClippedDQN.MEMORY_SIZE,
-                                                   trainConfig.alpha,
-                                                   trainConfig.beta,
-                                                   trainConfig.betaAnnealingSteps)
+        self._replayBuffer = _NStepPriorityReplayBuffer(AgentClippedDQN.MEMORY_SIZE,
+            trainConfig.alpha,
+            trainConfig.beta,
+            trainConfig.betaAnnealingSteps,
+            trainConfig.gamma,
+            trainConfig.nStep)
 
         # clipped DQN
-        self._gamma = trainConfig.gamma
+        self._gamma = trainConfig.gamma ** trainConfig.nStep
         self._epsilon = trainConfig.epsilon
         self._epsilonDecay = trainConfig.epsilonDecay
-        self._models = [self._buildModel(trainConfig.lr,
+        self._epsilonMin = trainConfig.epsilonMin
+        self._models = [self._buildModel(trainConfig,
                                          simulationConfig.gridWidth,
                                          simulationConfig.gridHeight),
-                        self._buildModel(trainConfig.lr,
+                        self._buildModel(trainConfig,
                                          simulationConfig.gridWidth,
                                          simulationConfig.gridHeight)]
 
+        self._useFrameStack = trainConfig.useFrameStack
+
         if False:
-            summary(self._models[0][0], (3, 6, 6))
+            summary(self._models[0][0], (1, 3, 6, 6))
             exit(-1)
 
     def getAction(self, state):
@@ -70,6 +76,7 @@ class AgentClippedDQN(AgentBase):
 
     def onEpisodeDone(self, *args):
         self._epsilon *= self._epsilonDecay
+        self._epsilon = max(self._epsilon, self._epsilonMin)
 
     def train(self, state, action, newState, reward, done):
         self._replayBuffer.append(self._stateToTensor(state),
@@ -137,15 +144,17 @@ class AgentClippedDQN(AgentBase):
 
         return torch_maximum(e0, e1).detach().numpy() + 1e-6
 
-    def _buildModel(self, lr, width, height):
+    def _buildModel(self, trainConfig, width, height):
         if self._useConv:
-            model = _ConvNet(width, height, 1, len(self._gameActions))
+            numInputs = trainConfig.frameStack if trainConfig.useFrameStack else 1
+            numInputs *= 3
+            model = _ConvNet(width, height, numInputs, len(self._gameActions))
         else:
-            model = _LinearNet(114, [512, 512], len(self._gameActions))
+            model = _LinearNet(width * height * 3 + 3, [512], len(self._gameActions))
 
         model.train()
 
-        return model, Adam(model.parameters(), lr=lr)
+        return model, Adam(model.parameters(), lr=trainConfig.lr)
 
     def _evalModel(self, index, x):
         return self._models[index][0](x)
@@ -164,9 +173,57 @@ class AgentClippedDQN(AgentBase):
         return error
 
     def _stateToTensor(self, state):
-        if self._useConv:
+        if True: # self._useConv:
             grid = state["occupancy_grid"]
-            x = from_numpy(grid.astype(np.float32) / 255)
+            grid = np.squeeze(grid)
+
+            head_d = state["head_direction"]
+            k = 0
+            if head_d[0] == 0:
+                if head_d[1] == -1:
+                    k = 2
+            elif head_d[1] == 0:
+                if head_d[0] == -1:
+                    k = 1
+                else:
+                    k = -1
+
+            if k != 0:
+                grid = np.rot90(grid, k=k, axes=(-2, -1))
+
+            if self._useFrameStack:
+                gg = np.zeros((grid.shape[0], 3, *grid.shape[1:]), dtype=grid.dtype)
+
+                for i in range(grid.shape[0]):
+                    gg[i, 0] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
+                    gg[i, 1] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
+                    gg[i, 2] = np.where(grid[i,:,:] == GridOccupancy.FOOD, 1, 0)
+
+                gg = gg.reshape((-1, *grid.shape[1:]))
+            else:
+                gg = np.zeros((3, *grid.shape), dtype=grid.dtype)
+                gg[0] = np.where(grid == GridOccupancy.SNAKE_BODY, 1, 0)
+                gg[1] = np.where(grid == GridOccupancy.SNAKE_HEAD, 1, 0)
+                gg[2] = np.where(grid == GridOccupancy.FOOD, 1, 0)
+
+            if self._useConv:
+                x = from_numpy(gg.astype(np.float32))
+            else:
+                head_p = state["head_position"]
+                food_p = state["food_position"]
+                food_d = food_p - head_p
+
+                forward = np.dot(head_d, food_d)
+                forward = 1 if forward > 0 else 0
+
+                cross = np.linalg.norm(np.cross(head_d, food_d))
+                ccw = 1 if cross > 0 else 0
+                cw = 1 if cross < 0 else 0
+
+                gg = gg.flatten()
+                gg = np.append(gg, [forward, ccw, cw])
+
+                x = from_numpy(gg.astype(np.float32))
         elif False:
             grid = state["occupancy_grid"]
             x = from_numpy( grid.flatten().astype(np.float32) )

@@ -4,7 +4,7 @@ from datetime import datetime
 from gymnasium import make as gym_Make
 from tqdm import trange
 from snake.application.wrappers.ai.envs import EnvironmentStats, \
-                                               EnvironmentOccupancyGrid
+                                               EnvironmentStackedOccupancyGrid
 
 
 class ApplicationTrain(object):
@@ -28,7 +28,9 @@ class ApplicationTrain(object):
         self._envStats.newMaxStatsDelegate.register(self._onNewMaxStats)
         self._env = self._envStats
 
-        # self._env = EnvironmentOccupancyGrid(self._env)
+        if configs.train.useFrameStack:
+            self._env = EnvironmentStackedOccupancyGrid(self._env,
+                                                        configs.train.frameStack)
 
     @property
     def envStats(self):
