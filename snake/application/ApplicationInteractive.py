@@ -111,8 +111,8 @@ class ApplicationInteractive(object):
         if not self._lastAnyKeyPressedCallable is None:
             self._inputManager.anyKeyPressedDelegate.register(self._lastAnyKeyPressedCallable)
 
-    def _setUpdateState(self, newUpdateCallable):
-        self._simulationCounter = 0
+    def _setUpdateState(self, newUpdateCallable, newSimulationCounter=0):
+        self._simulationCounter = newSimulationCounter
 
         if not self._lastUpdateCallable is None:
             self._updateDelegate.unregister(self._lastUpdateCallable)
@@ -130,7 +130,7 @@ class ApplicationInteractive(object):
         self._episode += 1
         self._setAnyKeyPressedState(None)
         self._reset()
-        self._setUpdateState(self._update)
+        self._setUpdateState(self._update, self._simulationFpsDivider)
 
     def _onLose(self):
         self.agent.onEpisodeDone(self._episode)
