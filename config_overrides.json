@@ -14,7 +14,7 @@
         "maxVisitCount": 7,
         "showStats": true,
         "useConv": false,
-        "useFrameStack": false,
+        "useFrameStack": true,
         "frameStack": 3
     },
 

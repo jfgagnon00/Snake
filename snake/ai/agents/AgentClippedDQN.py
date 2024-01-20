@@ -155,7 +155,7 @@ class AgentClippedDQN(AgentBase):
         if self._useConv:
             model = _ConvNet(width, height, numFrames, len(self._gameActions))
         else:
-            miscs = 4 if trainConfig.useFrameStack else 0
+            miscs = 0 if trainConfig.useFrameStack else 4
             model = _LinearNet(width * height * numFrames + miscs, [512], len(self._gameActions))
 
         model.train()
@@ -185,7 +185,7 @@ class AgentClippedDQN(AgentBase):
         if not self._useConv:
             grid = grid.flatten()
 
-            if self._useFrameStack:
+            if not self._useFrameStack:
                 head_p = state["head_position"]
                 food_p = state["food_position"]
                 food_d = food_p - head_p
