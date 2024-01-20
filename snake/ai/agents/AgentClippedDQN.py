@@ -150,12 +150,13 @@ class AgentClippedDQN(AgentBase):
         return torch_maximum(e0, e1).detach().numpy() + 1e-6
 
     def _buildModel(self, trainConfig, width, height):
+        numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
+
         if self._useConv:
-            numInputs = trainConfig.frameStack if trainConfig.useFrameStack else 1
-            numInputs *= 3
-            model = _ConvNet(width, height, numInputs, len(self._gameActions))
+            model = _ConvNet(width, height, numFrames, len(self._gameActions))
         else:
-            model = _LinearNet(width * height * 3 + 4, [512], len(self._gameActions))
+            miscs = 4 if trainConfig.useFrameStack else 0
+            model = _LinearNet(width * height * numFrames + miscs, [512], len(self._gameActions))
 
         model.train()
 
@@ -179,38 +180,23 @@ class AgentClippedDQN(AgentBase):
 
     def _stateToTensor(self, state):
         grid = state["occupancy_grid"]
-        grid = np.squeeze(grid)
+        grid = np.squeeze(grid / 255)
 
-        if self._useFrameStack:
-            gg = np.zeros((grid.shape[0], 3, *grid.shape[1:]), dtype=grid.dtype)
+        if not self._useConv:
+            grid = grid.flatten()
 
-            for i in range(grid.shape[0]):
-                gg[i, 0] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
-                gg[i, 1] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
-                gg[i, 2] = np.where(grid[i,:,:] == GridOccupancy.FOOD, 1, 0)
+            if self._useFrameStack:
+                head_p = state["head_position"]
+                food_p = state["food_position"]
+                food_d = food_p - head_p
 
-            gg = gg.reshape((-1, *grid.shape[1:]))
-        else:
-            gg = np.zeros((3, *grid.shape), dtype=grid.dtype)
-            gg[0] = np.where(grid == GridOccupancy.SNAKE_BODY, 1, 0)
-            gg[1] = np.where(grid == GridOccupancy.SNAKE_HEAD, 1, 0)
-            gg[2] = np.where(grid == GridOccupancy.FOOD, 1, 0)
+                n = 1.0 if food_d[0] < 0 else 0.0
+                s = 1.0 if food_d[0] > 0 else 0.0
+                w = 1.0 if food_d[1] < 0 else 0.0
+                e = 1.0 if food_d[1] > 0 else 0.0
 
-        if self._useConv:
-            x = from_numpy(gg.astype(np.float32))
-        else:
-            head_p = state["head_position"]
-            food_p = state["food_position"]
-            food_d = food_p - head_p
+                grid = np.append(grid, [n, s, w, e])
 
-            n = food_d[0] < 0
-            s = food_d[0] > 0
-            w = food_d[1] < 0
-            e = food_d[1] > 0
-
-            gg = gg.flatten()
-            gg = np.append(gg, [n, s, w, e])
-
-            x = from_numpy(gg.astype(np.float32))
+        x = from_numpy(grid.astype(np.float32))
 
         return unsqueeze(x, 0)
