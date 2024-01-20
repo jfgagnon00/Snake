@@ -4,7 +4,7 @@
         "beta": 0.1,
         "betaAnnealingSteps": 20000,
         "gamma": 0.95,
-        "epsilon": 0.01,
+        "epsilon": 1.0,
         "epsilonDecay": 0.95,
         "epsilonMin": 0.0,
         "nStep": 2,
@@ -26,7 +26,7 @@
             "collision": -200,
             "out_of_bounds": -200,
             "win": 400,
-            "truncated": -200
+            "truncated": 0
         }
     },
 

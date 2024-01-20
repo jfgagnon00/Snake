@@ -25,7 +25,7 @@ from snake.ai.NStepPriorityReplayBuffer import _NStepPriorityReplayBuffer
 
 class AgentClippedDQN(AgentBase):
     MEMORY_SIZE = 64_000
-    BATCH_SIZE = 64
+    BATCH_SIZE = 32
 
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
@@ -93,21 +93,26 @@ class AgentClippedDQN(AgentBase):
         os.makedirs(path, exist_ok=True)
 
         file = os.path.join(path, f"{filename}-0.pth")
-        save(self._models[0][0].state_dict(), file)
+        self._save(file, 0)
 
         file = os.path.join(path, f"{filename}-1.pth")
-        save(self._models[1][0].state_dict(), file)
+        self._save(file, 1)
 
     def load(self, *args):
         filename = args[0]
 
-        states = load(f"{filename}-0.pth")
-        states = {k:v for k, v in states.items() if "_net.0" in k}
-        self._models[0][0].load_state_dict(states, strict=False)
+        self._load(f"{filename}-0.pth", 0)
+        self._load(f"{filename}-1.pth", 1)
 
-        states = load(f"{filename}-1.pth")
-        states = {k:v for k, v in states.items() if "_net.0" in k}
-        self._models[1][0].load_state_dict(states, strict=False)
+    def _save(self, filename, index):
+        data = {"model": self._models[index][0].state_dict(),
+                "optimizer": self._models[index][1].state_dict()}
+        save(data, filename)
+
+    def _load(self, filename, index):
+        states = load(filename)
+        self._models[index][0].load_state_dict(states["model"])
+        self._models[index][1].load_state_dict(states["optimizer"])
 
     def _trainBatch(self):
         replaySize = len(self._replayBuffer)
@@ -150,7 +155,7 @@ class AgentClippedDQN(AgentBase):
             numInputs *= 3
             model = _ConvNet(width, height, numInputs, len(self._gameActions))
         else:
-            model = _LinearNet(width * height * 3 + 3, [512], len(self._gameActions))
+            model = _LinearNet(width * height * 3 + 4, [512], len(self._gameActions))
 
         model.train()
 
@@ -173,87 +178,39 @@ class AgentClippedDQN(AgentBase):
         return error
 
     def _stateToTensor(self, state):
-        if True: # self._useConv:
-            grid = state["occupancy_grid"]
-            grid = np.squeeze(grid)
+        grid = state["occupancy_grid"]
+        grid = np.squeeze(grid)
 
-            head_d = state["head_direction"]
-            k = 0
-            if head_d[0] == 0:
-                if head_d[1] == -1:
-                    k = 2
-            elif head_d[1] == 0:
-                if head_d[0] == -1:
-                    k = 1
-                else:
-                    k = -1
+        if self._useFrameStack:
+            gg = np.zeros((grid.shape[0], 3, *grid.shape[1:]), dtype=grid.dtype)
 
-            if k != 0:
-                grid = np.rot90(grid, k=k, axes=(-2, -1))
+            for i in range(grid.shape[0]):
+                gg[i, 0] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
+                gg[i, 1] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
+                gg[i, 2] = np.where(grid[i,:,:] == GridOccupancy.FOOD, 1, 0)
 
-            if self._useFrameStack:
-                gg = np.zeros((grid.shape[0], 3, *grid.shape[1:]), dtype=grid.dtype)
-
-                for i in range(grid.shape[0]):
-                    gg[i, 0] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
-                    gg[i, 1] = np.where(grid[i,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
-                    gg[i, 2] = np.where(grid[i,:,:] == GridOccupancy.FOOD, 1, 0)
-
-                gg = gg.reshape((-1, *grid.shape[1:]))
-            else:
-                gg = np.zeros((3, *grid.shape), dtype=grid.dtype)
-                gg[0] = np.where(grid == GridOccupancy.SNAKE_BODY, 1, 0)
-                gg[1] = np.where(grid == GridOccupancy.SNAKE_HEAD, 1, 0)
-                gg[2] = np.where(grid == GridOccupancy.FOOD, 1, 0)
-
-            if self._useConv:
-                x = from_numpy(gg.astype(np.float32))
-            else:
-                head_p = state["head_position"]
-                food_p = state["food_position"]
-                food_d = food_p - head_p
-
-                forward = np.dot(head_d, food_d)
-                forward = 1 if forward > 0 else 0
-
-                cross = np.linalg.norm(np.cross(head_d, food_d))
-                ccw = 1 if cross > 0 else 0
-                cw = 1 if cross < 0 else 0
-
-                gg = gg.flatten()
-                gg = np.append(gg, [forward, ccw, cw])
-
-                x = from_numpy(gg.astype(np.float32))
-        elif False:
-            grid = state["occupancy_grid"]
-            x = from_numpy( grid.flatten().astype(np.float32) )
+            gg = gg.reshape((-1, *grid.shape[1:]))
         else:
-            grid = state["occupancy_grid"]
-            grid_size = grid.shape[1:]
+            gg = np.zeros((3, *grid.shape), dtype=grid.dtype)
+            gg[0] = np.where(grid == GridOccupancy.SNAKE_BODY, 1, 0)
+            gg[1] = np.where(grid == GridOccupancy.SNAKE_HEAD, 1, 0)
+            gg[2] = np.where(grid == GridOccupancy.FOOD, 1, 0)
 
-            head_p = state["head_position"] / grid_size
-            length = float(state["length"])
+        if self._useConv:
+            x = from_numpy(gg.astype(np.float32))
+        else:
+            head_p = state["head_position"]
+            food_p = state["food_position"]
+            food_d = food_p - head_p
 
-            head_d = state["head_direction"]
-            head_forward = 1 if head_d[1] > 0 else 0
-            head_ccw = 1 if head_d[0] > 0 else 0
-            head_cw = 1 if head_d[0] < 0 else 0
+            n = food_d[0] < 0
+            s = food_d[0] > 0
+            w = food_d[1] < 0
+            e = food_d[1] > 0
 
-            if state["food_position"] is None:
-                food_forward = 0
-                food_ccw = 0
-                food_cw = 0
-            else:
-                food_d = state["food_position"] - state["head_position"]
-                food_forward = 1 if food_d[1] > 0 else 0
-                food_ccw = 1 if food_d[0] > 0 else 0
-                food_cw = 1 if food_d[0] < 0 else 0
+            gg = gg.flatten()
+            gg = np.append(gg, [n, s, w, e])
 
-            x = np.array((head_forward, head_ccw, head_cw,
-                          food_forward, food_ccw, food_cw),
-                          dtype=np.float32)
-
-            x = np.concatenate((x, grid.flatten().astype(np.float32)))
-            x = from_numpy(x)
+            x = from_numpy(gg.astype(np.float32))
 
         return unsqueeze(x, 0)
