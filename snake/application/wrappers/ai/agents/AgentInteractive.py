@@ -33,8 +33,7 @@ class AgentInteractive(AgentBase):
         """
         Handler système d'input
         """
-        if key in AgentInteractive._KEY_HANDLERS:
-            self._lastKeyDown = key
+        self._lastKeyDown = key
 
     def getAction(self, observations):
         """

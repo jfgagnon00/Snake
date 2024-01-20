@@ -62,7 +62,7 @@ class AgentClippedDQN(AgentBase):
 
     def getAction(self, state):
         if random() < self._epsilon:
-            gameAction = choice(self._gameActions)
+            gameAction = np.random.choice(self._gameActions)
         else:
             x = self._stateToTensor(state)
             q = self._evalModel(0, x)

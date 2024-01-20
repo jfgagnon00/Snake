@@ -98,10 +98,6 @@ class GameSimulation(object):
         """
         Met a jour la simulation en fonction de l'action fournie.
         """
-        # d est la meme instance que le serpent
-        # la mise a jour va modifier le serpent aussi
-        d = self._snake.direction
-
         winding = Vector.winding(self._snake.direction, action.value)
 
         if winding != 0:
@@ -110,7 +106,7 @@ class GameSimulation(object):
 
         # bouger la tete dans la nouvelle direction
         # ATTENTION: l'operateur + cree une nouvelle instance
-        head = self._snake.head + d
+        head = self._snake.head + self._snake.direction
 
         if head == self._food:
             # tete est sur la nourriture, grandire le serpent

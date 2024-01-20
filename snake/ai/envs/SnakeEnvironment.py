@@ -77,7 +77,7 @@ class SnakeEnvironment(Env):
         self._rewards = deepcopy(environmentConfig.rewards)
         self._reward = 0
         self._done = False
-        self._maxVisitCount = 0 if trainConfig is None else trainConfig.maxVisitCount
+        self._maxVisitCount = 2 if trainConfig is None else trainConfig.maxVisitCount
 
         # configuer les delegates pour gerer les recompenses
         self._simulation.outOfBoundsDelegate.register(self._onSnakeOutOfBounds)

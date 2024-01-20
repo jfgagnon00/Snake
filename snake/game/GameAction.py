@@ -6,6 +6,7 @@ from snake.core import Vector
 class GameAction(Enum):
     """
     Les actions possibles pour la tete du serpent
+    La convention est x == colonne, y == rangee
     """
     NORTH = Vector(0, -1)
     SOUTH = Vector(0,  1)
