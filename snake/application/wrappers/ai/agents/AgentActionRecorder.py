@@ -46,8 +46,8 @@ class AgentActionRecorder(AgentBase):
     def onEpisodeBegin(self, *args):
         self._agent.onEpisodeBegin(*args)
 
-    def onEpisodeDone(self, episode):
-        self._agent.onEpisodeDone(episode)
+    def onEpisodeDone(self, episode, *args):
+        self._agent.onEpisodeDone(episode, *args)
 
         self._episode = episode
         if not self._isEmpty() and (episode % self._episodeCountModulo) == 0:

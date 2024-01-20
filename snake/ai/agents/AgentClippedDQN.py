@@ -57,7 +57,8 @@ class AgentClippedDQN(AgentBase):
         self._useFrameStack = trainConfig.useFrameStack
 
         if False:
-            summary(self._models[0][0], (1, 3, 6, 6))
+            summary(self._models[0][0], \
+                    (1, simulationConfig.gridHeight, simulationConfig.gridWidth))
             exit(-1)
 
     def getAction(self, state):
@@ -73,10 +74,14 @@ class AgentClippedDQN(AgentBase):
 
     def onEpisodeBegin(self, episode, stats):
         stats.loc[0, "Epsilon"] = self._epsilon
+        self._trainLoss = np.zeros((1), dtype=np.float32)
 
-    def onEpisodeDone(self, *args):
+    def onEpisodeDone(self, episode, stats):
         self._epsilon *= self._epsilonDecay
         self._epsilon = max(self._epsilon, self._epsilonMin)
+        stats.loc[0, "TrainLossMin"] = self._trainLoss.min()
+        stats.loc[0, "TrainLossMax"] = self._trainLoss.max()
+        stats.loc[0, "TrainLossMean"] = self._trainLoss.mean()
 
     def train(self, state, action, newState, reward, done):
         self._replayBuffer.append(self._stateToTensor(state),
@@ -126,7 +131,8 @@ class AgentClippedDQN(AgentBase):
                                  tensor(rewards, dtype=torch_float32),
                                  tensor(dones, dtype=torch_float32),
                                  tensor(weights, dtype=torch_float32))
-            self._replayBuffer.updatePriorities(indices, errors)
+            self._trainLoss = np.append(self._trainLoss, errors)
+            self._replayBuffer.updatePriorities(indices, errors + 1e-6)
 
     def _train(self, states, intActions, newStates, rewards, dones, weights=None):
         with no_grad():
@@ -147,14 +153,14 @@ class AgentClippedDQN(AgentBase):
         e0 = self._optimizeModel(0, q0, q_target, weights)
         e1 = self._optimizeModel(1, q1, q_target, weights)
 
-        return torch_maximum(e0, e1).detach().numpy() + 1e-6
+        return e0.detach().numpy()
 
     def _buildModel(self, trainConfig, width, height):
-        numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
-
         if self._useConv:
-            model = _ConvNet(width, height, numFrames, len(self._gameActions))
+            assert not trainConfig.useFrameStack, "Occupancy stack non supporte avec frame stack"
+            model = _ConvNet(width, height, 3, len(self._gameActions))
         else:
+            numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
             miscs = 0 if trainConfig.useFrameStack else 4
             model = _LinearNet(width * height * numFrames + miscs, [512], len(self._gameActions))
 
@@ -170,6 +176,7 @@ class AgentClippedDQN(AgentBase):
 
         optimizer.zero_grad()
         error = loss = (predicate - target) ** 2
+        # error = loss = (predicate - target).abs()
         if not weights is None:
             loss = loss * weights
         loss = loss.mean()
@@ -180,9 +187,12 @@ class AgentClippedDQN(AgentBase):
 
     def _stateToTensor(self, state):
         grid = state["occupancy_grid"]
-        grid = np.squeeze(grid / 255)
 
-        if not self._useConv:
+        if self._useConv:
+            grid = self._splitOccupancyGrid(grid)
+        else:
+            grid = grid / 255
+            grid = np.squeeze(grid)
             grid = grid.flatten()
 
             if not self._useFrameStack:
@@ -200,3 +210,13 @@ class AgentClippedDQN(AgentBase):
         x = from_numpy(grid.astype(np.float32))
 
         return unsqueeze(x, 0)
+
+    def _splitOccupancyGrid(self, occupancyGrid):
+        shape = (3, *occupancyGrid.shape[1:])
+
+        occupancyStack = np.zeros(shape=shape, dtype=np.int32)
+        occupancyStack[0] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
+        occupancyStack[1] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
+        occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, 0)
+
+        return occupancyStack

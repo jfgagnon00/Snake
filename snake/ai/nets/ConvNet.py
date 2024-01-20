@@ -12,12 +12,15 @@ class _ConvNet(Module):
 
         self._net = Sequential()
 
-        self._net.append(Conv2d(numInputs, 512, width))
+        self._net.append(Conv2d(numInputs, 16, 3, padding="same"))
         self._net.append(LeakyReLU())
 
         self._net.append(Flatten())
 
-        self._net.append(Linear(512, numOutputs))
+        self._net.append(Linear(width * height * 16, 128))
+        self._net.append(LeakyReLU())
+
+        self._net.append(Linear(128, numOutputs))
 
     def forward(self, x):
         return self._net(x)
