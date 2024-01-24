@@ -25,6 +25,9 @@ class Vector(object):
     def __neg__(self):
         return Vector(-self.x, -self.y)
 
+    def __str__(self):
+        return f"x: {self.x}, y: {self.y}"
+
     @property
     def length(self):
         return sqrt(self.x*self.x + self.y*self.y)

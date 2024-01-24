@@ -21,6 +21,7 @@ class GameSimulation(object):
         self._winDelegate = Delegate()
         self._turnDelegate = Delegate()
         self._moveDelegate = Delegate()
+        self._backwardDelegate = Delegate()
 
         self.reset()
 
@@ -73,26 +74,40 @@ class GameSimulation(object):
         return self._moveDelegate
 
     @property
+    def backwardDelegate(self):
+        return self._backwardDelegate
+
+    @property
     def score(self):
         return self._score
 
-    def reset(self):
+    def reset(self, observations=None, infos=None):
         """
         Reinitialize etats internes
         """
-        self._score = 0
-
         # numpy est transpose par rapport au sens naturel
         # l'acces a _occupancyGrid suivra la convention numpy
         shape = (self._occupancyGridHeight, self._occupancyGridWidth)
-        self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
         self._occupancyGridCount = np.zeros(shape=shape, dtype=np.int32)
-        self._snake = GameSnake(Vector(3, 1), Vector(1, 0))
 
-        # placer le serpent dans la grille
-        self._setSnakeInGrid(True)
+        if observations and infos:
+            self._score = observations["score"]
+            self._occupancyGrid = np.squeeze(observations["occupancy_grid"]).copy()
 
-        self._placeFood()
+            direction = Vector.fromNumpy(observations["head_direction"])
+            self._snake = GameSnake(direction)
+            self._snake.bodyPartsFromNumpy(infos["snake_bodyparts"])
+
+            self._food = Vector.fromNumpy(observations["food_position"])
+        else:
+            self._score = 0
+            self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
+            self._snake = GameSnake(Vector(1, 0), position=Vector(3, 1))
+
+            # placer le serpent dans la grille
+            self._setSnakeInGrid(True)
+
+            self._placeFood()
 
     def apply(self, action):
         """
@@ -103,6 +118,8 @@ class GameSimulation(object):
         if winding != 0:
             self._snake.direction = action.value
             self._turnDelegate()
+        else:
+            self._backwardDelegate()
 
         # bouger la tete dans la nouvelle direction
         # ATTENTION: l'operateur + cree une nouvelle instance
@@ -163,6 +180,14 @@ class GameSimulation(object):
             "food_position": None if self.food is None else self.food.toNumpy(),
             "length": self.snake.length,
             "score": self.score,
+        }
+
+    def getInfo(self):
+        """
+        Retourne informations supplementaires
+        """
+        return {
+            "snake_bodyparts": self.snake.bodyPartsToNumpy(),
         }
 
     def _setSnakeInGrid(self, show):

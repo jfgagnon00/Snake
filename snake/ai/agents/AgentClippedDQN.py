@@ -18,7 +18,8 @@ from torchsummary import summary
 
 from snake.game import GameAction, GridOccupancy
 from snake.ai.agents.AgentBase import AgentBase
-from snake.ai.nets import _LinearNet, _ConvNet
+from snake.ai.nets import _ConvNet, _DuelingConvNet, _LinearNet
+from snake.ai.ReplayBuffer import _ReplayBuffer
 from snake.ai.PriorityReplayBuffer import _PriorityReplayBuffer
 from snake.ai.NStepPriorityReplayBuffer import _NStepPriorityReplayBuffer
 
@@ -35,12 +36,10 @@ class AgentClippedDQN(AgentBase):
         self._useConv = trainConfig.useConv
 
         # priority replay buffer
-        self._replayBuffer = _NStepPriorityReplayBuffer(AgentClippedDQN.MEMORY_SIZE,
+        self._replayBuffer = _PriorityReplayBuffer(AgentClippedDQN.MEMORY_SIZE,
             trainConfig.alpha,
             trainConfig.beta,
-            trainConfig.betaAnnealingSteps,
-            trainConfig.gamma,
-            trainConfig.nStep)
+            trainConfig.betaAnnealingSteps)
 
         # clipped DQN
         self._gamma = trainConfig.gamma ** trainConfig.nStep
@@ -65,10 +64,11 @@ class AgentClippedDQN(AgentBase):
         if random() < self._epsilon:
             gameAction = np.random.choice(self._gameActions)
         else:
-            x = self._stateToTensor(state)
-            q = self._evalModel(0, x)
-            intAction = q.argmax().item()
-            gameAction = self._gameActions[intAction]
+            with no_grad():
+                x = self._stateToTensor(state)
+                q = self._evalModel(0, x)
+                intAction = q.argmax().item()
+                gameAction = self._gameActions[intAction]
 
         return GameAction(gameAction)
 
@@ -131,8 +131,8 @@ class AgentClippedDQN(AgentBase):
                                  tensor(rewards, dtype=torch_float32),
                                  tensor(dones, dtype=torch_float32),
                                  tensor(weights, dtype=torch_float32))
-            self._trainLoss = np.append(self._trainLoss, errors)
-            self._replayBuffer.updatePriorities(indices, errors + 1e-6)
+            self._trainLoss = np.append(self._trainLoss, errors.mean())
+            self._replayBuffer.updatePriorities(indices, errors + 1e-9)
 
     def _train(self, states, intActions, newStates, rewards, dones, weights=None):
         with no_grad():
@@ -159,6 +159,7 @@ class AgentClippedDQN(AgentBase):
         if self._useConv:
             assert not trainConfig.useFrameStack, "Occupancy stack non supporte avec frame stack"
             model = _ConvNet(width, height, 3, len(self._gameActions))
+            # model = _DuelingConvNet(width, height, 3, len(self._gameActions))
         else:
             numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
             miscs = 0 if trainConfig.useFrameStack else 4
@@ -172,14 +173,13 @@ class AgentClippedDQN(AgentBase):
         return self._models[index][0](x)
 
     def _optimizeModel(self, index, predicate, target, weights=None):
-        optimizer = self._models[index][1]
-
-        optimizer.zero_grad()
-        error = loss = (predicate - target) ** 2
-        # error = loss = (predicate - target).abs()
+        error = (predicate - target) ** 2
         if not weights is None:
-            loss = loss * weights
-        loss = loss.mean()
+            error = error * weights
+        loss = error.mean()
+
+        optimizer = self._models[index][1]
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 

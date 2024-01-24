@@ -85,11 +85,18 @@ class SnakeEnvironment(Env):
         self._simulation.eatDelegate.register(self._onSnakeEat)
         self._simulation.winDelegate.register(self._onWin)
         self._simulation.moveDelegate.register(self._onSnakeMove)
+        self._simulation.backwardDelegate.register(self._onSnakeCollision)
+
+    @property
+    def winDelegate(self):
+        return self._simulation.winDelegate
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
-        self._simulation.reset()
+        observations = options.get("observations", None) if options else None
+        infos = options.get("infos", None) if options else None
+        self._simulation.reset(observations, infos)
         self._maybeUpdateWindow(reset=True)
 
         if self._renderMode == SnakeEnvironment._HUMAN:
@@ -135,7 +142,7 @@ class SnakeEnvironment(Env):
         return self._simulation.getObservations()
 
     def _getInfo(self):
-        return {}
+        return self._simulation.getInfo()
 
     def _renderInternal(self):
         pumpEvents()
@@ -149,22 +156,22 @@ class SnakeEnvironment(Env):
             self._window.update(self._simulation)
 
     def _onSnakeOutOfBounds(self):
-        self._reward = self._rewards[Rewards.OUT_OF_BOUNDS]
+        self._reward += self._rewards[Rewards.OUT_OF_BOUNDS]
         self._done = True
 
     def _onSnakeCollision(self):
-        self._reward = self._rewards[Rewards.COLLISION]
+        self._reward += self._rewards[Rewards.COLLISION]
         self._done = True
 
     def _onSnakeEat(self):
-        self._reward = self._rewards[Rewards.EAT]
+        self._reward += self._rewards[Rewards.EAT]
         self._maybeUpdateWindow()
 
     def _onWin(self):
-        self._reward = self._rewards[Rewards.WIN]
+        self._reward += self._rewards[Rewards.WIN]
         self._done = True
         self._maybeUpdateWindow()
 
     def _onSnakeMove(self):
-        self._reward = self._rewards[Rewards.MOVE]
+        self._reward += self._rewards[Rewards.MOVE]
         self._maybeUpdateWindow()

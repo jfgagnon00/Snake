@@ -9,4 +9,5 @@ __pycache__/
 
 # a ignorer dans le repertoire courant
 .venv/
+sandbox/
 /sandbox/jfgagnon

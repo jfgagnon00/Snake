@@ -1,8 +1,8 @@
 import gymnasium as gym
-import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 
-from tqdm import tqdm
+from datetime import datetime
 from snake.core import Delegate
 
 
@@ -16,13 +16,16 @@ class EnvironmentStats(gym.ObservationWrapper):
     """
     Encapsule un environment pour afficher ses statistiques
     """
+
+    _ROLLING_MEAN = 100
+
     def __init__(self, env, tqdmBasePosition, id, filename, showStats=True):
         gym.ObservationWrapper.__init__(self, env)
 
         self._episode = -1
         self._id = id
         self._filename = filename.replace("%", "stats")
-        self._stats = None
+        self._currentEpisodeStats = None
         self._maxStats = None
         self._maxEpisode = None
         self._saved = False
@@ -30,20 +33,16 @@ class EnvironmentStats(gym.ObservationWrapper):
         self._newMaxStatsDelegate = Delegate()
 
         if self._showStats:
-            self._episodeProgress = tqdm(bar_format="Max episode length: {desc} at {unit}",
-                                        position=tqdmBasePosition)
-
-            self._rewardProgress = tqdm(bar_format="Max cum. reward: {desc} at {unit}",
-                                        position=tqdmBasePosition + 1)
-
-            self._scoreProgress = tqdm(bar_format="Max score: {desc} at {unit}",
-                                       position=tqdmBasePosition + 2)
+            self._lastUpate = datetime.now()
+            self._allEpisodeStats = None
+            self._constructPlot()
+            plt.show(block=False)
 
         self.observation_space = env.observation_space
 
     @property
     def statsDataFrame(self):
-        return self._stats
+        return self._currentEpisodeStats
 
     @property
     def newMaxStatsDelegate(self):
@@ -56,32 +55,42 @@ class EnvironmentStats(gym.ObservationWrapper):
             self._episode += 1
 
         self.save()
+
+        if self._showStats and not self._currentEpisodeStats is None:
+            if self._allEpisodeStats is None:
+                self._allEpisodeStats = self._currentEpisodeStats
+            else:
+                self._allEpisodeStats = pd.concat([self._allEpisodeStats, self._currentEpisodeStats], axis=0)
+
         self._newEpisode()
+
+        if self._showStats:
+            if self._allEpisodeStats is None:
+                self._updatePlot(self._currentEpisodeStats)
+            else:
+                self._updatePlot(self._allEpisodeStats)
 
         return self.env.reset(*args, seed=seed, options=options)
 
     def step(self, *args):
         observations, reward, terinated, truncated, info = self.env.step(*args)
 
-        self._stats.loc[0, _EPISODE_LENGTH] += 1
-        self._stats.loc[0, _SCORE] = observations["score"]
-        self._stats.loc[0, _CUM_REWARD] += reward
+        self._currentEpisodeStats.loc[0, _EPISODE_LENGTH] += 1
+        self._currentEpisodeStats.loc[0, _SCORE] = observations["score"]
+        self._currentEpisodeStats.loc[0, _CUM_REWARD] += reward
 
         forceUpdate = False
         if self._maxStats is None:
-            self._maxStats = self._stats.copy()
+            self._maxStats = self._currentEpisodeStats.copy()
             self._maxEpisode = self._newDataFrame()
             self._maxEpisode.iloc[:,:] = self._episode
             forceUpdate = True
 
-        greater = self._stats > self._maxStats
-        greaterEqual = self._stats >= self._maxStats
+        greater = self._currentEpisodeStats > self._maxStats
+        greaterEqual = self._currentEpisodeStats >= self._maxStats
 
-        self._maxStats[greaterEqual] = self._stats[greaterEqual]
+        self._maxStats[greaterEqual] = self._currentEpisodeStats[greaterEqual]
         self._maxEpisode[greaterEqual] = self._episode
-
-        if greaterEqual.iloc[0,2:4].any(axis=0) or forceUpdate:
-            self._update()
 
         if greater.loc[0, _CUM_REWARD]:
             self._newMaxStatsDelegate()
@@ -99,28 +108,63 @@ class EnvironmentStats(gym.ObservationWrapper):
         self.save()
 
     def save(self):
-        if not self._stats is None and \
+        if not self._currentEpisodeStats is None and \
            not self._filename is None:
             if self._saved:
-                self._stats.to_csv(self._filename, mode="a", index=False, header=False)
+                self._currentEpisodeStats.to_csv(self._filename, mode="a", index=False, header=False)
             else:
-                self._stats.to_csv(self._filename, mode="w", index=False)
+                self._currentEpisodeStats.to_csv(self._filename, mode="w", index=False)
 
             self._saved = True
 
-    def _update(self):
-        if self._showStats:
-            self._episodeProgress.set_description_str(str(self._maxStats.loc[0, _EPISODE_LENGTH]))
-            self._episodeProgress.unit = str(self._maxEpisode.loc[0, _EPISODE_LENGTH])
+    def _updatePlot(self, df):
+        t = datetime.now()
+        dt = t - self._lastUpate
 
-            self._rewardProgress.set_description_str(str(self._maxStats.loc[0, _CUM_REWARD]))
-            self._rewardProgress.unit = str(int(self._maxEpisode.loc[0, _CUM_REWARD]))
+        if dt.total_seconds() > 1.5:
+            self._lastUpate = t
 
-            self._scoreProgress.set_description_str(str(self._maxStats.loc[0, _SCORE]))
-            self._scoreProgress.unit = str(self._maxEpisode.loc[0, _SCORE])
+            episode = df.Episode
+            score = df.Score
+            cumReward = df.CumulativeReward
+            trainError = df.TrainLossMean
+
+            EnvironmentStats._updateAx(self._score, episode, score, "Score")
+            EnvironmentStats._updateAx(self._cumReward, episode, cumReward, "Cum. Reward")
+            EnvironmentStats._updateAx(self._trainError, episode, trainError, "Train Error (Mean)")
+            # self._trainError.set_ylim([0, ylim])
+
+            self._figure.canvas.draw()
+            self._figure.canvas.flush_events()
+
+    @staticmethod
+    def _updateAx(ax, x, y, title):
+        LAST = -1000
+
+        xx = x[LAST:]
+        yy = y[LAST:]
+        yym = y.rolling(EnvironmentStats._ROLLING_MEAN).mean()[LAST:]
+
+        ax.cla()
+        ax.plot(xx, yym, color="blue")
+        ax.scatter(xx, yy, s=1, color="orange")
+        ax.set_title(title)
+        ax.grid()
+
+    def _constructPlot(self):
+        layout = [
+            ["A", "B"],
+            ["Z", "Z"],
+        ]
+
+        self._figure, ax = plt.subplot_mosaic(layout, figsize=(9, 7), height_ratios=[1, 2])
+
+        self._score = ax["A"]
+        self._cumReward = ax["B"]
+        self._trainError = ax["Z"]
 
     def _newEpisode(self):
-        self._stats = self._newDataFrame()
+        self._currentEpisodeStats = self._newDataFrame()
 
     def _newDataFrame(self):
         return pd.DataFrame([[self._id, self._episode, 0, 0, 0.0]],
