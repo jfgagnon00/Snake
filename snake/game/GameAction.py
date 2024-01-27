@@ -1,14 +1,30 @@
-from enum import Enum
-
-from snake.core import Vector
+from enum import StrEnum
 
 
-class GameAction(Enum):
+class GameAction(StrEnum):
     """
     Les actions possibles pour la tete du serpent
-    La convention est x == colonne, y == rangee
     """
-    NORTH = Vector(0, -1)
-    SOUTH = Vector(0,  1)
-    EAST = Vector( 1, 0)
-    WEST = Vector(-1, 0)
+    TURN_CW = "TURN_CW"
+    TURN_CCW = "TURN_CCW"
+    FORWARD = "FORWARD"
+
+    @property
+    def krot90(self):
+        if self == GameAction.TURN_CW:
+            return -1
+
+        if self == GameAction.TURN_CCW:
+            return 1
+
+        return 0
+
+    @property
+    def flip(self):
+        if self == GameAction.TURN_CCW:
+            return GameAction.TURN_CW
+
+        if self == GameAction.TURN_CW:
+            return GameAction.TURN_CCW
+
+        return GameAction.FORWARD

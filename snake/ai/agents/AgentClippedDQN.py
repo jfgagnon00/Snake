@@ -16,7 +16,8 @@ from torch import from_numpy, \
 from torch.optim import Adam
 from torchsummary import summary
 
-from snake.game import GameAction, GridOccupancy
+from snake.core import Vector
+from snake.game import GameAction, GameDirection, GridOccupancy
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _ConvNet, _DuelingConvNet, _LinearNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
@@ -25,8 +26,8 @@ from snake.ai.NStepPriorityReplayBuffer import _NStepPriorityReplayBuffer
 
 
 class AgentClippedDQN(AgentBase):
-    MEMORY_SIZE = 64_000
-    BATCH_SIZE = 32
+    MEMORY_SIZE = 8_192
+    BATCH_SIZE = 64
 
     def __init__(self, trainConfig, simulationConfig) -> None:
         super().__init__()
@@ -34,12 +35,11 @@ class AgentClippedDQN(AgentBase):
         # misc parameters
         self._gameActions = list(GameAction)
         self._useConv = trainConfig.useConv
+        self._gridCenter = Vector(simulationConfig.gridWidth,
+                                  simulationConfig.gridHeight).scale(0.5) - Vector(0.5, 0.5)
 
-        # priority replay buffer
-        self._replayBuffer = _PriorityReplayBuffer(AgentClippedDQN.MEMORY_SIZE,
-            trainConfig.alpha,
-            trainConfig.beta,
-            trainConfig.betaAnnealingSteps)
+        # replay buffer
+        self._replayBuffer = _ReplayBuffer(AgentClippedDQN.MEMORY_SIZE)
 
         # clipped DQN
         self._gamma = trainConfig.gamma ** trainConfig.nStep
@@ -62,15 +62,17 @@ class AgentClippedDQN(AgentBase):
 
     def getAction(self, state):
         if random() < self._epsilon:
-            gameAction = np.random.choice(self._gameActions)
+            intAction = np.random.choice(len(GameAction))
+            gameAction = self._gameActions[intAction]
         else:
-            with no_grad():
-                x = self._stateToTensor(state)
-                q = self._evalModel(0, x)
-                intAction = q.argmax().item()
-                gameAction = self._gameActions[intAction]
+            x, flip = self._stateToTensor(state)
+            q = self._evalModel(0, x)
+            intAction = q.argmax().item()
+            gameAction = self._gameActions[intAction]
+            if flip:
+                gameAction = gameAction.flip
 
-        return GameAction(gameAction)
+        return gameAction
 
     def onEpisodeBegin(self, episode, stats):
         stats.loc[0, "Epsilon"] = self._epsilon
@@ -84,24 +86,29 @@ class AgentClippedDQN(AgentBase):
         stats.loc[0, "TrainLossMean"] = self._trainLoss.mean()
 
     def train(self, state, action, newState, reward, done):
-        self._replayBuffer.append(self._stateToTensor(state),
+        state, flip = self._stateToTensor(state)
+        if flip:
+            action = action.flip
+
+        self._replayBuffer.append(state,
                                   self._gameActions.index(action),
-                                  self._stateToTensor(newState),
+                                  self._stateToTensor(newState)[0], # flip n'est pas important ici
                                   reward,
                                   done)
         self._trainBatch()
 
     def save(self, *args):
-        path, filename = os.path.split(args[0])
-        filename, _ = os.path.splitext(filename)
+        if len(args) > 0:
+            path, filename = os.path.split(args[0])
+            filename, _ = os.path.splitext(filename)
 
-        os.makedirs(path, exist_ok=True)
+            os.makedirs(path, exist_ok=True)
 
-        file = os.path.join(path, f"{filename}-0.pth")
-        self._save(file, 0)
+            file = os.path.join(path, f"{filename}-0.pth")
+            self._save(file, 0)
 
-        file = os.path.join(path, f"{filename}-1.pth")
-        self._save(file, 1)
+            file = os.path.join(path, f"{filename}-1.pth")
+            self._save(file, 1)
 
     def load(self, *args):
         filename = args[0]
@@ -124,17 +131,18 @@ class AgentClippedDQN(AgentBase):
 
         if replaySize >= AgentClippedDQN.BATCH_SIZE:
             samples = self._replayBuffer.sample(AgentClippedDQN.BATCH_SIZE)
-            states, intActions, newStates, rewards, dones, weights, indices = samples
+            states, intActions, newStates, rewards, dones = samples
             errors = self._train(vstack(states),
                                  tensor(intActions, dtype=torch_int64).view(-1, 1),
                                  vstack(newStates),
                                  tensor(rewards, dtype=torch_float32),
-                                 tensor(dones, dtype=torch_float32),
-                                 tensor(weights, dtype=torch_float32))
+                                 tensor(dones, dtype=torch_float32))
             self._trainLoss = np.append(self._trainLoss, errors.mean())
-            self._replayBuffer.updatePriorities(indices, errors + 1e-9)
 
     def _train(self, states, intActions, newStates, rewards, dones, weights=None):
+        self._models[0][0].train()
+        self._models[1][0].train()
+
         with no_grad():
             q0_new = self._evalModel(0, newStates)
             q1_new = self._evalModel(1, newStates)
@@ -153,19 +161,24 @@ class AgentClippedDQN(AgentBase):
         e0 = self._optimizeModel(0, q0, q_target, weights)
         e1 = self._optimizeModel(1, q1, q_target, weights)
 
-        return e0.detach().numpy()
+        e0 = e0.detach().numpy()
+
+        self._models[0][0].eval()
+        self._models[1][0].eval()
+
+        return e0
 
     def _buildModel(self, trainConfig, width, height):
         if self._useConv:
             assert not trainConfig.useFrameStack, "Occupancy stack non supporte avec frame stack"
-            model = _ConvNet(width, height, 3, len(self._gameActions))
-            # model = _DuelingConvNet(width, height, 3, len(self._gameActions))
+            # model = _ConvNet(width, height, 3, len(self._gameActions))
+            model = _DuelingConvNet(width, height, 3, len(self._gameActions))
         else:
-            numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
-            miscs = 0 if trainConfig.useFrameStack else 4
-            model = _LinearNet(width * height * numFrames + miscs, [512], len(self._gameActions))
+            # numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
+            # miscs = 0 if trainConfig.useFrameStack else 4
+            model = _LinearNet(width * height * 3, [512], len(self._gameActions))
 
-        model.train()
+        model.eval()
 
         return model, Adam(model.parameters(), lr=trainConfig.lr)
 
@@ -186,30 +199,74 @@ class AgentClippedDQN(AgentBase):
         return error
 
     def _stateToTensor(self, state):
-        grid = state["occupancy_grid"]
-
         if self._useConv:
-            grid = self._splitOccupancyGrid(grid)
+            grid, heatmap, flip = self._applySymmetry(state)
+            grid = self._splitOccupancyGrid(grid).astype(np.float32)
+
+            # heatmap = 1.0 - (heatmap / 8.0)
+            # grid = np.stack([grid[0], grid[1], grid[2], heatmap[0]], axis=0)
         else:
-            grid = grid / 255
-            grid = np.squeeze(grid)
-            grid = grid.flatten()
+            grid, heatmap, flip = self._applySymmetry(state)
+            grid = self._splitOccupancyGrid(grid).flatten()
 
-            if not self._useFrameStack:
-                head_p = state["head_position"]
-                food_p = state["food_position"]
-                food_d = food_p - head_p
+            # flip = False
+            # grid = state["occupancy_grid"]
+            # grid = grid / 255
+            # grid = np.squeeze(grid)
+            # grid = grid.flatten()
 
-                n = 1.0 if food_d[0] < 0 else 0.0
-                s = 1.0 if food_d[0] > 0 else 0.0
-                w = 1.0 if food_d[1] < 0 else 0.0
-                e = 1.0 if food_d[1] > 0 else 0.0
+            # if not self._useFrameStack:
+            #     head_p = state["head_position"]
+            #     food_p = state["food_position"]
+            #     food_d = food_p - head_p
 
-                grid = np.append(grid, [n, s, w, e])
+            #     n = 1.0 if food_d[0] < 0 else 0.0
+            #     s = 1.0 if food_d[0] > 0 else 0.0
+            #     w = 1.0 if food_d[1] < 0 else 0.0
+            #     e = 1.0 if food_d[1] > 0 else 0.0
+
+            #     grid = np.append(grid, [n, s, w, e])
 
         x = from_numpy(grid.astype(np.float32))
 
-        return unsqueeze(x, 0)
+        return unsqueeze(x, 0), flip
+
+    def _applySymmetry(self, state):
+        head_d = state["head_direction"]
+        head_d = Vector.fromNumpy(head_d)
+
+        # simplifier state: toujours mettre par rapport a NORTH
+        head_d = GameDirection(head_d)
+        if head_d == GameDirection.EAST:
+            # CCW
+            k = 1
+        elif head_d == GameDirection.WEST:
+            # CW
+            k = -1
+        elif head_d == GameDirection.SOUTH:
+            # 180 degrees
+            k = 2
+        else:
+            k = 0
+
+        grid = state["occupancy_grid"]
+        grid = np.rot90(grid, k=k, axes=(1, 2))
+
+        heatmap = state["occupancy_heatmap"]
+        heatmap = np.rot90(heatmap, k=k, axes=(1, 2))
+
+        # simplifier state: toujours mettre cote gauche de la grille
+        head_p = state["head_position"]
+        head_p = Vector.fromNumpy(head_p) - self._gridCenter
+        head_p = head_p.rot90(k) + self._gridCenter
+        if head_p.x > self._gridCenter.x:
+            grid = np.flip(grid, 2)
+            heatmap = np.flip(heatmap, 2)
+            flip = True
+        else:
+            flip = False
+
+        return grid, heatmap, flip
 
     def _splitOccupancyGrid(self, occupancyGrid):
         shape = (3, *occupancyGrid.shape[1:])

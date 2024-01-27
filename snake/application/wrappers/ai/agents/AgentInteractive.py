@@ -1,14 +1,18 @@
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
 from snake.ai.agents.AgentBase import AgentBase
 from snake.core import Vector
-from snake.game import GameAction
+from snake.game import GameAction, GameDirection
 
 
-def _getAction(direction, action):
-    if Vector.winding(direction, action.value) != 0:
-        return action
+def _getAction(currentDirection, desirecDirection):
+    w = Vector.winding(currentDirection, desirecDirection)
+    if w == 0:
+        return GameAction.FORWARD
 
-    return GameAction(direction)
+    if w == 1:
+        return GameAction.TURN_CCW
+
+    return GameAction.TURN_CW
 
 class AgentInteractive(AgentBase):
     """
@@ -16,10 +20,10 @@ class AgentInteractive(AgentBase):
     Note: specialiser pour play.py. Ne pas utiliser comme agent conventionel.
     """
     _KEY_HANDLERS = {
-        K_LEFT: lambda d: _getAction(d, GameAction.WEST),
-        K_RIGHT: lambda d: _getAction(d, GameAction.EAST),
-        K_UP: lambda d: _getAction(d, GameAction.NORTH),
-        K_DOWN: lambda d: _getAction(d, GameAction.SOUTH)
+        K_LEFT: lambda d: _getAction(d, GameDirection.WEST.value),
+        K_RIGHT: lambda d: _getAction(d, GameDirection.EAST.value),
+        K_UP: lambda d: _getAction(d, GameDirection.NORTH.value),
+        K_DOWN: lambda d: _getAction(d, GameDirection.SOUTH.value)
     }
 
     def __init__(self):
@@ -46,4 +50,4 @@ class AgentInteractive(AgentBase):
             handler = AgentInteractive._KEY_HANDLERS[self._lastKeyDown]
             return handler(direction)
 
-        return GameAction(direction)
+        return GameAction.FORWARD

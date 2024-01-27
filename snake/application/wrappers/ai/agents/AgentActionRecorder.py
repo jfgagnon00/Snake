@@ -38,8 +38,8 @@ class AgentActionRecorder(AgentBase):
         action = self._agent.getAction(*args)
 
         self._time += 1
-        if self._isEmpty() or self._timedActions[-1].action != action:
-            self._timedActions.append(_TimedAction(self._time, action))
+        # if self._isEmpty() or self._timedActions[-1].action != action:
+        self._timedActions.append(_TimedAction(self._time, action))
 
         return action
 

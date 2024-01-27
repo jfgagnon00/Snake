@@ -2,6 +2,7 @@ import numpy as np
 
 from snake.core import Delegate, Vector, RandomProxy
 from .GameAction import GameAction
+from .GameDirection import GameDirection
 from .GameSnake import GameSnake
 from .GridOccupancy import GridOccupancy
 
@@ -21,7 +22,6 @@ class GameSimulation(object):
         self._winDelegate = Delegate()
         self._turnDelegate = Delegate()
         self._moveDelegate = Delegate()
-        self._backwardDelegate = Delegate()
 
         self.reset()
 
@@ -74,10 +74,6 @@ class GameSimulation(object):
         return self._moveDelegate
 
     @property
-    def backwardDelegate(self):
-        return self._backwardDelegate
-
-    @property
     def score(self):
         return self._score
 
@@ -102,7 +98,7 @@ class GameSimulation(object):
         else:
             self._score = 0
             self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
-            self._snake = GameSnake(Vector(1, 0), position=Vector(3, 1))
+            self._snake = GameSnake(GameDirection.EAST.value, position=Vector(3, 1))
 
             # placer le serpent dans la grille
             self._setSnakeInGrid(True)
@@ -113,13 +109,10 @@ class GameSimulation(object):
         """
         Met a jour la simulation en fonction de l'action fournie.
         """
-        winding = Vector.winding(self._snake.direction, action.value)
-
-        if winding != 0:
-            self._snake.direction = action.value
+        if action != GameAction.FORWARD:
+            k = action.krot90
+            self._snake.direction = self._snake.direction.rot90(k)
             self._turnDelegate()
-        else:
-            self._backwardDelegate()
 
         # bouger la tete dans la nouvelle direction
         # ATTENTION: l'operateur + cree une nouvelle instance
@@ -175,6 +168,7 @@ class GameSimulation(object):
         return {
             # shape est (Channel, Height, Width)
             "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=0).copy(),
+            "occupancy_heatmap": np.expand_dims(self._occupancyGridCount, axis=0).copy(),
             "head_direction": self.snake.direction.toNumpy(),
             "head_position": self.snake.head.toNumpy(),
             "food_position": None if self.food is None else self.food.toNumpy(),

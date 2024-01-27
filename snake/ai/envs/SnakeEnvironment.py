@@ -43,6 +43,10 @@ class SnakeEnvironment(Env):
                                              high=255,
                                              shape=(1, simulationConfig.gridHeight, simulationConfig.gridWidth),
                                              dtype=np.int32),
+                "occupancy_heatmap": spaces.Box(low=0,
+                                                high=65535,
+                                                shape=(1, simulationConfig.gridHeight, simulationConfig.gridWidth),
+                                                dtype=np.int32),
                 "head_direction": spaces.Box(low=-1,
                                              high=1,
                                              shape=(2,),
@@ -85,7 +89,14 @@ class SnakeEnvironment(Env):
         self._simulation.eatDelegate.register(self._onSnakeEat)
         self._simulation.winDelegate.register(self._onWin)
         self._simulation.moveDelegate.register(self._onSnakeMove)
-        self._simulation.backwardDelegate.register(self._onSnakeCollision)
+
+    @property
+    def outOfBoundsDelegate(self):
+        return self._simulation.outOfBoundsDelegate
+
+    @property
+    def collisionDelegate(self):
+        return self._simulation.collisionDelegate
 
     @property
     def winDelegate(self):

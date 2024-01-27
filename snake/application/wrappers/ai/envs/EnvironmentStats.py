@@ -11,20 +11,21 @@ _EPISODE = "Episode"
 _EPISODE_LENGTH = "EpisodeLength"
 _SCORE = "Score"
 _CUM_REWARD = "CumulativeReward"
+_CAUSE_OF_TERMINATION = "CauseOfTermination"
+
+_ROLLING_MEAN = 100
+_SAMPLES = -500
 
 class EnvironmentStats(gym.ObservationWrapper):
     """
     Encapsule un environment pour afficher ses statistiques
     """
-
-    _ROLLING_MEAN = 100
-
     def __init__(self, env, tqdmBasePosition, id, filename, showStats=True):
         gym.ObservationWrapper.__init__(self, env)
 
         self._episode = -1
         self._id = id
-        self._filename = filename.replace("%", "stats")
+        self._filename = filename.replace("%", "stats") if filename else None
         self._currentEpisodeStats = None
         self._maxStats = None
         self._maxEpisode = None
@@ -39,6 +40,10 @@ class EnvironmentStats(gym.ObservationWrapper):
             plt.show(block=False)
 
         self.observation_space = env.observation_space
+
+        env.unwrapped.outOfBoundsDelegate.register(lambda: self._onTermination("OutOfBound"))
+        env.unwrapped.collisionDelegate.register(lambda: self._onTermination("Collision"))
+        env.unwrapped.winDelegate.register(lambda: self._onTermination("Win"))
 
     @property
     def statsDataFrame(self):
@@ -74,6 +79,9 @@ class EnvironmentStats(gym.ObservationWrapper):
 
     def step(self, *args):
         observations, reward, terinated, truncated, info = self.env.step(*args)
+
+        if truncated:
+            self._onTermination("EpisodeTruncated")
 
         self._currentEpisodeStats.loc[0, _EPISODE_LENGTH] += 1
         self._currentEpisodeStats.loc[0, _SCORE] = observations["score"]
@@ -125,31 +133,34 @@ class EnvironmentStats(gym.ObservationWrapper):
             self._lastUpate = t
 
             episode = df.Episode
-            score = df.Score
+            cot = df.CauseOfTermination
             cumReward = df.CumulativeReward
             trainError = df.TrainLossMean
 
-            EnvironmentStats._updateAx(self._score, episode, score, "Score")
-            EnvironmentStats._updateAx(self._cumReward, episode, cumReward, "Cum. Reward")
-            EnvironmentStats._updateAx(self._trainError, episode, trainError, "Train Error (Mean)")
-            # self._trainError.set_ylim([0, ylim])
+            EnvironmentStats._updateScatter(self._cumReward, episode, cumReward, "Cum. Reward")
+            EnvironmentStats._updateBarGraph(self._causeOfTemination, cot, "Cause Of Death")
+            EnvironmentStats._updateScatter(self._trainError, episode, trainError, "Train Error (Mean)")
 
             self._figure.canvas.draw()
             self._figure.canvas.flush_events()
 
     @staticmethod
-    def _updateAx(ax, x, y, title):
-        LAST = -1000
-
-        xx = x[LAST:]
-        yy = y[LAST:]
-        yym = y.rolling(EnvironmentStats._ROLLING_MEAN).mean()[LAST:]
-
+    def _updateScatter(ax, x, y, title):
+        xx = x[_SAMPLES:]
+        yy = y[_SAMPLES:]
+        yym = y.rolling(_ROLLING_MEAN).mean()[_SAMPLES:]
         ax.cla()
         ax.plot(xx, yym, color="blue")
         ax.scatter(xx, yy, s=1, color="orange")
         ax.set_title(title)
         ax.grid()
+
+    @staticmethod
+    def _updateBarGraph(ax, y, title):
+        samples = y[_SAMPLES:].value_counts()
+        ax.cla()
+        ax.bar(samples.index, samples.values)
+        ax.set_title(title)
 
     def _constructPlot(self):
         layout = [
@@ -159,13 +170,16 @@ class EnvironmentStats(gym.ObservationWrapper):
 
         self._figure, ax = plt.subplot_mosaic(layout, figsize=(9, 7), height_ratios=[1, 2])
 
-        self._score = ax["A"]
-        self._cumReward = ax["B"]
+        self._cumReward = ax["A"]
+        self._causeOfTemination = ax["B"]
         self._trainError = ax["Z"]
 
     def _newEpisode(self):
         self._currentEpisodeStats = self._newDataFrame()
 
     def _newDataFrame(self):
-        return pd.DataFrame([[self._id, self._episode, 0, 0, 0.0]],
-                            columns=[_ID, _EPISODE, _EPISODE_LENGTH, _SCORE, _CUM_REWARD])
+        return pd.DataFrame([[self._id, self._episode, 0, 0, 0.0, ""]],
+                            columns=[_ID, _EPISODE, _EPISODE_LENGTH, _SCORE, _CUM_REWARD, _CAUSE_OF_TERMINATION])
+
+    def _onTermination(self, cause):
+        self._currentEpisodeStats.loc[0, _CAUSE_OF_TERMINATION] = cause

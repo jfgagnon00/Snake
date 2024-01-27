@@ -28,6 +28,9 @@ class Vector(object):
     def __str__(self):
         return f"x: {self.x}, y: {self.y}"
 
+    def scale(self, s):
+        return Vector(self.x * s, self.y * s)
+
     @property
     def length(self):
         return sqrt(self.x*self.x + self.y*self.y)
@@ -40,6 +43,24 @@ class Vector(object):
         # convention numpy: height, width
         return np.array([self.y, self.x])
 
+    def rot90(self, k):
+        if k == 0:
+            return Vector(self.x, self.y)
+
+        if k == 1:
+            # ccw
+            return Vector(self.y, -self.x)
+
+        if k == 2:
+            # flip
+            return Vector(-self.x, -self.y)
+
+        if k == 3 or k == -1:
+            # cw
+            return Vector(-self.y, self.x)
+
+        raise ValueError("Vector::rot90, invalide k")
+
     @staticmethod
     def fromNumpy(v):
         return Vector(v[1], v[0])
@@ -51,16 +72,16 @@ class Vector(object):
     @staticmethod
     def winding(a, b):
         """
-        Retourne  1 si a tourne vers b de maniere CCW
         Retourne -1 si a tourne vers b de maniere CW
+        Retourne  1 si a tourne vers b de maniere CCW
         Retourne  0 si a et b sont paralleles
         """
         k = a.x * b.y - a.y * b.x
 
         if k > 0:
-            return 1
+            return -1
 
         if k < 0:
-            return -1
+            return 1
 
         return 0
