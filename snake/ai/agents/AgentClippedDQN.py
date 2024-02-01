@@ -1,7 +1,6 @@
 import numpy as np
 import os
 
-from random import random, choice
 from torch import from_numpy, \
                 no_grad, \
                 min as torch_min, \
@@ -14,6 +13,7 @@ from torch import from_numpy, \
                 int64 as torch_int64, \
                 float32 as torch_float32
 from torch.optim import Adam
+from torch.nn.functional import softmax
 from torchsummary import summary
 
 from snake.core import Vector
@@ -61,16 +61,21 @@ class AgentClippedDQN(AgentBase):
             exit(-1)
 
     def getAction(self, state):
-        if random() < self._epsilon:
+        if np.random.uniform() < self._epsilon:
             intAction = np.random.choice(len(GameAction))
             gameAction = self._gameActions[intAction]
         else:
-            x, flip = self._stateToTensor(state)
-            q = self._evalModel(0, x)
-            intAction = q.argmax().item()
-            gameAction = self._gameActions[intAction]
-            if flip:
-                gameAction = gameAction.flip
+            with no_grad():
+                x, flip = self._stateToTensor(state)
+                q = self._evalModel(0, x)
+
+                # intAction = q.argmax().item()
+                proba = softmax(q, dim=1).numpy().flatten()
+                intAction = np.random.choice(range(len(GameAction)), p=proba)
+
+                gameAction = self._gameActions[intAction]
+                if flip:
+                    gameAction = gameAction.flip
 
         return gameAction
 
@@ -171,8 +176,8 @@ class AgentClippedDQN(AgentBase):
     def _buildModel(self, trainConfig, width, height):
         if self._useConv:
             assert not trainConfig.useFrameStack, "Occupancy stack non supporte avec frame stack"
-            # model = _ConvNet(width, height, 3, len(self._gameActions))
-            model = _DuelingConvNet(width, height, 3, len(self._gameActions))
+            model = _ConvNet(width, height, 3, len(self._gameActions))
+            # model = _DuelingConvNet(width, height, 3, len(self._gameActions))
         else:
             # numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
             # miscs = 0 if trainConfig.useFrameStack else 4
