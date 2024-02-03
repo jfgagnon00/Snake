@@ -69,6 +69,8 @@ class AgentClippedDQN(AgentBase):
                 x0, x1 = self._stateToTensor(state)
                 q = self._evalModel(0, x0, x1)
 
+                self._lastQvalues = q.numpy().flatten()
+
                 # intAction = q.argmax().item()
                 proba = softmax(q, dim=1).numpy().flatten()
                 intAction = np.random.choice(range(len(GameAction)), p=proba)
@@ -80,6 +82,7 @@ class AgentClippedDQN(AgentBase):
     def onEpisodeBegin(self, episode, stats):
         stats.loc[0, "Epsilon"] = self._epsilon
         self._trainLoss = np.zeros((1), dtype=np.float32)
+        self._lastQvalues = np.zeros((len(GameAction)), dtype=np.float32)
 
     def onEpisodeDone(self, episode, stats):
         self._epsilon *= self._epsilonDecay
@@ -87,6 +90,9 @@ class AgentClippedDQN(AgentBase):
         stats.loc[0, "TrainLossMin"] = self._trainLoss.min()
         stats.loc[0, "TrainLossMax"] = self._trainLoss.max()
         stats.loc[0, "TrainLossMean"] = self._trainLoss.mean()
+
+        for i, a in enumerate(self._gameActions):
+            stats.loc[0, f"Q_{a.name}"] = self._lastQvalues[i]
 
     def train(self, state, action, newState, reward, done):
         self._replayBuffer.append(self._stateToTensor(state),
