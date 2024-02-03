@@ -6,7 +6,7 @@
         "gamma": 0.99,
         "epsilon": 0.8,
         "epsilonDecay": 0.995,
-        "epsilonMin": 0.025,
+        "epsilonMin": 0,
         "nStep": 1,
         "lr": 0.005,
         "agent": "AgentClippedDQN",
@@ -21,10 +21,10 @@
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "move": 1,
+            "move": 0.5,
             "eat": 20,
             "collision": -10,
-            "out_of_bounds": -100,
+            "out_of_bounds": -1000,
             "win": 80,
             "truncated": 0
         }

@@ -61,28 +61,33 @@ class AgentClippedDQN(AgentBase):
             exit(-1)
 
     def getAction(self, state):
+        self._NumActions += 1
+
+        x0, x1, actionFlags = self._stateToTensor(state)
+
         if np.random.uniform() < self._epsilon:
-            intAction = np.random.choice(len(GameAction))
-            gameAction = self._gameActions[intAction]
+            self._NumRandomActions += 1
+            self._lastQvalues = np.zeros((len(GameAction)), dtype=np.float32)
+            self._lastActionProbs = np.array(actionFlags, dtype=np.float32)
+            self._lastActionProbs = self._lastActionProbs / (self._lastActionProbs.sum() + 1e-6)
+
+            intAction = np.random.choice(len(GameAction), p=self._lastActionProbs)
         else:
             with no_grad():
-                x0, x1 = self._stateToTensor(state)
                 q = self._evalModel(0, x0, x1)
-
                 self._lastQvalues = q.numpy().flatten()
+                self._lastActionProbs = softmax(q, dim=1).numpy().flatten()
 
                 # intAction = q.argmax().item()
-                proba = softmax(q, dim=1).numpy().flatten()
-                intAction = np.random.choice(range(len(GameAction)), p=proba)
+                intAction = np.random.choice(len(GameAction), p=self._lastActionProbs)
 
-                gameAction = self._gameActions[intAction]
-
-        return gameAction
+        return self._gameActions[intAction]
 
     def onEpisodeBegin(self, episode, stats):
         stats.loc[0, "Epsilon"] = self._epsilon
         self._trainLoss = np.zeros((1), dtype=np.float32)
-        self._lastQvalues = np.zeros((len(GameAction)), dtype=np.float32)
+        self._NumRandomActions = 0
+        self._NumActions = 0
 
     def onEpisodeDone(self, episode, stats):
         self._epsilon *= self._epsilonDecay
@@ -93,6 +98,11 @@ class AgentClippedDQN(AgentBase):
 
         for i, a in enumerate(self._gameActions):
             stats.loc[0, f"Q_{a.name}"] = self._lastQvalues[i]
+
+        for i, a in enumerate(self._gameActions):
+            stats.loc[0, f"P_{a.name}"] = self._lastActionProbs[i]
+
+        stats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
 
     def train(self, state, action, newState, reward, done):
         self._replayBuffer.append(self._stateToTensor(state),
@@ -244,7 +254,7 @@ class AgentClippedDQN(AgentBase):
         x0 = from_numpy(grid.astype(np.float32))
         x1 = from_numpy(flags.astype(np.float32))
 
-        return unsqueeze(x0, 0), unsqueeze(x1, 0)
+        return unsqueeze(x0, 0), unsqueeze(x1, 0), (head_cw, head_ccw, head_f)
 
     def _applySymmetry(self, state):
         head_d = state["head_direction"]
