@@ -1,3 +1,4 @@
+from torch import concatenate
 from torch.nn import Linear, \
                     Module, \
                     Sequential, \
@@ -18,5 +19,6 @@ class _LinearNet(Module):
 
         self._net.append(Linear(prevSize, numOutput))
 
-    def forward(self, x):
-        return self._net(x)
+    def forward(self, x0, x1):
+        out = concatenate((x0, x1), dim=1)
+        return self._net(out)

@@ -138,7 +138,7 @@ class EnvironmentStats(gym.ObservationWrapper):
             trainError = df.TrainLossMean
 
             EnvironmentStats._updateScatter(self._cumReward, episode, cumReward, "Cum. Reward")
-            EnvironmentStats._updateBarGraph(self._causeOfTemination, cot, "Cause Of Death")
+            EnvironmentStats._updatePiePlot(self._causeOfTemination, cot, "Cause Of Death")
             EnvironmentStats._updateScatter(self._trainError, episode, trainError, "Train Error (Mean)")
 
             self._figure.canvas.draw()
@@ -156,10 +156,14 @@ class EnvironmentStats(gym.ObservationWrapper):
         ax.grid()
 
     @staticmethod
-    def _updateBarGraph(ax, y, title):
+    def _updatePiePlot(ax, y, title):
         samples = y[_SAMPLES:].value_counts()
+
         ax.cla()
-        ax.bar(samples.index, samples.values)
+        ax.pie(samples.values,
+               labels=samples.index,
+               autopct="%2.1f%%",
+               explode=[0.05] * len(samples))
         ax.set_title(title)
 
     def _constructPlot(self):

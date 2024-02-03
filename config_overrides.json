@@ -21,11 +21,11 @@
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "move": 0,
-            "eat": 50,
+            "move": 1,
+            "eat": 20,
             "collision": -10,
-            "out_of_bounds": -20,
-            "win": 50,
+            "out_of_bounds": -100,
+            "win": 80,
             "truncated": 0
         }
     },
