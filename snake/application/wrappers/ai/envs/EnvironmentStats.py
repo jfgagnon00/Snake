@@ -1,4 +1,5 @@
 import gymnasium as gym
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -138,7 +139,7 @@ class EnvironmentStats(gym.ObservationWrapper):
             trainError = df.TrainLossMean
 
             EnvironmentStats._updateScatter(self._cumReward, episode, cumReward, "Cum. Reward")
-            EnvironmentStats._updatePiePlot(self._causeOfTemination, cot, "Cause Of Death")
+            EnvironmentStats._updatePiePlot(self._causeOfTemination, cot, "Cause Of Termination")
             EnvironmentStats._updateScatter(self._trainError, episode, trainError, "Train Error (Mean)")
 
             self._figure.canvas.draw()
@@ -172,7 +173,11 @@ class EnvironmentStats(gym.ObservationWrapper):
             ["Z", "Z"],
         ]
 
-        self._figure, ax = plt.subplot_mosaic(layout, figsize=(9, 7), height_ratios=[1, 2])
+        matplotlib.rcParams['toolbar'] = 'None'
+
+        self._figure, ax = plt.subplot_mosaic(layout, figsize=(7, 6), height_ratios=[2, 3])
+        self._figure.canvas.manager.set_window_title(f"Stats - dernier {_ROLLING_MEAN} samples")
+        self._figure.canvas.manager
 
         self._cumReward = ax["A"]
         self._causeOfTemination = ax["B"]
