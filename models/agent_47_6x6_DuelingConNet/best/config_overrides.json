@@ -1,0 +1,53 @@
+{
+    "train": {
+        "alpha": 0.8,
+        "beta": 0.1,
+        "betaAnnealingSteps": 20000,
+        "gamma": 0.99,
+        "epsilon": 0.8,
+        "epsilonDecay": 0.995,
+        "epsilonMin": 0,
+        "nStep": 1,
+        "lr": 0.005,
+        "agent": "AgentClippedDQN",
+        "episodes": 30000,
+        "maxVisitCount": 8,
+        "showStats": true,
+        "useConv": true,
+        "useFrameStack": false,
+        "frameStack": 3
+    },
+
+    "environment": {
+        "renderFps": 200,
+        "rewards": {
+            "move": 0.5,
+            "eat": 20,
+            "collision": -10,
+            "out_of_bounds": -1000,
+            "win": 80,
+            "truncated": 0
+        }
+    },
+
+    "simulation": {
+        "gridWidth": 6,
+        "gridHeight": 6
+    },
+
+    "graphics": {
+        "caption": "Snake",
+        "clearColor": [0, 0, 0],
+        "backgroundTileColorLight": [0, 255, 0],
+        "backgroundTileColorDark": [0, 200, 0],
+        "simulationFpsDivider": 15,
+        "windowSize": 625,
+        "fontSize": 20,
+        "fontColor":[255, 255, 255],
+        "fontPath": "assets/arial.ttf",
+        "snakeSpritesPath": "assets/snake.png",
+        "snakeColor": [80, 80, 240],
+        "foodSpritePath": "assets/food.png",
+        "iconPath": "assets/icon.png"
+    }
+}
