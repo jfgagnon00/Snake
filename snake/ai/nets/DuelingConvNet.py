@@ -1,3 +1,4 @@
+from torch import concatenate
 from torch.nn import Linear, \
                     Module, \
                     Sequential, \
@@ -6,29 +7,32 @@ from torch.nn import Linear, \
                     LeakyReLU
 
 class _DuelingConvNet(Module):
-    def __init__(self, width, height, numInputs, numOutputs):
+    def __init__(self, width, height, numChannels, numInputs, numOutputs):
         super().__init__()
 
         self._conv = Sequential(
-            Conv2d(numInputs, 16, 3, padding="same"),
+            Conv2d(numChannels, 16, 3, padding="same"),
             LeakyReLU(),
             Flatten()
         )
 
         self._value = Sequential(
-            Linear(width * height * 16, 128),
+            Linear(width * height * 16 + numInputs, 128),
             LeakyReLU(),
             Linear(128, 1),
         )
 
         self._advantage = Sequential(
-            Linear(width * height * 16, 128),
+            Linear(width * height * 16 + numInputs, 128),
             LeakyReLU(),
             Linear(128, numOutputs),
         )
 
-    def forward(self, x):
-        features = self._conv(x)
+    def forward(self, x0, x1):
+        features = self._conv(x0)
+        features = concatenate((features, x1), dim=1)
+
         value = self._value(features)
         advantage = self._advantage(features)
+
         return value + (advantage - advantage.mean())

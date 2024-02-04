@@ -196,9 +196,9 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height):
         if self._useConv:
-            assert not trainConfig.useFrameStack, "Occupancy stack non supporte avec frame stack"
-            model = _ConvNet(width, height, 3, 6, len(self._gameActions))
-            # model = _DuelingConvNet(width, height, 3, len(self._gameActions))
+            assert not trainConfig.useFrameStack, "Frame stack non supporte"
+            # model = _ConvNet(width, height, 3, 6, len(self._gameActions))
+            model = _DuelingConvNet(width, height, 3, 6, len(self._gameActions))
         else:
             # numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
             # miscs = 0 if trainConfig.useFrameStack else 4
