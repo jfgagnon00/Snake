@@ -135,10 +135,10 @@ class EnvironmentStats(gym.ObservationWrapper):
 
             episode = df.Episode
             cot = df.CauseOfTermination
-            cumReward = df.CumulativeReward
+            score = df.Score
             trainError = df.TrainLossMean
 
-            EnvironmentStats._updateScatter(self._cumReward, episode, cumReward, "Cum. Reward")
+            EnvironmentStats._updateScatter(self._score, episode, score, "Score")
             EnvironmentStats._updatePiePlot(self._causeOfTemination, cot, "Cause Of Termination")
             EnvironmentStats._updateScatter(self._trainError, episode, trainError, "Train Error (Mean)")
 
@@ -179,7 +179,7 @@ class EnvironmentStats(gym.ObservationWrapper):
         self._figure.canvas.manager.set_window_title(f"Stats - dernier {_ROLLING_MEAN} samples")
         self._figure.canvas.manager
 
-        self._cumReward = ax["A"]
+        self._score = ax["A"]
         self._causeOfTemination = ax["B"]
         self._trainError = ax["Z"]
 

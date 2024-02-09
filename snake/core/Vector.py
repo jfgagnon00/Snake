@@ -43,6 +43,9 @@ class Vector(object):
         # convention numpy: height, width
         return np.array([self.y, self.x])
 
+    def toInt(self):
+        return Vector(int(self.x), int(self.y))
+
     def rot90(self, k):
         if k == 0:
             return Vector(self.x, self.y)

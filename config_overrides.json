@@ -1,11 +1,8 @@
 {
     "train": {
-        "alpha": 0.8,
-        "beta": 0.1,
-        "betaAnnealingSteps": 20000,
         "gamma": 0.99,
-        "epsilon": 0.8,
-        "epsilonDecay": 0.995,
+        "epsilon": 0.5,
+        "epsilonDecay": 0.997,
         "epsilonMin": 0,
         "nStep": 1,
         "lr": 0.005,
@@ -13,26 +10,24 @@
         "episodes": 30000,
         "maxVisitCount": 8,
         "showStats": true,
-        "useConv": true,
-        "useFrameStack": false,
-        "frameStack": 3
+        "useConv": true
     },
 
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "move": 0.5,
+            "move": -0.1,
             "eat": 20,
             "collision": -10,
-            "out_of_bounds": -1000,
-            "win": 80,
+            "out_of_bounds": -100,
+            "win": 50,
             "truncated": 0
         }
     },
 
     "simulation": {
-        "gridWidth": 6,
-        "gridHeight": 6
+        "gridWidth": 8,
+        "gridHeight": 8
     },
 
     "graphics": {

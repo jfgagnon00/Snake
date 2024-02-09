@@ -4,27 +4,45 @@ from torch.nn import Linear, \
                     Sequential, \
                     Conv2d, \
                     Flatten, \
-                    LeakyReLU
+                    LeakyReLU, \
+                    MaxPool2d
 
 class _DuelingConvNet(Module):
     def __init__(self, width, height, numChannels, numInputs, numOutputs):
         super().__init__()
 
         self._conv = Sequential(
-            Conv2d(numChannels, 16, 3, padding="same"),
+            Conv2d(numChannels, 16, 5, padding="same"),
             LeakyReLU(),
+
+            MaxPool2d(2, stride=2),
+
+            Conv2d(16, 32, 3, padding="same"),
+            LeakyReLU(),
+
             Flatten()
         )
 
+        w2 = width // 2
+        h2 = height // 2
+
         self._value = Sequential(
-            Linear(width * height * 16 + numInputs, 128),
+            Linear(w2 * h2 * 32  + numInputs, 128),
             LeakyReLU(),
+
+            Linear(128, 128),
+            LeakyReLU(),
+
             Linear(128, 1),
         )
 
         self._advantage = Sequential(
-            Linear(width * height * 16 + numInputs, 128),
+            Linear(w2 * h2 * 32 + numInputs, 128),
             LeakyReLU(),
+
+            Linear(128, 128),
+            LeakyReLU(),
+
             Linear(128, numOutputs),
         )
 

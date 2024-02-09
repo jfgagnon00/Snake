@@ -1,8 +1,5 @@
 class ConfigTrain(object):
     def __init__(self):
-        self.alpha = 0.0
-        self.beta = 0.0
-        self.betaAnnealingSteps = 50
         self.gamma = 0.0
         self.epsilon = 0.0
         self.epsilonDecay = 0.0
@@ -15,5 +12,3 @@ class ConfigTrain(object):
         self.maxVisitCount = 0
         self.showStats = True
         self.useConv = False
-        self.frameStack = 1
-        self.useFrameStack = False

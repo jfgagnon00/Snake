@@ -21,8 +21,7 @@ from snake.game import GameAction, GameDirection, GridOccupancy
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _ConvNet, _DuelingConvNet, _LinearNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
-from snake.ai.PriorityReplayBuffer import _PriorityReplayBuffer
-from snake.ai.NStepPriorityReplayBuffer import _NStepPriorityReplayBuffer
+from snake.ai.NStepReplayBuffer import _NStepReplayBuffer
 
 
 class AgentClippedDQN(AgentBase):
@@ -33,13 +32,16 @@ class AgentClippedDQN(AgentBase):
         super().__init__()
 
         # misc parameters
+        self._numGameActions = len(GameAction)
         self._gameActions = list(GameAction)
         self._useConv = trainConfig.useConv
         self._gridCenter = Vector(simulationConfig.gridWidth,
                                   simulationConfig.gridHeight).scale(0.5) - Vector(0.5, 0.5)
 
         # replay buffer
-        self._replayBuffer = _ReplayBuffer(AgentClippedDQN.MEMORY_SIZE)
+        self._replayBuffer = _NStepReplayBuffer(AgentClippedDQN.MEMORY_SIZE,
+                                                trainConfig.gamma,
+                                                trainConfig.nStep)
 
         # clipped DQN
         self._gamma = trainConfig.gamma ** trainConfig.nStep
@@ -53,11 +55,9 @@ class AgentClippedDQN(AgentBase):
                                          simulationConfig.gridWidth,
                                          simulationConfig.gridHeight)]
 
-        self._useFrameStack = trainConfig.useFrameStack
-
         if False:
             summary(self._models[0][0], \
-                    (1, simulationConfig.gridHeight, simulationConfig.gridWidth))
+                    (1, 1, simulationConfig.gridHeight, simulationConfig.gridWidth))
             exit(-1)
 
     def getAction(self, state):
@@ -67,20 +67,22 @@ class AgentClippedDQN(AgentBase):
 
         if np.random.uniform() < self._epsilon:
             self._NumRandomActions += 1
-            self._lastQvalues = np.zeros((len(GameAction)), dtype=np.float32)
+            self._lastQvalues = np.zeros((self._numGameActions), dtype=np.float32)
             self._lastActionProbs = np.array(actionFlags, dtype=np.float32)
-            self._lastActionProbs = self._lastActionProbs / (self._lastActionProbs.sum() + 1e-6)
 
-            intAction = np.random.choice(len(GameAction), p=self._lastActionProbs)
+            sum = self._lastActionProbs.sum()
+            if sum < 1e-6:
+                self._lastActionProbs = np.ones(self._numGameActions, dtype=np.float32)
+                sum = self._numGameActions
+
+            self._lastActionProbs = self._lastActionProbs / sum
         else:
             with no_grad():
                 q = self._evalModel(0, x0, x1)
                 self._lastQvalues = q.numpy().flatten()
                 self._lastActionProbs = softmax(q, dim=1).numpy().flatten()
 
-                # intAction = q.argmax().item()
-                intAction = np.random.choice(len(GameAction), p=self._lastActionProbs)
-
+        intAction = np.random.choice(self._numGameActions, p=self._lastActionProbs)
         return self._gameActions[intAction]
 
     def onEpisodeBegin(self, episode, stats):
@@ -196,13 +198,10 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height):
         if self._useConv:
-            assert not trainConfig.useFrameStack, "Frame stack non supporte"
-            # model = _ConvNet(width, height, 3, 6, len(self._gameActions))
-            model = _DuelingConvNet(width, height, 3, 6, len(self._gameActions))
+            model = _ConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
+            # model = _DuelingConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
         else:
-            # numFrames = trainConfig.frameStack if trainConfig.useFrameStack else 1
-            # miscs = 0 if trainConfig.useFrameStack else 4
-            model = _LinearNet(width * height * 3 + 6, [256, 256], len(self._gameActions))
+            model = _LinearNet((width + 2) * (height + 2) * 3 + 6, [256, 256], len(self._gameActions))
 
         model.eval()
 
@@ -228,8 +227,6 @@ class AgentClippedDQN(AgentBase):
         _, w = state["occupancy_grid"].shape[1:]
 
         grid, head_p, food_p = self._applySymmetry(state)
-        grid = self._splitOccupancyGrid(grid, pad=False)
-
         if not food_p is None:
             food_d = food_p - head_p
 
@@ -237,9 +234,20 @@ class AgentClippedDQN(AgentBase):
             food_ccw = 1 if food_d.x < 0 else 0
             food_f = 1 if food_d.y < 0 else 0
 
-            head_cw = 1 if head_p.x < (w - 1) else 0
-            head_ccw = 1 if head_p.x > 0 else 0
-            head_f = 1 if head_p.y > 0 else 0
+            if head_p.x < (w - 1) and grid[0, head_p.y, head_p.x + 1] == GridOccupancy.EMPTY:
+                head_cw = 1
+            else:
+                head_cw = 0
+
+            if head_p.x > 0 and grid[0, head_p.y, head_p.x - 1] == GridOccupancy.EMPTY:
+                head_ccw = 1
+            else:
+                head_ccw = 0
+
+            if head_p.y > 0 and grid[0, head_p.y - 1, head_p.x] == GridOccupancy.EMPTY:
+                head_f = 1
+            else:
+                head_f = 0
         else:
             food_cw = 0
             food_ccw = 0
@@ -249,6 +257,7 @@ class AgentClippedDQN(AgentBase):
             head_ccw = 0
             head_f = 0
 
+        grid = self._splitOccupancyGrid(grid, pad=True)
         flags = np.array([food_cw, food_ccw, food_f, head_cw, head_ccw, head_f])
 
         x0 = from_numpy(grid.astype(np.float32))
@@ -280,11 +289,13 @@ class AgentClippedDQN(AgentBase):
         head_p = state["head_position"]
         head_p = Vector.fromNumpy(head_p) - self._gridCenter
         head_p = head_p.rot90(k) + self._gridCenter
+        head_p = head_p.toInt()
 
         food_p = state["food_position"]
         if not food_p is None:
             food_p = Vector.fromNumpy(food_p) - self._gridCenter
             food_p = food_p.rot90(k) + self._gridCenter
+            food_p = food_p.toInt()
 
         return grid, head_p, food_p
 

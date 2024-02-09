@@ -1,11 +1,11 @@
 from collections import deque
 
-from .PriorityReplayBuffer import _PriorityReplayBuffer
+from .ReplayBuffer import _ReplayBuffer
 
 
-class _NStepPriorityReplayBuffer(_PriorityReplayBuffer):
-    def __init__(self, maxlen, alpha, beta, betaAnnealingSteps, gamma, nStep):
-        super().__init__(maxlen, alpha, beta, betaAnnealingSteps)
+class _NStepReplayBuffer(_ReplayBuffer):
+    def __init__(self, maxlen, gamma, nStep):
+        super().__init__(maxlen)
         self._gamma = gamma
         self._nStep = nStep
         self._nStepBuffer = deque(maxlen=nStep)
