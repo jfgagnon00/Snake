@@ -63,7 +63,7 @@ class AgentClippedDQN(AgentBase):
     def getAction(self, state):
         self._NumActions += 1
 
-        x0, x1, actionFlags = self._stateToTensor(state)
+        x0, x1, actionFlags = self._stateProcessing(state)
 
         if np.random.uniform() < self._epsilon:
             self._NumRandomActions += 1
@@ -75,7 +75,7 @@ class AgentClippedDQN(AgentBase):
                 self._lastQvalues = q.numpy().flatten().copy()
                 self._lastActionProbs = self._lastQvalues.copy()
 
-
+        # transformer valeurs en probabilites
         self._lastActionProbs = self._lastActionProbs - self._lastActionProbs.max()
         self._lastActionProbs = np.exp(self._lastActionProbs)
         self._lastActionProbs = self._lastActionProbs / (self._lastActionProbs.sum() + 1e-6)
@@ -83,31 +83,31 @@ class AgentClippedDQN(AgentBase):
 
         return self._gameActions[intAction]
 
-    def onEpisodeBegin(self, episode, stats):
-        stats.loc[0, "Epsilon"] = self._epsilon
+    def onEpisodeBegin(self, episode, frameStats):
+        frameStats.loc[0, "Epsilon"] = self._epsilon
         self._trainLoss = np.zeros((1), dtype=np.float32)
         self._NumRandomActions = 0
         self._NumActions = 0
 
-    def onEpisodeDone(self, episode, stats):
+    def onEpisodeDone(self, episode, frameStats):
         self._epsilon *= self._epsilonDecay
         self._epsilon = max(self._epsilon, self._epsilonMin)
-        stats.loc[0, "TrainLossMin"] = self._trainLoss.min()
-        stats.loc[0, "TrainLossMax"] = self._trainLoss.max()
-        stats.loc[0, "TrainLossMean"] = self._trainLoss.mean()
+        frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
+        frameStats.loc[0, "TrainLossMax"] = self._trainLoss.max()
+        frameStats.loc[0, "TrainLossMean"] = self._trainLoss.mean()
 
         for i, a in enumerate(self._gameActions):
-            stats.loc[0, f"Q_{a.name}"] = self._lastQvalues[i]
+            frameStats.loc[0, f"Q_{a.name}"] = self._lastQvalues[i]
 
         for i, a in enumerate(self._gameActions):
-            stats.loc[0, f"P_{a.name}"] = self._lastActionProbs[i]
+            frameStats.loc[0, f"P_{a.name}"] = self._lastActionProbs[i]
 
-        stats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
+        frameStats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
 
     def train(self, state, action, newState, reward, done):
-        self._replayBuffer.append(self._stateToTensor(state),
+        self._replayBuffer.append(self._stateProcessing(state),
                                   self._gameActions.index(action),
-                                  self._stateToTensor(newState),
+                                  self._stateProcessing(newState),
                                   reward,
                                   done)
         self._trainBatch()
@@ -221,15 +221,21 @@ class AgentClippedDQN(AgentBase):
 
         return error
 
+    def _stateProcessing(self, state):
+        tensors = self._stateToTensor(state)
+        return self._stateToTorch(*tensors)
+
     def _stateToTensor(self, state):
         grid, food_flags, head_flags = self._applySymmetry(state)
 
         grid = self._splitOccupancyGrid(grid, pad=True)
         flags = np.array([*food_flags, *head_flags])
 
-        x0 = from_numpy(grid.astype(np.float32))
-        x1 = from_numpy(flags.astype(np.float32))
+        return grid, flags, head_flags
 
+    def _stateToTorch(self, x0, x1, head_flags):
+        x0 = from_numpy(x0.astype(np.float32))
+        x1 = from_numpy(x1.astype(np.float32))
         return unsqueeze(x0, 0), unsqueeze(x1, 0), head_flags
 
     def _applySymmetry(self, state):
@@ -269,8 +275,7 @@ class AgentClippedDQN(AgentBase):
             v  = v.toInt()
         return v
 
-    @staticmethod
-    def _headFlags(grid, head_p):
+    def _headFlags(self, grid, head_p):
         w = grid.shape[-1]
 
         head_cw = head_ccw = head_f = -1
@@ -286,8 +291,7 @@ class AgentClippedDQN(AgentBase):
 
         return head_cw, head_ccw, head_f
 
-    @staticmethod
-    def _foodFlags(head_p, food_p):
+    def _foodFlags(self, head_p, food_p):
         food_cw = food_ccw = food_f = -1
 
         if not food_p is None:

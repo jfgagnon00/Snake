@@ -130,7 +130,7 @@ class EnvironmentStats(gym.ObservationWrapper):
         t = datetime.now()
         dt = t - self._lastUpate
 
-        if dt.total_seconds() > 1.5:
+        if dt.total_seconds() > 6:
             self._lastUpate = t
 
             episode = df.Episode
@@ -144,6 +144,8 @@ class EnvironmentStats(gym.ObservationWrapper):
 
             self._figure.canvas.draw()
             self._figure.canvas.flush_events()
+
+            plt.tight_layout()
 
     @staticmethod
     def _updateScatter(ax, x, y, title):
@@ -167,6 +169,13 @@ class EnvironmentStats(gym.ObservationWrapper):
                explode=[0.05] * len(samples))
         ax.set_title(title)
 
+    @staticmethod
+    def _updateBarPlot(ax, dict_, title):
+        size = len(dict_)
+        ax.cla()
+        ax.bar(range(size), dict_.values())
+        ax.set_title(f"{title} - {size}")
+
     def _constructPlot(self):
         layout = [
             ["A", "B"],
@@ -177,11 +186,12 @@ class EnvironmentStats(gym.ObservationWrapper):
 
         self._figure, ax = plt.subplot_mosaic(layout, figsize=(7, 6), height_ratios=[2, 3])
         self._figure.canvas.manager.set_window_title(f"Stats - dernier {_ROLLING_MEAN} samples")
-        self._figure.canvas.manager
 
         self._score = ax["A"]
         self._causeOfTemination = ax["B"]
         self._trainError = ax["Z"]
+
+        plt.tight_layout()
 
     def _newEpisode(self):
         self._currentEpisodeStats = self._newDataFrame()
