@@ -69,20 +69,16 @@ class AgentClippedDQN(AgentBase):
             self._NumRandomActions += 1
             self._lastQvalues = np.zeros((self._numGameActions), dtype=np.float32)
             self._lastActionProbs = np.array(actionFlags, dtype=np.float32)
-
-            sum = self._lastActionProbs.sum()
-            if sum < 1e-6:
-                self._lastActionProbs = np.ones(self._numGameActions, dtype=np.float32)
-                sum = self._numGameActions
-
-            self._lastActionProbs = self._lastActionProbs / sum
         else:
             with no_grad():
                 q = self._evalModel(0, x0, x1)
-                self._lastQvalues = q.numpy().flatten()
-                self._lastActionProbs = softmax(q, dim=1).numpy().flatten()
+                self._lastQvalues = q.numpy().flatten().copy()
+                self._lastActionProbs = self._lastQvalues.copy()
 
+        self._lastActionProbs = np.exp(self._lastActionProbs)
+        self._lastActionProbs = self._lastActionProbs / self._lastActionProbs.sum()
         intAction = np.random.choice(self._numGameActions, p=self._lastActionProbs)
+
         return self._gameActions[intAction]
 
     def onEpisodeBegin(self, episode, stats):
@@ -198,10 +194,10 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height):
         if self._useConv:
-            model = _ConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
-            # model = _DuelingConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
+            model = _ConvNet(width + 2, height + 2, 3, 7, len(self._gameActions))
+            # model = _DuelingConvNet(width + 2, height + 2, 3, 7, len(self._gameActions))
         else:
-            model = _LinearNet((width + 2) * (height + 2) * 3 + 6, [256, 256], len(self._gameActions))
+            model = _LinearNet((width + 2) * (height + 2) * 3 + 7, [256, 256], len(self._gameActions))
 
         model.eval()
 
@@ -224,46 +220,15 @@ class AgentClippedDQN(AgentBase):
         return error
 
     def _stateToTensor(self, state):
-        _, w = state["occupancy_grid"].shape[1:]
-
-        grid, head_p, food_p = self._applySymmetry(state)
-        if not food_p is None:
-            food_d = food_p - head_p
-
-            food_cw = 1 if food_d.x > 0 else 0
-            food_ccw = 1 if food_d.x < 0 else 0
-            food_f = 1 if food_d.y < 0 else 0
-
-            if head_p.x < (w - 1) and grid[0, head_p.y, head_p.x + 1] == GridOccupancy.EMPTY:
-                head_cw = 1
-            else:
-                head_cw = 0
-
-            if head_p.x > 0 and grid[0, head_p.y, head_p.x - 1] == GridOccupancy.EMPTY:
-                head_ccw = 1
-            else:
-                head_ccw = 0
-
-            if head_p.y > 0 and grid[0, head_p.y - 1, head_p.x] == GridOccupancy.EMPTY:
-                head_f = 1
-            else:
-                head_f = 0
-        else:
-            food_cw = 0
-            food_ccw = 0
-            food_f = 0
-
-            head_cw = 0
-            head_ccw = 0
-            head_f = 0
+        grid, food_flags, head_flags, flip = self._applySymmetry(state)
 
         grid = self._splitOccupancyGrid(grid, pad=True)
-        flags = np.array([food_cw, food_ccw, food_f, head_cw, head_ccw, head_f])
+        flags = np.array([*food_flags, *head_flags, flip])
 
         x0 = from_numpy(grid.astype(np.float32))
         x1 = from_numpy(flags.astype(np.float32))
 
-        return unsqueeze(x0, 0), unsqueeze(x1, 0), (head_cw, head_ccw, head_f)
+        return unsqueeze(x0, 0), unsqueeze(x1, 0), head_flags
 
     def _applySymmetry(self, state):
         head_d = state["head_direction"]
@@ -286,18 +251,55 @@ class AgentClippedDQN(AgentBase):
         grid = state["occupancy_grid"]
         grid = np.rot90(grid, k=k, axes=(1, 2))
 
-        head_p = state["head_position"]
-        head_p = Vector.fromNumpy(head_p) - self._gridCenter
-        head_p = head_p.rot90(k) + self._gridCenter
-        head_p = head_p.toInt()
+        head_p = self._rot90Vector(state["head_position"], k)
+        food_p = self._rot90Vector(state["food_position"], k)
 
-        food_p = state["food_position"]
+        return grid.copy(), \
+               self._foodFlags(head_p, food_p), \
+               self._headFlags(grid, head_p)
+
+    def _rot90Vector(self, v, k):
+        if not v is None:
+            v  = Vector.fromNumpy(v)
+            v -= self._gridCenter
+            v  = v.rot90(k)
+            v += self._gridCenter
+            v  = v.toInt()
+        return v
+
+    @staticmethod
+    def _headFlags(grid, head_p):
+        w = grid.shape[-1]
+
+        head_cw = head_ccw = head_f = -1
+
+        if head_p.x < (w - 1) and grid[0, head_p.y, head_p.x + 1] == GridOccupancy.EMPTY:
+            head_cw = 1
+
+        if head_p.x > 0 and grid[0, head_p.y, head_p.x - 1] == GridOccupancy.EMPTY:
+            head_ccw = 1
+
+        if head_p.y > 0 and grid[0, head_p.y - 1, head_p.x] == GridOccupancy.EMPTY:
+            head_f = 1
+
+        return head_cw, head_ccw, head_f
+
+    @staticmethod
+    def _foodFlags(head_p, food_p):
+        food_cw = food_ccw = food_f = -1
+
         if not food_p is None:
-            food_p = Vector.fromNumpy(food_p) - self._gridCenter
-            food_p = food_p.rot90(k) + self._gridCenter
-            food_p = food_p.toInt()
+            food_d = food_p - head_p
+            if food_d.x > 0:
+                food_cw = 1
 
-        return grid, head_p, food_p
+            if food_d.x < 0:
+                food_ccw = 1
+
+            if food_d.y < 0:
+                food_f = 1
+
+        return food_cw, food_ccw, food_f
 
     def _splitOccupancyGrid(self, occupancyGrid, pad=False):
         if pad:
@@ -309,8 +311,8 @@ class AgentClippedDQN(AgentBase):
         shape = (3, *occupancyGrid.shape[1:])
 
         occupancyStack = np.zeros(shape=shape, dtype=np.int32)
-        occupancyStack[0] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
-        occupancyStack[1] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
-        occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, 0)
+        occupancyStack[0] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_BODY, 1, -1)
+        occupancyStack[1] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_HEAD, 1, -1)
+        occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, -1)
 
         return occupancyStack
