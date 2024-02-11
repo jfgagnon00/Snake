@@ -75,8 +75,10 @@ class AgentClippedDQN(AgentBase):
                 self._lastQvalues = q.numpy().flatten().copy()
                 self._lastActionProbs = self._lastQvalues.copy()
 
+
+        self._lastActionProbs = self._lastActionProbs - self._lastActionProbs.max()
         self._lastActionProbs = np.exp(self._lastActionProbs)
-        self._lastActionProbs = self._lastActionProbs / self._lastActionProbs.sum()
+        self._lastActionProbs = self._lastActionProbs / (self._lastActionProbs.sum() + 1e-6)
         intAction = np.random.choice(self._numGameActions, p=self._lastActionProbs)
 
         return self._gameActions[intAction]
@@ -194,10 +196,10 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height):
         if self._useConv:
-            model = _ConvNet(width + 2, height + 2, 3, 7, len(self._gameActions))
-            # model = _DuelingConvNet(width + 2, height + 2, 3, 7, len(self._gameActions))
+            model = _ConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
+            # model = _DuelingConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
         else:
-            model = _LinearNet((width + 2) * (height + 2) * 3 + 7, [256, 256], len(self._gameActions))
+            model = _LinearNet((width + 2) * (height + 2) * 3 + 6, [256, 256], len(self._gameActions))
 
         model.eval()
 
@@ -220,10 +222,10 @@ class AgentClippedDQN(AgentBase):
         return error
 
     def _stateToTensor(self, state):
-        grid, food_flags, head_flags, flip = self._applySymmetry(state)
+        grid, food_flags, head_flags = self._applySymmetry(state)
 
         grid = self._splitOccupancyGrid(grid, pad=True)
-        flags = np.array([*food_flags, *head_flags, flip])
+        flags = np.array([*food_flags, *head_flags])
 
         x0 = from_numpy(grid.astype(np.float32))
         x1 = from_numpy(flags.astype(np.float32))
