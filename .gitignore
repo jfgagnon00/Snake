@@ -1,13 +1,13 @@
 # a ignorer globalement
-models/
-recordings/
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store
-.vscode
 *.egg-info/
 
 # a ignorer dans le repertoire courant
 .venv/
+.vscode
+models/
+recordings/
+runs/
 sandbox/
-/sandbox/jfgagnon
