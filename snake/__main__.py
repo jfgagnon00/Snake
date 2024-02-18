@@ -101,7 +101,7 @@ def replay(configs, windowSize, fps, recording):
     configs.graphics.caption += " - playback"
 
     application = ApplicationInteractive(configs)
-    application.agent = AgentActionPlayback(recording)
+    application.setPlaybackAgent(AgentActionPlayback(recording))
     application.runAttended()
 
 @cli.command()
@@ -134,10 +134,10 @@ def render(configs, windowSize, fps, recording):
     filename = f"{filename}.mp4"
 
     application = ApplicationInteractive(configs)
-    application.agent = AgentActionPlayback(recording)
     application.window = VideoWriter(application.window,
                                      configs.graphics.fps,
                                      filename)
+    application.setPlaybackAgent(AgentActionPlayback(recording), quit=True)
     application.runUnattended()
     application.window.dispose()
 

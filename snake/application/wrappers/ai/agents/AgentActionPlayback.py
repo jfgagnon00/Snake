@@ -1,7 +1,7 @@
 import json
 
 from snake.ai.agents import AgentBase
-from snake.core import RandomProxy
+from snake.core import Delegate, RandomProxy
 from .Random import _RandomPlayback
 from .TimedAction import _TimedActionDecoder
 
@@ -13,14 +13,20 @@ class AgentActionPlayback(AgentBase):
     """
     def __init__(self, filename):
         super().__init__()
+
         with open(filename, "r") as file:
             dict_ = json.load(file, cls=_TimedActionDecoder)
             self._timedActions = dict_["timedActions"]
             random_choices = dict_["random_choices"]
 
         self._randomPlayback = RandomProxy.instance = _RandomPlayback(random_choices)
+        self._endOfActionsDelegate = Delegate()
 
         self.reset()
+
+    @property
+    def endOfActionsDelegate(self):
+        return self._endOfActionsDelegate
 
     def reset(self):
         """
@@ -50,3 +56,5 @@ class AgentActionPlayback(AgentBase):
         if nextIndex < len(self._timedActions):
             self._nextTime = self._timedActions[nextIndex].time
             self._nextIndex = nextIndex
+        else:
+            self._endOfActionsDelegate()

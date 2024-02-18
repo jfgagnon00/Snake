@@ -47,6 +47,12 @@ class ApplicationInteractive(object):
         self._simulation.turnDelegate.register(self._onSnakeTurn)
         self._simulation.moveDelegate.register(self._onSnakeMove)
 
+    def setPlaybackAgent(self, agent, quit=False):
+        self.agent = agent
+        agent.endOfActionsDelegate.register(self._onEndOfActionsDelegate)
+        if quit:
+            agent.endOfActionsDelegate.register(self._onQuit)
+
     def runAttended(self):
         # en mode interactif, l'utilisateur doit
         # peser sur une touche avant de demarrer
@@ -131,6 +137,11 @@ class ApplicationInteractive(object):
         self._setAnyKeyPressedState(None)
         self._reset()
         self._setUpdateState(self._update, self._simulationFpsDivider)
+
+    def _onEndOfActionsDelegate(self):
+        self.agent.onEpisodeDone(self._episode)
+        self._setAnyKeyPressedState(self._onResetSimulation, "Actions épuisées! - Pesez une touche pour redémarrer")
+        self._setUpdateState(None)
 
     def _onLose(self):
         self.agent.onEpisodeDone(self._episode)

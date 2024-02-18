@@ -1,4 +1,4 @@
-from pygame import HIDDEN, SHOWN
+from pygame import HIDDEN, SHOWN, SCALED
 from pygame.font import Font
 from pygame.display import set_mode, set_caption, get_caption, set_icon, flip
 from pygame.time import Clock
@@ -47,8 +47,8 @@ class GraphicWindow(object):
         set_icon(icon.image)
         set_caption(graphicsConfig.caption)
 
-        flags = SHOWN if graphicsConfig.showWindow else HIDDEN
-        self._window = set_mode((w, h), flags=flags)
+        flags = SHOWN | SCALED if graphicsConfig.showWindow else HIDDEN
+        self._window = set_mode((w, h), flags=flags, vsync=0)
 
         self._initBackground(graphicsConfig, simulationGridShape)
         self._initFood(graphicsConfig)
