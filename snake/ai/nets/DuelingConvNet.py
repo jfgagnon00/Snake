@@ -48,7 +48,9 @@ class _DuelingConvNet(Module):
 
     def forward(self, x0, x1):
         features = self._conv(x0)
-        features = concatenate((features, x1), dim=1)
+
+        if not x1 is None:
+            features = concatenate((features, x1), dim=1)
 
         value = self._value(features)
         advantage = self._advantage(features)

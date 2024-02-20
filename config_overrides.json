@@ -4,6 +4,7 @@
         "epsilon": 0.5,
         "epsilonDecay": 0.997,
         "epsilonMin": 0,
+        "tau": 0.005,
         "nStep": 1,
         "lr": 0.005,
         "agent": "AgentClippedDQN",
@@ -16,12 +17,12 @@
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "move": -0.1,
-            "eat": 20,
-            "collision": -10,
-            "out_of_bounds": -100,
-            "win": 50,
-            "truncated": 0
+            "move": 0,
+            "eat": 3,
+            "collision": -150,
+            "out_of_bounds": -500,
+            "win": 500,
+            "truncated": -150
         }
     },
 

@@ -148,13 +148,13 @@ class EnvironmentStats(gym.ObservationWrapper):
             plt.tight_layout()
 
     @staticmethod
-    def _updateScatter(ax, x, y, title):
+    def _updateScatter(ax, x, y, title, size=3):
         xx = x[_SAMPLES:]
         yy = y[_SAMPLES:]
         yym = y.rolling(_ROLLING_MEAN).mean()[_SAMPLES:]
         ax.cla()
         ax.plot(xx, yym, color="blue")
-        ax.scatter(xx, yy, s=1, color="orange")
+        ax.scatter(xx, yy, s=size, color="orange")
         ax.set_title(title)
         ax.grid()
 

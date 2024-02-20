@@ -48,12 +48,15 @@ class AgentClippedDQN(AgentBase):
         self._epsilon = trainConfig.epsilon
         self._epsilonDecay = trainConfig.epsilonDecay
         self._epsilonMin = trainConfig.epsilonMin
+        self._tau = trainConfig.tau
         self._models = [self._buildModel(trainConfig,
                                          simulationConfig.gridWidth,
                                          simulationConfig.gridHeight),
                         self._buildModel(trainConfig,
                                          simulationConfig.gridWidth,
-                                         simulationConfig.gridHeight)]
+                                         simulationConfig.gridHeight,
+                                         False)]
+        self._copyWeights()
 
         if False:
             summary(self._models[0][0], \
@@ -65,22 +68,42 @@ class AgentClippedDQN(AgentBase):
 
         x0, x1, actionFlags = self._stateProcessing(state)
 
+        self._lastActionFlags = actionFlags
+        actionFlags = np.array(actionFlags, dtype=np.float32)
+        actionsAvailable = np.nonzero(actionFlags)[0]
+
         if np.random.uniform() < self._epsilon:
             self._NumRandomActions += 1
-            self._lastQvalues = np.zeros((self._numGameActions), dtype=np.float32)
-            self._lastActionProbs = np.array(actionFlags, dtype=np.float32)
+            self._lastActionRandom = 1
+            self._lastQvalues = actionFlags.copy()
+            lastActionProbs = actionFlags.copy()
         else:
+            self._lastActionRandom = 0
             with no_grad():
                 q = self._evalModel(0, x0, x1)
                 self._lastQvalues = q.numpy().flatten().copy()
-                self._lastActionProbs = self._lastQvalues.copy()
+                lastActionProbs = self._lastQvalues.copy()
 
         # transformer valeurs en probabilites
-        self._lastActionProbs = self._lastActionProbs - self._lastActionProbs.max()
-        self._lastActionProbs = np.exp(self._lastActionProbs)
-        self._lastActionProbs = self._lastActionProbs / (self._lastActionProbs.sum() + 1e-6)
-        intAction = np.random.choice(self._numGameActions, p=self._lastActionProbs)
+        sum_ = 0
+        if len(actionsAvailable) > 0:
+            lastActionProbs = lastActionProbs[actionsAvailable]
+            lastActionProbs -= lastActionProbs.max()
+            lastActionProbs = np.exp(lastActionProbs)
+            lastActionProbs = np.nan_to_num(lastActionProbs)
+            sum_ = lastActionProbs.sum()
 
+        if sum_ < 1e-6:
+            actionsAvailable = np.arange(self._numGameActions)
+            lastActionProbs = np.ones(self._numGameActions, dtype=np.float32)
+            sum_ = lastActionProbs.sum()
+
+        lastActionProbs /= sum_
+
+        self._lastActionProbs = np.ones(self._numGameActions, dtype=np.float32)
+        self._lastActionProbs[actionsAvailable] = lastActionProbs
+
+        intAction = np.random.choice(actionsAvailable, p=lastActionProbs)
         return self._gameActions[intAction]
 
     def onEpisodeBegin(self, episode, frameStats):
@@ -88,6 +111,8 @@ class AgentClippedDQN(AgentBase):
         self._trainLoss = np.zeros((1), dtype=np.float32)
         self._NumRandomActions = 0
         self._NumActions = 0
+        self._lastActionFlags = [9, 9, 9]
+        self._lastActionRandom = 0
 
     def onEpisodeDone(self, episode, frameStats):
         self._epsilon *= self._epsilonDecay
@@ -102,6 +127,10 @@ class AgentClippedDQN(AgentBase):
         for i, a in enumerate(self._gameActions):
             frameStats.loc[0, f"P_{a.name}"] = self._lastActionProbs[i]
 
+        for i, a in enumerate(self._gameActions):
+            frameStats.loc[0, f"Flag_{a.name}"] = self._lastActionFlags[i]
+
+        frameStats.loc[0, f"LastActionRandom"] = self._lastActionRandom
         frameStats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
 
     def train(self, state, action, newState, reward, done):
@@ -133,15 +162,21 @@ class AgentClippedDQN(AgentBase):
 
     def _save(self, filename, index):
         data = {"epsilon": self._epsilon,
-                "model": self._models[index][0].state_dict(),
-                "optimizer": self._models[index][1].state_dict()}
+                "model": self._models[index][0].state_dict()}
+
+        optimizer = self._models[index][1]
+        if not optimizer is None:
+            data["optimizer"] = optimizer.state_dict()
+
         save(data, filename)
 
     def _load(self, filename, index):
         states = load(filename)
         self._epsilon = states["epsilon"]
         self._models[index][0].load_state_dict(states["model"])
-        self._models[index][1].load_state_dict(states["optimizer"])
+
+        if "optimizer" in states:
+            self._models[index][1].load_state_dict(states["optimizer"])
 
     def _trainBatch(self):
         replaySize = len(self._replayBuffer)
@@ -155,20 +190,23 @@ class AgentClippedDQN(AgentBase):
                 x1 = []
                 for s in states:
                     x0.append(s[0])
-                    x1.append(s[1])
-                return vstack(x0), vstack(x1)
 
-            errors = self._train(unpack(states),
-                                 tensor(intActions, dtype=torch_int64).view(-1, 1),
-                                 unpack(newStates),
-                                 tensor(rewards, dtype=torch_float32),
-                                 tensor(dones, dtype=torch_float32))
-            self._trainLoss = np.append(self._trainLoss, errors.mean())
+                    if not s[1] is None:
+                        x1.append(s[1])
+
+                x0 = vstack(x0)
+                x1 = None if len(x1) == 0 else vstack(x1)
+
+                return x0, x1
+
+            loss = self._train(unpack(states),
+                               tensor(intActions, dtype=torch_int64).view(-1, 1),
+                               unpack(newStates),
+                               tensor(rewards, dtype=torch_float32),
+                               tensor(dones, dtype=torch_float32))
+            self._trainLoss = np.append(self._trainLoss, loss)
 
     def _train(self, states, intActions, newStates, rewards, dones, weights=None):
-        self._models[0][0].train()
-        self._models[1][0].train()
-
         with no_grad():
             q0_new = self._evalModel(0, *newStates)
             q1_new = self._evalModel(1, *newStates)
@@ -176,34 +214,46 @@ class AgentClippedDQN(AgentBase):
                 q0_new.max(dim=1)[0],
                 q1_new.max(dim=1)[0]
             )
-
             q_target = rewards + self._gamma * (1 - dones) * q_new
             q_target = q_target.view(-1, 1)
 
+        self._models[0][0].train()
+
         # gather fait un lookup, donc enleve les dimensions
-        q0 = self._evalModel(0, *states).gather(1, intActions)
-        q1 = self._evalModel(1, *states).gather(1, intActions)
-
-        e0 = self._optimizeModel(0, q0, q_target, weights)
-        e1 = self._optimizeModel(1, q1, q_target, weights)
-
-        e0 = e0.detach().numpy()
+        q = self._evalModel(0, *states).gather(dim=1, index=intActions)
+        loss = self._optimizeModel(0, q, q_target, weights)
 
         self._models[0][0].eval()
-        self._models[1][0].eval()
+        self._copyWeights(self._tau)
 
-        return e0
+        return loss
 
-    def _buildModel(self, trainConfig, width, height):
+    def _buildModel(self, trainConfig, width, height, optimizer=True):
         if self._useConv:
-            model = _ConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
-            # model = _DuelingConvNet(width + 2, height + 2, 3, 6, len(self._gameActions))
+            model = _ConvNet(width, height, 3, 0, len(self._gameActions))
+            # model = _DuelingConvNet(width + 2, height + 2, 3, 0, len(self._gameActions))
         else:
-            model = _LinearNet((width + 2) * (height + 2) * 3 + 6, [256, 256], len(self._gameActions))
+            model = _LinearNet((width + 2) * (height + 2) * 3 + 0, [256, 256], len(self._gameActions))
 
         model.eval()
+        optimizer = Adam(model.parameters(), lr=trainConfig.lr) if optimizer else None
 
-        return model, Adam(model.parameters(), lr=trainConfig.lr)
+        return model, optimizer
+
+    def _stateToTensor(self, state):
+        grid, food_flags, head_flags = self._applySymmetry(state)
+
+        grid = self._splitOccupancyGrid(grid, pad=False)
+        if False:
+            flags = np.array([*food_flags, *head_flags])
+        elif False:
+            flags = np.array(food_flags)
+        elif False:
+            flags = np.array(head_flags)
+        else:
+            flags = None
+
+        return grid, flags, head_flags
 
     def _evalModel(self, index, *args):
         return self._models[index][0](*args)
@@ -219,52 +269,58 @@ class AgentClippedDQN(AgentBase):
         loss.backward()
         optimizer.step()
 
-        return error
+        return loss.detach().numpy()
+
+    def _copyWeights(self, tau=None):
+        p0 = self._models[0][0].state_dict()
+        if tau is None:
+            self._models[1][0].load_state_dict(p0)
+        else:
+            p1 = self._models[0][0].state_dict()
+            for key in p0:
+                p1[key] = tau * p0[key] + (1 - tau) * p1[key]
+            self._models[1][0].load_state_dict(p1)
 
     def _stateProcessing(self, state):
         tensors = self._stateToTensor(state)
         return self._stateToTorch(*tensors)
 
-    def _stateToTensor(self, state):
-        grid, food_flags, head_flags = self._applySymmetry(state)
-
-        grid = self._splitOccupancyGrid(grid, pad=True)
-        flags = np.array([*food_flags, *head_flags])
-
-        return grid, flags, head_flags
-
     def _stateToTorch(self, x0, x1, head_flags):
         x0 = from_numpy(x0.astype(np.float32))
-        x1 = from_numpy(x1.astype(np.float32))
-        return unsqueeze(x0, 0), unsqueeze(x1, 0), head_flags
+        x0 = unsqueeze(x0, 0)
+
+        if not x1 is None:
+            x1 = from_numpy(x1.astype(np.float32))
+            x1 = unsqueeze(x1, 0)
+
+        return x0, x1, head_flags
 
     def _applySymmetry(self, state):
-        head_d = state["head_direction"]
-        head_d = Vector.fromNumpy(head_d)
-
         # simplifier state: toujours mettre par rapport a NORTH
-        head_d = GameDirection(head_d)
-        if head_d == GameDirection.EAST:
-            # CCW
-            k = 1
-        elif head_d == GameDirection.WEST:
-            # CW
-            k = -1
-        elif head_d == GameDirection.SOUTH:
-            # 180 degrees
-            k = 2
-        else:
-            k = 0
-
+        k = self._rot90WithNorth(state)
         grid = state["occupancy_grid"]
         grid = np.rot90(grid, k=k, axes=(1, 2))
 
-        head_p = self._rot90Vector(state["head_position"], k)
-        food_p = self._rot90Vector(state["food_position"], k)
-
         return grid.copy(), \
-               self._foodFlags(head_p, food_p), \
-               self._headFlags(grid, head_p)
+               self._foodFlags(state), \
+               self._headFlags(state)
+
+    def _rot90WithNorth(self, state):
+        head_d = state["head_direction"]
+        head_d = Vector.fromNumpy(head_d)
+
+        head_d = GameDirection(head_d)
+        if head_d == GameDirection.EAST:
+            # CCW
+            return 1
+        elif head_d == GameDirection.WEST:
+            # CW
+            return -1
+        elif head_d == GameDirection.SOUTH:
+            # 180 degrees
+            return 2
+        else:
+            return 0
 
     def _rot90Vector(self, v, k):
         if not v is None:
@@ -275,36 +331,72 @@ class AgentClippedDQN(AgentBase):
             v  = v.toInt()
         return v
 
-    def _headFlags(self, grid, head_p):
-        w = grid.shape[-1]
+    def _isAvailable(self, grid, p):
+        h, w = grid.shape[-2:]
 
-        head_cw = head_ccw = head_f = -1
+        if p.x < 0 or p.x >= w:
+            return False
 
-        if head_p.x < (w - 1) and grid[0, head_p.y, head_p.x + 1] == GridOccupancy.EMPTY:
-            head_cw = 1
+        if p.y < 0 or p.y >= h:
+            return False
 
-        if head_p.x > 0 and grid[0, head_p.y, head_p.x - 1] == GridOccupancy.EMPTY:
-            head_ccw = 1
+        occupancy = grid[0, p.y, p.x]
 
-        if head_p.y > 0 and grid[0, head_p.y - 1, head_p.x] == GridOccupancy.EMPTY:
+        return occupancy == GridOccupancy.EMPTY or \
+               occupancy == GridOccupancy.FOOD
+
+    def _headFlags(self, state):
+        grid = state["occupancy_grid"]
+
+        head_p = state["head_position"]
+        head_p = Vector.fromNumpy(head_p)
+
+        head_d = state["head_direction"]
+        f = Vector.fromNumpy(head_d)
+        cw = Vector.rot90(f, -1)
+        ccw = Vector.rot90(f, 1)
+        head_cw = head_ccw = head_f = 0
+
+        if self._isAvailable(grid, head_p + f):
             head_f = 1
 
+        if self._isAvailable(grid, head_p + cw):
+            head_cw = 1
+
+        if self._isAvailable(grid, head_p + ccw):
+            head_ccw = 1
+
+        # doit suivre l'ordre de GameAction
         return head_cw, head_ccw, head_f
 
-    def _foodFlags(self, head_p, food_p):
-        food_cw = food_ccw = food_f = -1
+    def _foodFlags(self, state):
+        food_cw = food_ccw = food_f = 0
 
+        food_p = state["food_position"]
         if not food_p is None:
+            food_p = Vector.fromNumpy(food_p)
+
+            head_p = state["head_position"]
+            head_p = Vector.fromNumpy(head_p)
+
             food_d = food_p - head_p
-            if food_d.x > 0:
-                food_cw = 1
 
-            if food_d.x < 0:
-                food_ccw = 1
+            head_d = state["head_direction"]
+            head_d = Vector.fromNumpy(head_d)
 
-            if food_d.y < 0:
+            if Vector.dot(head_d, food_d) > 0:
                 food_f = 1
 
+            w = Vector.winding(head_d, food_d)
+
+            if w == -1:
+                food_cw = 1
+
+            if w == 1:
+                food_ccw = 1
+
+        # prend les 4 directions ?
+        # dans tous les cas, gerer arriere
         return food_cw, food_ccw, food_f
 
     def _splitOccupancyGrid(self, occupancyGrid, pad=False):
@@ -317,8 +409,8 @@ class AgentClippedDQN(AgentBase):
         shape = (3, *occupancyGrid.shape[1:])
 
         occupancyStack = np.zeros(shape=shape, dtype=np.int32)
-        occupancyStack[0] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_BODY, 1, -1)
-        occupancyStack[1] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_HEAD, 1, -1)
-        occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, -1)
+        occupancyStack[0] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
+        occupancyStack[1] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
+        occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, 0)
 
         return occupancyStack

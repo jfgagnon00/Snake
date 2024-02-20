@@ -6,38 +6,40 @@ from torch.nn import Linear, \
                     Flatten, \
                     LeakyReLU, \
                     MaxPool2d
+from torch.nn.functional import leaky_relu
 
 
 class _ConvNet(Module):
     def __init__(self, width, height, numChannels, numInputs, numOutputs):
         super().__init__()
 
-        self._conv = Sequential(
-            Conv2d(numChannels, 16, 5, padding="same"),
+        self._convs = Sequential(
+            Conv2d(numChannels, 10, 3, padding="same"),
+            LeakyReLU(),
+
+            Conv2d(10, 10, 3, padding="same"),
             LeakyReLU(),
 
             MaxPool2d(2, stride=2),
 
-            Conv2d(16, 32, 3, padding="same"),
-            LeakyReLU(),
-
-            Flatten()
+            Flatten(),
         )
 
         w2 = width // 2
         h2 = height // 2
 
+        size = 0
+        size += w2 * h2 * 10
+        size += numInputs
+
         self._linear = Sequential(
-            Linear(w2 * h2 * 32  + numInputs, 128),
+            Linear(size, 128),
             LeakyReLU(),
-
-            Linear(128, 128),
-            LeakyReLU(),
-
             Linear(128, numOutputs)
         )
 
     def forward(self, x0, x1):
-        out = self._conv(x0)
-        out = concatenate((out, x1), dim=1)
-        return self._linear(out)
+        features = self._convs(x0)
+        if not x1 is None:
+            features = concatenate((features, x1), dim=1)
+        return self._linear(features)
