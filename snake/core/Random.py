@@ -2,7 +2,7 @@
 Encapsulation de random pour permettre override des methodes.
 """
 
-import random
+import numpy as np
 
 from abc import ABC, abstractmethod
 
@@ -31,4 +31,4 @@ class _DefaultRandom(RandomBase):
     Implementation par default pour RandomProxy
     """
     def choice(self, *args):
-        return int(random.choice(*args))
+        return int(np.random.choice(*args))

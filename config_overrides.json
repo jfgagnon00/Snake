@@ -22,7 +22,7 @@
             "collision": -150,
             "out_of_bounds": -500,
             "win": 500,
-            "truncated": -150
+            "truncated": -1000
         }
     },
 
