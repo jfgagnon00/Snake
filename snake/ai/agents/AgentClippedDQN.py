@@ -230,10 +230,10 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height, optimizer=True):
         if self._useConv:
-            model = _ConvNet(width, height, 3, 4, len(self._gameActions))
-            # model = _DuelingConvNet(width, height, 3, 4, len(self._gameActions))
+            model = _ConvNet(width, height, 3, 7, len(self._gameActions))
+            # model = _DuelingConvNet(width, height, 3, 7, len(self._gameActions))
         else:
-            model = _LinearNet(width * height * 3 + 4, [256, 256], len(self._gameActions))
+            model = _LinearNet(width * height * 3 + 7, [256, 256], len(self._gameActions))
 
         model.eval()
         optimizer = Adam(model.parameters(), lr=trainConfig.lr) if optimizer else None
@@ -244,9 +244,9 @@ class AgentClippedDQN(AgentBase):
         grid, food_flags, head_flags = self._applySymmetry(state)
 
         grid = self._splitOccupancyGrid(grid, pad=False)
-        if False:
+        if True:
             flags = np.array([*food_flags, *head_flags])
-        elif True:
+        elif False:
             flags = np.array(food_flags)
         elif False:
             flags = np.array(head_flags)
