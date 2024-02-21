@@ -189,9 +189,12 @@ class GameSimulation(object):
         value = GridOccupancy.SNAKE_BODY if show else GridOccupancy.EMPTY
 
         for p in self._snake.bodyParts:
-            self._occupancyGrid[p.y, p.x] = value if show else GridOccupancy.EMPTY
+            self._occupancyGrid[p.y, p.x] = value
 
         if show:
+            tail = self._snake.tail
+            self._occupancyGrid[tail.y, tail.x] = GridOccupancy.SNAKE_TAIL
+
             head = self._snake.head
             self._occupancyGrid[head.y, head.x] = GridOccupancy.SNAKE_HEAD
             self._occupancyGridCount[head.y, head.x] += 1

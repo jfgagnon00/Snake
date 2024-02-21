@@ -175,7 +175,7 @@ class SnakeEnvironment(Env):
         self._done = True
 
     def _onSnakeEat(self):
-        self._reward += self._rewards[Rewards.EAT] * self._simulation.snake.length
+        self._reward += self._rewards[Rewards.EAT]
         self._maybeUpdateWindow()
 
     def _onWin(self):

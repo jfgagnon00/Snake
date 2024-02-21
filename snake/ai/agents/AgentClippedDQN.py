@@ -230,10 +230,10 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height, optimizer=True):
         if self._useConv:
-            model = _ConvNet(width, height, 3, 0, len(self._gameActions))
-            # model = _DuelingConvNet(width + 2, height + 2, 3, 0, len(self._gameActions))
+            model = _ConvNet(width, height, 3, 4, len(self._gameActions))
+            # model = _DuelingConvNet(width, height, 3, 4, len(self._gameActions))
         else:
-            model = _LinearNet((width + 2) * (height + 2) * 3 + 0, [256, 256], len(self._gameActions))
+            model = _LinearNet(width * height * 3 + 4, [256, 256], len(self._gameActions))
 
         model.eval()
         optimizer = Adam(model.parameters(), lr=trainConfig.lr) if optimizer else None
@@ -246,7 +246,7 @@ class AgentClippedDQN(AgentBase):
         grid = self._splitOccupancyGrid(grid, pad=False)
         if False:
             flags = np.array([*food_flags, *head_flags])
-        elif False:
+        elif True:
             flags = np.array(food_flags)
         elif False:
             flags = np.array(head_flags)
@@ -343,7 +343,8 @@ class AgentClippedDQN(AgentBase):
         occupancy = grid[0, p.y, p.x]
 
         return occupancy == GridOccupancy.EMPTY or \
-               occupancy == GridOccupancy.FOOD
+               occupancy == GridOccupancy.FOOD or \
+               occupancy == GridOccupancy.SNAKE_TAIL
 
     def _headFlags(self, state):
         grid = state["occupancy_grid"]
@@ -370,7 +371,7 @@ class AgentClippedDQN(AgentBase):
         return head_cw, head_ccw, head_f
 
     def _foodFlags(self, state):
-        food_cw = food_ccw = food_f = 0
+        food_cw = food_ccw = food_f = food_b = 0
 
         food_p = state["food_position"]
         if not food_p is None:
@@ -384,8 +385,13 @@ class AgentClippedDQN(AgentBase):
             head_d = state["head_direction"]
             head_d = Vector.fromNumpy(head_d)
 
-            if Vector.dot(head_d, food_d) > 0:
+            dot_ = Vector.dot(head_d, food_d)
+
+            if dot_ > 0:
                 food_f = 1
+
+            if dot_ < 0:
+                food_b = 1
 
             w = Vector.winding(head_d, food_d)
 
@@ -395,9 +401,7 @@ class AgentClippedDQN(AgentBase):
             if w == 1:
                 food_ccw = 1
 
-        # prend les 4 directions ?
-        # dans tous les cas, gerer arriere
-        return food_cw, food_ccw, food_f
+        return food_cw, food_ccw, food_f, food_b
 
     def _splitOccupancyGrid(self, occupancyGrid, pad=False):
         if pad:

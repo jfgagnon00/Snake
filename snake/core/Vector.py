@@ -70,7 +70,7 @@ class Vector(object):
 
     @staticmethod
     def dot(a, b):
-        return a.x * b.x + a.y + b.y
+        return a.x * b.x + a.y * b.y
 
     @staticmethod
     def winding(a, b):
