@@ -11,7 +11,7 @@ class _DuelingConvNet(Module):
     def __init__(self, width, height, numChannels, numInputs, numOutputs):
         super().__init__()
 
-        self._conv = Sequential(
+        self._features = Sequential(
             Conv2d(numChannels, 16, 5, padding="same"),
             LeakyReLU(),
 
@@ -47,7 +47,7 @@ class _DuelingConvNet(Module):
         )
 
     def forward(self, x0, x1):
-        features = self._conv(x0)
+        features = self._features(x0)
 
         if not x1 is None:
             features = concatenate((features, x1), dim=1)
@@ -55,4 +55,4 @@ class _DuelingConvNet(Module):
         value = self._value(features)
         advantage = self._advantage(features)
 
-        return value + (advantage - advantage.mean())
+        return value + advantage - advantage.mean()

@@ -28,6 +28,9 @@ class ApplicationTrain(object):
         self._envStats.newMaxStatsDelegate.register(self._onNewMaxStats)
         self._env = self._envStats
 
+        # TODO: trouver meilleur design
+        self._agent.rewardFunction = lambda head, food: self._env.unwrapped.reward(head, food)
+
         # if configs.train.useFrameStack:
         #     self._env = EnvironmentStackedOccupancyGrid(self._env,
         #                                                 configs.train.frameStack)

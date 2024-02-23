@@ -5,7 +5,6 @@ class ConfigTrain(object):
         self.epsilonDecay = 0.0
         self.epsilonMin = 0.0
         self.tau = 0
-        self.nStep = 1
         self.lr = 0.0
         self.agent = "AgentRandom"
         self.unattended = False
