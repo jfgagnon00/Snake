@@ -28,9 +28,6 @@ class ApplicationTrain(object):
         self._envStats.newMaxStatsDelegate.register(self._onNewMaxStats)
         self._env = self._envStats
 
-        # TODO: trouver meilleur design
-        self._agent.rewardFunction = lambda head, food: self._env.unwrapped.reward(head, food)
-
         # if configs.train.useFrameStack:
         #     self._env = EnvironmentStackedOccupancyGrid(self._env,
         #                                                 configs.train.frameStack)
@@ -45,7 +42,7 @@ class ApplicationTrain(object):
         for e in episodesIt:
             done = False
             self._agent.reset()
-            observations, _ = self._env.reset(options={"episode":e})
+            observations, info = self._env.reset(options={"episode":e})
 
             self._agent.onEpisodeBegin(e, self._envStats.statsDataFrame)
             start = datetime.now()
@@ -53,13 +50,14 @@ class ApplicationTrain(object):
             while not done:
                 action = self._agent.getAction(observations)
 
-                newObservations, reward, terminated, truncated, _ = self._env.step(action)
+                newObservations, reward, terminated, truncated, newInfo = self._env.step(action)
                 done = terminated or truncated
 
                 self._env.render()
-                self._agent.train(observations, action, newObservations, reward, done)
+                self._agent.train(observations, info, action, newObservations, newInfo, reward, done)
 
                 observations = newObservations
+                info = newInfo
 
             dt = datetime.now() - start
             self._envStats.statsDataFrame.loc[0, "EpisodeDuration"] = dt.total_seconds()

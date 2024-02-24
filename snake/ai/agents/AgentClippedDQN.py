@@ -20,15 +20,18 @@ from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _ConvNet, _DuelingConvNet, _LinearNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
 from snake.ai.StateProcessor import _StateProcessor
-from snake.ai.HindsightReplayBuffer import _HindsightReplayBuffer
+from snake.ai.HindsightExperienceReplay import _HindsightExperienceReplay
 
 
 class AgentClippedDQN(AgentBase):
-    MEMORY_SIZE = 8_192
+    MEMORY_SIZE = 8_192 * 3
     BATCH_SIZE = 64
 
-    def __init__(self, trainConfig, simulationConfig) -> None:
+    def __init__(self, configs):
         super().__init__()
+
+        trainConfig = configs.train
+        simulationConfig = configs.simulation
 
         # misc parameters
         self._numGameActions = len(GameAction)
@@ -38,8 +41,8 @@ class AgentClippedDQN(AgentBase):
                                   simulationConfig.gridHeight).scale(0.5) - Vector(0.5, 0.5)
 
         # replay buffer
-        self._replayBuffer = _HindsightReplayBuffer(AgentClippedDQN.MEMORY_SIZE)
-        self._rewardFunction = None
+        self._replayBuffer = _ReplayBuffer(AgentClippedDQN.MEMORY_SIZE)
+        self._hindsightReplay = _HindsightExperienceReplay(configs)
 
         # clipped DQN
         self._gamma = trainConfig.gamma
@@ -62,14 +65,6 @@ class AgentClippedDQN(AgentBase):
             summary(self._models[0][0], \
                     (1, 1, simulationConfig.gridHeight, simulationConfig.gridWidth))
             exit(-1)
-
-    @property
-    def rewardFunction(self):
-        return self._rewardFunction
-
-    @rewardFunction.setter
-    def rewardFunction(self, value):
-        self._rewardFunction = value
 
     def getAction(self, state):
         self._NumActions += 1
@@ -115,7 +110,8 @@ class AgentClippedDQN(AgentBase):
         return self._gameActions[intAction]
 
     def onEpisodeBegin(self, episode, frameStats):
-        self._replayBuffer.onEpisodeBegin()
+        self._hindsightReplay.clear()
+
         frameStats.loc[0, "Epsilon"] = self._epsilon
         self._trainLoss = np.zeros((1), dtype=np.float32)
         self._NumRandomActions = 0
@@ -124,7 +120,9 @@ class AgentClippedDQN(AgentBase):
         self._lastActionRandom = 0
 
     def onEpisodeDone(self, episode, frameStats):
-        self._replayBuffer.onEpisodeDone()
+        hindsightStates = self._hindsightReplay.replay()
+        for state, action, newState, reward, done in hindsightStates:
+            self._trainInternal(state, action, newState, reward, done)
 
         self._epsilon *= self._epsilonDecay
         self._epsilon = max(self._epsilon, self._epsilonMin)
@@ -144,16 +142,9 @@ class AgentClippedDQN(AgentBase):
         frameStats.loc[0, f"LastActionRandom"] = self._lastActionRandom
         frameStats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
 
-    def train(self, state, action, newState, reward, done):
-        head, food = self._hindsightInfo(state)
-        newHead, newFood = self._hindsightInfo(newState)
-        self._replayBuffer.append(self._stateProcessing(state),
-                                  self._gameActions.index(action),
-                                  self._stateProcessing(newState),
-                                  reward,
-                                  done,
-                                  (head, food, newHead, newFood))
-        self._trainBatch()
+    def train(self, state, info, action, newState, newInfo, reward, done):
+        self._hindsightReplay.append(state, info, action, done)
+        self._trainInternal(state, action, newState, reward, done)
 
     def save(self, *args):
         if len(args) > 0:
@@ -192,7 +183,15 @@ class AgentClippedDQN(AgentBase):
         if "optimizer" in states:
             self._models[index][1].load_state_dict(states["optimizer"])
 
-    def _trainBatch(self):
+    def _trainInternal(self, state, action, newState, reward, done):
+        self._replayBuffer.append(self._stateProcessing(state),
+                                  self._gameActions.index(action),
+                                  self._stateProcessing(newState),
+                                  reward,
+                                  done)
+        self._trainFromReplayBuffer()
+
+    def _trainFromReplayBuffer(self):
         replaySize = len(self._replayBuffer)
 
         if replaySize >= AgentClippedDQN.BATCH_SIZE:
@@ -213,14 +212,14 @@ class AgentClippedDQN(AgentBase):
 
                 return x0, x1
 
-            loss = self._train(unpack(states),
-                               tensor(intActions, dtype=torch_int64).view(-1, 1),
-                               unpack(newStates),
-                               tensor(rewards, dtype=torch_float32),
-                               tensor(dones, dtype=torch_float32))
+            loss = self._trainBatch(unpack(states),
+                                    tensor(intActions, dtype=torch_int64).view(-1, 1),
+                                    unpack(newStates),
+                                    tensor(rewards, dtype=torch_float32),
+                                    tensor(dones, dtype=torch_float32))
             self._trainLoss = np.append(self._trainLoss, loss)
 
-    def _train(self, states, intActions, newStates, rewards, dones, weights=None):
+    def _trainBatch(self, states, intActions, newStates, rewards, dones, weights=None):
         with no_grad():
             q0_new = self._evalModel(0, *newStates)
             q1_new = self._evalModel(1, *newStates)
@@ -281,12 +280,6 @@ class AgentClippedDQN(AgentBase):
             for key in p0:
                 p1[key] = tau * p0[key] + (1 - tau) * p1[key]
             self._models[1][0].load_state_dict(p1)
-
-    def _hindsightInfo(self, state):
-        head_p = state["head_position"]
-        food_p = state["food_position"]
-        return Vector.fromNumpy(head_p), \
-               Vector.fromNumpy(food_p)
 
     def _stateProcessing(self, state):
         tensors = self._stateProcessor(state)

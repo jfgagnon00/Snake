@@ -12,3 +12,4 @@ class ConfigTrain(object):
         self.maxVisitCount = 0
         self.showStats = True
         self.useConv = False
+        self.hindsightFutureK = 0

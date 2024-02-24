@@ -218,7 +218,7 @@ def train(configs,
     # instantier un agent a partir d'un string
     # limiter aux classes de ai.agents pour le moment
     agent_class = getattr(agents, agent)
-    agent = agent_class(configs.train, configs.simulation)
+    agent = agent_class(configs)
 
     if model is not None:
         agent.load(model)

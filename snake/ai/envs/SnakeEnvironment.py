@@ -79,6 +79,7 @@ class SnakeEnvironment(Env):
                                          graphicsConfig)
 
         self._rewards = deepcopy(environmentConfig.rewards)
+        self._reward = 0
         self._done = False
         self._maxVisitCount = 2 if trainConfig is None else trainConfig.maxVisitCount
 
@@ -104,9 +105,7 @@ class SnakeEnvironment(Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
-        observations = options.get("observations", None) if options else None
-        infos = options.get("infos", None) if options else None
-        self._simulation.reset(observations, infos)
+        self._simulation.reset(options=options)
         self._maybeUpdateWindow(reset=True)
 
         if self._renderMode == SnakeEnvironment._HUMAN:
@@ -115,6 +114,8 @@ class SnakeEnvironment(Env):
         return self._getObservations(), self._getInfo()
 
     def step(self, action):
+        # reset recompense (les delegates vont le mettre la jour)
+        self._reward = 0
         self._done = False
 
         # simulation:
@@ -125,25 +126,18 @@ class SnakeEnvironment(Env):
         # self._maxVisitCount fois au meme endroit. Moins restrictif que
         # longueur d'episode et plus efficace
         truncated = self._simulation.occupancyGridCount.max() > self._maxVisitCount
-
-        reward = self.reward(self._simulation.snake.head,
-                             self._simulation.food)
+        if truncated and self._maxVisitCount > 0:
+            self._reward = self._rewards[Rewards.TRUNCATED]
 
         # faire affichage si besoin
         if self._renderMode == SnakeEnvironment._HUMAN:
             self._renderInternal()
 
         return self._getObservations(), \
-               reward, \
+               self._reward, \
                self._done, \
                truncated, \
                self._getInfo()
-
-    def reward(self, headPosition, foodPosition):
-        if headPosition == foodPosition:
-            return self._rewards[Rewards.EAT]
-
-        return self._rewards[Rewards.OUT_OF_BOUNDS]
 
     def render(self):
         # rien a faire
@@ -171,17 +165,22 @@ class SnakeEnvironment(Env):
             self._window.update(self._simulation)
 
     def _onSnakeOutOfBounds(self):
+        self._reward += self._rewards[Rewards.OUT_OF_BOUNDS]
         self._done = True
 
     def _onSnakeCollision(self):
+        self._reward += self._rewards[Rewards.COLLISION]
         self._done = True
 
     def _onSnakeEat(self):
+        self._reward += self._rewards[Rewards.EAT]
         self._maybeUpdateWindow()
 
     def _onWin(self):
+        self._reward += self._rewards[Rewards.WIN]
         self._done = True
         self._maybeUpdateWindow()
 
     def _onSnakeMove(self):
+        self._reward += self._rewards[Rewards.MOVE]
         self._maybeUpdateWindow()

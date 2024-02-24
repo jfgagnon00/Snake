@@ -14,7 +14,7 @@ class GameSimulation(object):
     """
     def __init__(self, simulationConfig):
         self._occupancyGridWidth = max(6, simulationConfig.gridWidth)
-        self._occupancyGridHeight = max(5, simulationConfig.gridHeight)
+        self._occupancyGridHeight = max(6, simulationConfig.gridHeight)
 
         self._outOfBoundsDelegate = Delegate()
         self._collisionDelegate = Delegate()
@@ -77,7 +77,7 @@ class GameSimulation(object):
     def score(self):
         return self._score
 
-    def reset(self, observations=None, infos=None):
+    def reset(self, options=None):
         """
         Reinitialize etats internes
         """
@@ -85,25 +85,28 @@ class GameSimulation(object):
         # l'acces a _occupancyGrid suivra la convention numpy
         shape = (self._occupancyGridHeight, self._occupancyGridWidth)
         self._occupancyGridCount = np.zeros(shape=shape, dtype=np.int32)
+        self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
 
-        if observations and infos:
-            self._score = observations["score"]
-            self._occupancyGrid = np.squeeze(observations["occupancy_grid"]).copy()
+        try:
+            score = options["score"]
+            food = options["food_position"]
+            direction = options["head_direction"]
+            bodyparts = options["snake_bodyparts"]
 
-            direction = Vector.fromNumpy(observations["head_direction"])
-            self._snake = GameSnake(direction)
-            self._snake.bodyPartsFromNumpy(infos["snake_bodyparts"])
+            self._score = score
+            self._snake = GameSnake(Vector.fromNumpy(direction))
+            self._snake.bodyPartsFromNumpy(bodyparts)
 
-            self._food = Vector.fromNumpy(observations["food_position"])
-        else:
+            if not food is None:
+                self._food = Vector.fromNumpy(food)
+                self._placeFood()
+        except:
             self._score = 0
-            self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
             self._snake = GameSnake(GameDirection.EAST.value, position=Vector(3, 1))
+            self._placeRandomFood()
 
-            # placer le serpent dans la grille
-            self._setSnakeInGrid(True)
-
-            self._placeFood()
+        # placer le serpent dans la grille
+        self._setSnakeInGrid(True)
 
     def apply(self, action):
         """
@@ -133,7 +136,7 @@ class GameSimulation(object):
                 # serpent couvre toutes les cellules, gagner la partie
                 self._winDelegate()
             else:
-                self._placeFood()
+                self._placeRandomFood()
                 self._eatDelegate()
 
             return
@@ -199,7 +202,7 @@ class GameSimulation(object):
             self._occupancyGrid[head.y, head.x] = GridOccupancy.SNAKE_HEAD
             self._occupancyGridCount[head.y, head.x] += 1
 
-    def _placeFood(self):
+    def _placeRandomFood(self):
         # trouver les cellules libres a partir de _occupancyGrid
         allCells = np.arange(self._occupancyGridWidth * self._occupancyGridHeight)
         freeCells = np.where(self._occupancyGrid == GridOccupancy.EMPTY, True, False)
@@ -212,11 +215,14 @@ class GameSimulation(object):
         x = cellIndex % self._occupancyGridWidth
         y = cellIndex // self._occupancyGridWidth
 
+        self._food = Vector(x, y)
+        self._placeFood()
+
+    def _placeFood(self):
         # validation
-        assert 0 <= x and x < self._occupancyGridWidth
-        assert 0 <= y and y < self._occupancyGridHeight
-        assert self._occupancyGrid[y, x] == GridOccupancy.EMPTY
+        assert 0 <= self._food.x and self._food.x < self._occupancyGridWidth
+        assert 0 <= self._food.y and self._food.y < self._occupancyGridHeight
+        assert self._occupancyGrid[self._food.y, self._food.x] == GridOccupancy.EMPTY
 
         # placer dans la grille
-        self._food = Vector(x, y)
-        self._occupancyGrid[y, x] = GridOccupancy.FOOD
+        self._occupancyGrid[self._food.y, self._food.x] = GridOccupancy.FOOD
