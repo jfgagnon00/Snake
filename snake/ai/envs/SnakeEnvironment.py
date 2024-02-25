@@ -108,9 +108,6 @@ class SnakeEnvironment(Env):
         self._simulation.reset(options=options)
         self._maybeUpdateWindow(reset=True)
 
-        if self._renderMode == SnakeEnvironment._HUMAN:
-            self._renderInternal()
-
         return self._getObservations(), self._getInfo()
 
     def step(self, action):
@@ -140,8 +137,8 @@ class SnakeEnvironment(Env):
                self._getInfo()
 
     def render(self):
-        # rien a faire
-        pass
+        if self._renderMode == SnakeEnvironment._HUMAN:
+            self._renderInternal()
 
     def close(self):
         if not self._window is None:

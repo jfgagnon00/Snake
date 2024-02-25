@@ -12,10 +12,10 @@ class _StateProcessor():
     def __call__(self, state):
         grid, food_flags, head_flags = self._applySymmetry(state)
 
-        grid = self._splitOccupancyGrid(grid, pad=False)
+        grid = self._splitOccupancyGrid(grid, pad=True)
         if False:
             flags = np.array([*food_flags, *head_flags])
-        elif False:
+        elif True:
             flags = np.array(food_flags)
         elif False:
             flags = np.array(head_flags)
@@ -25,14 +25,16 @@ class _StateProcessor():
         return grid, flags, head_flags
 
     def _applySymmetry(self, state):
-        # simplifier state: toujours mettre par rapport a NORTH
-        k = self._rot90WithNorth(state)
-        grid = state["occupancy_grid"]
-        grid = np.rot90(grid, k=k, axes=(1, 2))
+        # # simplifier state: toujours mettre par rapport a NORTH
+        # k = self._rot90WithNorth(state)
+        # grid = state["occupancy_grid"]
+        # grid = np.rot90(grid, k=k, axes=(1, 2))
 
-        return grid.copy(), \
+        # grid.copy(), \
+        return state["occupancy_grid"].copy(), \
                self._foodFlags(state), \
                self._headFlags(state)
+
     def _rot90WithNorth(self, state):
         head_d = state["head_direction"]
         head_d = Vector.fromNumpy(head_d)
@@ -138,11 +140,11 @@ class _StateProcessor():
                                     ((0, 0), (1, 1), (1, 1)),
                                     constant_values=GridOccupancy.SNAKE_BODY)
 
-        shape = (3, *occupancyGrid.shape[1:])
+        shape = (1, *occupancyGrid.shape[1:])
 
         occupancyStack = np.zeros(shape=shape, dtype=np.int32)
-        occupancyStack[0] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_BODY, 1, 0)
-        occupancyStack[1] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
-        occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, 0)
+        occupancyStack[0] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_BODY, 1, -1)
+        # occupancyStack[1] = np.where(occupancyGrid[0,:,:] == GridOccupancy.SNAKE_HEAD, 1, 0)
+        # occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, 0)
 
         return occupancyStack

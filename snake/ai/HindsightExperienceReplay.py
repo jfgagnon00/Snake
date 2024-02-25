@@ -1,62 +1,82 @@
-from pprint import pprint
-
-from copy import deepcopy
-from gymnasium import make as gym_Make
 from numpy.random import randint
+from snake.game.GameSimulation import ResetException
 
-
+# TODO: semble plus approprite dans application
+# n'a pas vraiment de lien avec l'agent: ca genere des nouveaux samples
+# et a une dependance sur la simulation
 class _HindsightExperienceReplay():
     """
     Implementation de Hindsight Experience Replay.
     """
 
-    def __init__(self, configs):
-        self._futureK = configs.train.hindsightFutureK
+    def __init__(self, futureK):
+        self._futureK = futureK
+        self._env = None
 
-        # l'agent devrait supporter l'apprentissage par 'goal'. Dans le
-        # present contexte, il est plus simple de resimuler une action
-        # avec des modifications sur les observations.
-        self._env = gym_Make("snake/SnakeEnvironment-v0",
-                             renderMode=None,
-                             environmentConfig=configs.environment,
-                             simulationConfig=configs.simulation,
-                             graphicsConfig=configs.graphics,
-                             trainConfig=configs.train)
+    @property
+    def env(self):
+        return self._env
 
-    def append(self, state, info, action, done):
-        self._episode.append((state, info, action, done))
+    @env.setter
+    def env(self, value):
+        self._env = value
+
+    def append(self, state, info, action, newState, newInfo, done):
+        if not self._env is None:
+            self._episode.append((state, info, action, newState, newInfo, done))
 
     def clear(self):
         self._episode = []
 
     def replay(self):
+        # for t in range( len(self._episode) ):
+        #     startState, startInfo, action, endState = self._episode[t]
+
+        #     observations, _ = self._env.reset(options={
+        #         "score": startState["score"],
+        #         "food_position": endState["head_position"],
+        #         "head_direction": startState["head_direction"],
+        #         "snake_bodyparts": startInfo["snake_bodyparts"],
+        #     })
+
+        #     newObservations, reward, terminated, truncated, _ = self._env.step(action)
+        #     done = terminated or truncated
+
+        #     self._env.render()
+
+        #     yield observations, action, newObservations, reward, done
+
         for s in range(len(self._episode)):
-            goalState, goalInfo, action, goalDone = self._episode[s]
+            goalState, goalInfo, action, _, _, goalDone = self._episode[s]
             if goalDone:
                 continue
 
             transitions = self._sampleTransitions(s + 1)
             for t in transitions:
-                newGoalState, _, _, newGoalDone = self._episode[t]
+                _, _, _, newGoalState, _, newGoalDone = self._episode[t]
                 if newGoalDone:
                     continue
 
-                observations, _ = self._env.reset(options={
-                    "score": goalState["score"],
-                    "food_position": newGoalState["head_position"],
-                    "head_direction": goalState["head_direction"],
-                    "snake_bodyparts": goalInfo["snake_bodyparts"],
-                })
+                try:
+                    observations, _ = self._env.reset(options={
+                        "score": goalState["score"],
+                        "food_position": newGoalState["head_position"],
+                        "head_direction": goalState["head_direction"],
+                        "snake_bodyparts": goalInfo["snake_bodyparts"],
+                    })
+                except ResetException:
+                    # certaines combinaisons ne sont pas valide
+                    # reset() lance une exception; simplement ignorer
+                    continue
 
                 newObservations, reward, terminated, truncated, _ = self._env.step(action)
                 done = terminated or truncated
 
+                self._env.render()
+
                 yield observations, action, newObservations, reward, done
 
     def _sampleTransitions(self, start):
-        if self._futureK == 1:
-            return [-1]
-
         stop = len(self._episode)
         count = min(self._futureK, stop - start)
         if count > 0:

@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import time
 
 from torch import from_numpy, \
                 no_grad, \
@@ -24,7 +25,7 @@ from snake.ai.HindsightExperienceReplay import _HindsightExperienceReplay
 
 
 class AgentClippedDQN(AgentBase):
-    MEMORY_SIZE = 8_192 * 3
+    MEMORY_SIZE = 8_192
     BATCH_SIZE = 64
 
     def __init__(self, configs):
@@ -42,7 +43,7 @@ class AgentClippedDQN(AgentBase):
 
         # replay buffer
         self._replayBuffer = _ReplayBuffer(AgentClippedDQN.MEMORY_SIZE)
-        self._hindsightReplay = _HindsightExperienceReplay(configs)
+        self._hindsightReplay = _HindsightExperienceReplay(trainConfig.hindsightFutureK)
 
         # clipped DQN
         self._gamma = trainConfig.gamma
@@ -65,6 +66,14 @@ class AgentClippedDQN(AgentBase):
             summary(self._models[0][0], \
                     (1, 1, simulationConfig.gridHeight, simulationConfig.gridWidth))
             exit(-1)
+
+    @property
+    def env(self):
+        return self._hindsightReplay.env
+
+    @env.setter
+    def env(self, value):
+        self._hindsightReplay.env = value
 
     def getAction(self, state):
         self._NumActions += 1
@@ -120,9 +129,9 @@ class AgentClippedDQN(AgentBase):
         self._lastActionRandom = 0
 
     def onEpisodeDone(self, episode, frameStats):
-        hindsightStates = self._hindsightReplay.replay()
-        for state, action, newState, reward, done in hindsightStates:
+        for state, action, newState, reward, done in self._hindsightReplay.replay():
             self._trainInternal(state, action, newState, reward, done)
+            time.sleep(1)
 
         self._epsilon *= self._epsilonDecay
         self._epsilon = max(self._epsilon, self._epsilonMin)
@@ -143,7 +152,7 @@ class AgentClippedDQN(AgentBase):
         frameStats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
 
     def train(self, state, info, action, newState, newInfo, reward, done):
-        self._hindsightReplay.append(state, info, action, done)
+        self._hindsightReplay.append(state, info, action, newState, newInfo, done)
         self._trainInternal(state, action, newState, reward, done)
 
     def save(self, *args):
@@ -189,7 +198,8 @@ class AgentClippedDQN(AgentBase):
                                   self._stateProcessing(newState),
                                   reward,
                                   done)
-        self._trainFromReplayBuffer()
+        for epoch in range(1):
+            self._trainFromReplayBuffer()
 
     def _trainFromReplayBuffer(self):
         replaySize = len(self._replayBuffer)
@@ -242,10 +252,10 @@ class AgentClippedDQN(AgentBase):
         return loss
 
     def _buildModel(self, trainConfig, width, height, optimizer=True):
-        numImputs = 0
+        numImputs = 4
 
         if self._useConv:
-            model = _ConvNet(width, height, 3, numImputs, len(self._gameActions))
+            model = _ConvNet(width + 2, height + 2, 1, numImputs, len(self._gameActions))
             # model = _DuelingConvNet(width, height, 3, numImputs, len(self._gameActions))
         else:
             model = _LinearNet(width * height * 3 + numImputs, [256, 256], len(self._gameActions))
