@@ -22,6 +22,14 @@ class AgentActionRecorder(AgentBase):
         self._randomRecorder = RandomProxy.instance = _RandomRecorder(RandomProxy.instance)
         self.reset()
 
+    @property
+    def env(self):
+        return self._agent.env
+
+    @env.setter
+    def env(self, value):
+        self._agent.env = value
+
     def reset(self):
         """
         Redemarre la capture

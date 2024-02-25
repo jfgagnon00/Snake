@@ -148,7 +148,7 @@ class EnvironmentStats(gym.ObservationWrapper):
             plt.tight_layout()
 
     @staticmethod
-    def _updateScatter(ax, x, y, title, size=3):
+    def _updateScatter(ax, x, y, title, size=5):
         xx = x[_SAMPLES:]
         yy = y[_SAMPLES:]
         yym = y.rolling(_ROLLING_MEAN).mean()[_SAMPLES:]

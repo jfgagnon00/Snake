@@ -46,3 +46,11 @@ class AgentBase(object):
         Appeler pour charger
         """
         pass
+
+    @property
+    def env(self):
+        pass
+
+    @env.setter
+    def env(self, value):
+        pass

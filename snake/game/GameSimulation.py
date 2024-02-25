@@ -7,6 +7,9 @@ from .GameSnake import GameSnake
 from .GridOccupancy import GridOccupancy
 
 
+class ResetException(Exception):
+    pass
+
 class GameSimulation(object):
     """
     Responsable de la logique de simulation du jeu de serpent.
@@ -89,7 +92,7 @@ class GameSimulation(object):
 
         try:
             score = options["score"]
-            food = options["food_position"]
+            food = options.get("food_position", None)
             direction = options["head_direction"]
             bodyparts = options["snake_bodyparts"]
 
@@ -99,7 +102,9 @@ class GameSimulation(object):
 
             if not food is None:
                 self._food = Vector.fromNumpy(food)
-                self._placeFood()
+                self._setFoodInGrid(True)
+            else:
+                self._placeRandomFood()
         except:
             self._score = 0
             self._snake = GameSnake(GameDirection.EAST.value, position=Vector(3, 1))
@@ -122,6 +127,8 @@ class GameSimulation(object):
         head = self._snake.head + self._snake.direction
 
         if head == self._food:
+            self._setFoodInGrid(False)
+
             # tete est sur la nourriture, grandire le serpent
             self._setSnakeInGrid(False)
             self._snake.bodyParts.appendleft(head)
@@ -187,18 +194,44 @@ class GameSimulation(object):
             "snake_bodyparts": self.snake.bodyPartsToNumpy(),
         }
 
+    def _setFoodInGrid(self, show):
+        # validation
+        if not (0 <= self._food.x and self._food.x < self._occupancyGridWidth):
+            raise ResetException("Positon food invalide")
+
+        if not (0 <= self._food.y and self._food.y < self._occupancyGridHeight):
+            raise ResetException("Positon food invalide")
+
+        expectedOccupancy = GridOccupancy.EMPTY if show else GridOccupancy.FOOD
+        if self._occupancyGrid[self._food.y, self._food.x] != expectedOccupancy:
+            raise ResetException("Placement food invalide")
+
+        # placer dans la grille
+        self._occupancyGrid[self._food.y, self._food.x] = GridOccupancy.FOOD if show else GridOccupancy.EMPTY
+
     def _setSnakeInGrid(self, show):
         # sous optimal, a changer
         value = GridOccupancy.SNAKE_BODY if show else GridOccupancy.EMPTY
 
-        for p in self._snake.bodyParts:
+        for i, p in enumerate(self._snake.bodyParts):
+            if show and self._occupancyGrid[p.y, p.x] != GridOccupancy.EMPTY:
+                raise ResetException("Placement snake bodyParts invalide")
+
             self._occupancyGrid[p.y, p.x] = value
 
         if show:
             tail = self._snake.tail
+
+            if self._occupancyGrid[tail.y, tail.x] != GridOccupancy.SNAKE_BODY:
+                raise ResetException("Placement snake tail invalide")
+
             self._occupancyGrid[tail.y, tail.x] = GridOccupancy.SNAKE_TAIL
 
             head = self._snake.head
+
+            if self._occupancyGrid[head.y, head.x] != GridOccupancy.SNAKE_BODY:
+                raise ResetException("Placement snake head invalide")
+
             self._occupancyGrid[head.y, head.x] = GridOccupancy.SNAKE_HEAD
             self._occupancyGridCount[head.y, head.x] += 1
 
@@ -216,13 +249,4 @@ class GameSimulation(object):
         y = cellIndex // self._occupancyGridWidth
 
         self._food = Vector(x, y)
-        self._placeFood()
-
-    def _placeFood(self):
-        # validation
-        assert 0 <= self._food.x and self._food.x < self._occupancyGridWidth
-        assert 0 <= self._food.y and self._food.y < self._occupancyGridHeight
-        assert self._occupancyGrid[self._food.y, self._food.x] == GridOccupancy.EMPTY
-
-        # placer dans la grille
-        self._occupancyGrid[self._food.y, self._food.x] = GridOccupancy.FOOD
+        self._setFoodInGrid(True)
