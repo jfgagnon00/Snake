@@ -17,7 +17,7 @@ from torchsummary import summary
 from snake.core import Vector
 from snake.game import GameAction
 from snake.ai.agents.AgentBase import AgentBase
-from snake.ai.nets import _ConvNet, _DuelingConvNet, _LinearNet
+from snake.ai.nets import _ConvNet, _DuelingConvNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
 from snake.ai.StateProcessor import _StateProcessor
 
@@ -35,7 +35,6 @@ class AgentClippedDQN(AgentBase):
         # misc parameters
         self._numGameActions = len(GameAction)
         self._gameActions = list(GameAction)
-        self._useConv = trainConfig.useConv
         self._gridCenter = Vector(simulationConfig.gridWidth,
                                   simulationConfig.gridHeight).scale(0.5) - Vector(0.5, 0.5)
 
@@ -235,11 +234,8 @@ class AgentClippedDQN(AgentBase):
         numInputs = 0
         numChannels = 3
 
-        if self._useConv:
-            model = _ConvNet(width + 2, height + 2, numChannels, numInputs, len(self._gameActions))
-            # model = _DuelingConvNet(width, height, numChannels, numInputs, len(self._gameActions))
-        else:
-            model = _LinearNet(width * height * numChannels + numInputs, [256, 256], len(self._gameActions))
+        model = _ConvNet(width, height, numChannels, numInputs, len(self._gameActions))
+        # model = _DuelingConvNet(width, height, numChannels, numInputs, len(self._gameActions))
 
         model.eval()
         optimizer = Adam(model.parameters(), lr=trainConfig.lr) if optimizer else None

@@ -11,5 +11,3 @@ class ConfigTrain(object):
         self.episodes = 1
         self.maxVisitCount = 0
         self.showStats = True
-        self.useConv = False
-        self.hindsightFutureK = 0

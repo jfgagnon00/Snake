@@ -9,9 +9,7 @@
         "agent": "AgentClippedDQN",
         "episodes": 30000,
         "maxVisitCount": 8,
-        "showStats": true,
-        "useConv": true,
-        "hindsightFutureK": 2
+        "showStats": true
     },
 
     "environment": {
