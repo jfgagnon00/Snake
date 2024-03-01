@@ -20,7 +20,6 @@ from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _ConvNet, _DuelingConvNet, _LinearNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
 from snake.ai.StateProcessor import _StateProcessor
-from snake.ai.HindsightExperienceReplay import _HindsightExperienceReplay
 
 
 class AgentClippedDQN(AgentBase):
@@ -42,7 +41,6 @@ class AgentClippedDQN(AgentBase):
 
         # replay buffer
         self._replayBuffer = _ReplayBuffer(AgentClippedDQN.MEMORY_SIZE)
-        self._hindsightReplay = _HindsightExperienceReplay(trainConfig.hindsightFutureK)
 
         # clipped DQN
         self._gamma = trainConfig.gamma
@@ -67,13 +65,6 @@ class AgentClippedDQN(AgentBase):
                     None)
             exit(-1)
 
-    @property
-    def env(self):
-        return self._hindsightReplay.env
-
-    @env.setter
-    def env(self, value):
-        self._hindsightReplay.env = value
 
     def getAction(self, state):
         self._NumActions += 1
@@ -119,8 +110,6 @@ class AgentClippedDQN(AgentBase):
         return self._gameActions[intAction]
 
     def onEpisodeBegin(self, episode, frameStats):
-        self._hindsightReplay.clear()
-
         frameStats.loc[0, "Epsilon"] = self._epsilon
         self._trainLoss = np.zeros((1), dtype=np.float32)
         self._NumRandomActions = 0
@@ -129,9 +118,6 @@ class AgentClippedDQN(AgentBase):
         self._lastActionRandom = 0
 
     def onEpisodeDone(self, episode, frameStats):
-        for state, action, newState, reward, done in self._hindsightReplay.replay():
-            self._trainInternal(state, action, newState, reward, done)
-
         self._epsilon *= self._epsilonDecay
         self._epsilon = max(self._epsilon, self._epsilonMin)
         frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
@@ -151,8 +137,12 @@ class AgentClippedDQN(AgentBase):
         frameStats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
 
     def train(self, state, info, action, newState, newInfo, reward, done):
-        self._hindsightReplay.append(state, info, action, newState, newInfo, done)
-        self._trainInternal(state, action, newState, reward, done)
+        self._replayBuffer.append(self._stateProcessing(state),
+                                  self._gameActions.index(action),
+                                  self._stateProcessing(newState),
+                                  reward,
+                                  done)
+        self._trainFromReplayBuffer()
 
     def save(self, *args):
         if len(args) > 0:
@@ -190,15 +180,6 @@ class AgentClippedDQN(AgentBase):
 
         if "optimizer" in states:
             self._models[index][1].load_state_dict(states["optimizer"])
-
-    def _trainInternal(self, state, action, newState, reward, done):
-        self._replayBuffer.append(self._stateProcessing(state),
-                                  self._gameActions.index(action),
-                                  self._stateProcessing(newState),
-                                  reward,
-                                  done)
-        for epoch in range(1):
-            self._trainFromReplayBuffer()
 
     def _trainFromReplayBuffer(self):
         replaySize = len(self._replayBuffer)
