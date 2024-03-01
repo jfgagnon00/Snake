@@ -13,7 +13,7 @@ class _StateProcessor():
         grid, food_flags, head_flags = self._applySymmetry(state)
 
         showFood = state["event"] > 0
-        grid = self._splitOccupancyGrid(grid, pad=True, showFood=showFood)
+        grid = self._splitOccupancyGrid(grid, pad=False, showFood=showFood)
 
         if False:
             flags = np.array([*food_flags, *head_flags])
