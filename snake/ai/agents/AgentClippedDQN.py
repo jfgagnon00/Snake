@@ -14,7 +14,6 @@ from torch import from_numpy, \
 from torch.optim import Adam
 from torchsummary import summary
 
-from snake.core import Vector
 from snake.game import GameAction
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _ConvNet, _DuelingConvNet
@@ -35,8 +34,6 @@ class AgentClippedDQN(AgentBase):
         # misc parameters
         self._numGameActions = len(GameAction)
         self._gameActions = list(GameAction)
-        self._gridCenter = Vector(simulationConfig.gridWidth,
-                                  simulationConfig.gridHeight).scale(0.5) - Vector(0.5, 0.5)
 
         # replay buffer
         self._replayBuffer = _ReplayBuffer(AgentClippedDQN.MEMORY_SIZE)
