@@ -1,5 +1,7 @@
 import numpy as np
 
+from io import StringIO
+from pprint import pprint
 from snake.core import Delegate, Vector, RandomProxy
 from .GameAction import GameAction
 from .GameDirection import GameDirection
@@ -8,7 +10,23 @@ from .GridOccupancy import GridOccupancy
 
 
 class ResetException(Exception):
-    pass
+    def __init__(self, message, occupancyGrid, position):
+        super().__init__(message)
+        self.occupancyGrid = occupancyGrid
+        self.position = position
+
+    def __str__(self):
+        with StringIO() as stream:
+            print(file=stream)
+            print(super().__str__(), file=stream)
+            if self.occupancyGrid is None:
+                print("No occupancy grid", file=stream)
+            else:
+                print("occupancyGrid shape", self.occupancyGrid.shape, file=stream)
+                print("occupancyGrid", file=stream)
+                pprint(self.occupancyGrid, stream=stream)
+            print("Position", self.position, file=stream)
+            return stream.getvalue()
 
 class GameSimulation(object):
     """
@@ -91,27 +109,26 @@ class GameSimulation(object):
         self._occupancyGrid = np.zeros(shape=shape, dtype=np.int32)
 
         try:
-            score = options["score"]
-            food = options.get("food_position", None)
+            food = options["food_position"]
             direction = options["head_direction"]
             bodyparts = options["snake_bodyparts"]
 
-            self._score = score
+            self._score = options["score"]
             self._snake = GameSnake(Vector.fromNumpy(direction))
             self._snake.bodyPartsFromNumpy(bodyparts)
-
-            if not food is None:
-                self._food = Vector.fromNumpy(food)
-                self._setFoodInGrid(True)
-            else:
-                self._placeRandomFood()
         except:
+            food = None
             self._score = 0
             self._snake = GameSnake(GameDirection.EAST.value, position=Vector(3, 1))
-            self._placeRandomFood()
 
         # placer le serpent dans la grille
         self._setSnakeInGrid(True)
+
+        if food is None:
+            self._placeRandomFood()
+        else:
+            self._food = Vector.fromNumpy(food)
+            self._setFoodInGrid(True)
 
     def apply(self, action):
         """
@@ -197,14 +214,16 @@ class GameSimulation(object):
     def _setFoodInGrid(self, show):
         # validation
         if not (0 <= self._food.x and self._food.x < self._occupancyGridWidth):
-            raise ResetException("Positon food invalide")
+            raise ResetException("Positon x food invalide", None, self._food.copy())
 
         if not (0 <= self._food.y and self._food.y < self._occupancyGridHeight):
-            raise ResetException("Positon food invalide")
+            raise ResetException("Positon y food invalide", None, self._food.copy())
 
         expectedOccupancy = GridOccupancy.EMPTY if show else GridOccupancy.FOOD
         if self._occupancyGrid[self._food.y, self._food.x] != expectedOccupancy:
-            raise ResetException("Placement food invalide")
+            raise ResetException("Occupancy food invalide",
+                                 self._occupancyGrid.copy(),
+                                 self._food.copy())
 
         # placer dans la grille
         self._occupancyGrid[self._food.y, self._food.x] = GridOccupancy.FOOD if show else GridOccupancy.EMPTY
@@ -215,7 +234,9 @@ class GameSimulation(object):
 
         for i, p in enumerate(self._snake.bodyParts):
             if show and self._occupancyGrid[p.y, p.x] != GridOccupancy.EMPTY:
-                raise ResetException("Placement snake bodyParts invalide")
+                raise ResetException("Placement snake bodyParts invalide",
+                                     self._occupancyGrid.copy(),
+                                     p.copy())
 
             self._occupancyGrid[p.y, p.x] = value
 
@@ -223,14 +244,18 @@ class GameSimulation(object):
             tail = self._snake.tail
 
             if self._occupancyGrid[tail.y, tail.x] != GridOccupancy.SNAKE_BODY:
-                raise ResetException("Placement snake tail invalide")
+                raise ResetException("Placement snake tail invalide",
+                                     self._occupancyGrid.copy(),
+                                     tail.copy())
 
             self._occupancyGrid[tail.y, tail.x] = GridOccupancy.SNAKE_TAIL
 
             head = self._snake.head
 
             if self._occupancyGrid[head.y, head.x] != GridOccupancy.SNAKE_BODY:
-                raise ResetException("Placement snake head invalide")
+                raise ResetException("Placement snake head invalide",
+                                     self._occupancyGrid.copy(),
+                                     head.copy())
 
             self._occupancyGrid[head.y, head.x] = GridOccupancy.SNAKE_HEAD
             self._occupancyGridCount[head.y, head.x] += 1
@@ -239,6 +264,11 @@ class GameSimulation(object):
         # trouver les cellules libres a partir de _occupancyGrid
         allCells = np.arange(self._occupancyGridWidth * self._occupancyGridHeight)
         freeCells = np.where(self._occupancyGrid == GridOccupancy.EMPTY, True, False)
+
+        if len(freeCells) == 0:
+            self._food = None
+            return
+
         freeCells = allCells[freeCells.reshape(-1)]
 
         # prendre une cellule au hasard

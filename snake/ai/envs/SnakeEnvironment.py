@@ -1,4 +1,5 @@
 import numpy as np
+from enum import IntEnum
 
 from copy import deepcopy
 from gymnasium import Env, spaces
@@ -7,6 +8,11 @@ from snake.game import GameAction
 from snake.game import GameSimulation
 from snake.graphics import GraphicWindow, init as gfxInit, quit as gfxQuit, pumpEvents
 
+class Event(IntEnum):
+    EAT = 0
+    MOVE = 1
+    DEATH = 2
+    UNKNOWN = 3
 
 class SnakeEnvironment(Env):
     """
@@ -61,6 +67,7 @@ class SnakeEnvironment(Env):
                                             dtype=int),
                 "length": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
                 "score": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
+                "event": spaces.Discrete(len(Event)),
             })
 
         self._renderMode = renderMode
@@ -81,6 +88,7 @@ class SnakeEnvironment(Env):
         self._rewards = deepcopy(environmentConfig.rewards)
         self._reward = 0
         self._done = False
+        self._event = Event.UNKNOWN
         self._maxVisitCount = 2 if trainConfig is None else trainConfig.maxVisitCount
 
         # configuer les delegates pour gerer les recompenses
@@ -114,6 +122,7 @@ class SnakeEnvironment(Env):
         # reset recompense (les delegates vont le mettre la jour)
         self._reward = 0
         self._done = False
+        self._event = Event.UNKNOWN
 
         # simulation:
         # les evenements appropries seront lances par les delegates et feront avancer les etats
@@ -145,7 +154,9 @@ class SnakeEnvironment(Env):
             gfxQuit()
 
     def _getObservations(self):
-        return self._simulation.getObservations()
+        observations = self._simulation.getObservations()
+        observations["event"] = self._event
+        return observations
 
     def _getInfo(self):
         return self._simulation.getInfo()
@@ -164,20 +175,25 @@ class SnakeEnvironment(Env):
     def _onSnakeOutOfBounds(self):
         self._reward += self._rewards[Rewards.OUT_OF_BOUNDS]
         self._done = True
+        self._event = Event.DEATH
 
     def _onSnakeCollision(self):
         self._reward += self._rewards[Rewards.COLLISION]
         self._done = True
+        self._event = Event.DEATH
 
     def _onSnakeEat(self):
         self._reward += self._rewards[Rewards.EAT]
+        self._event = Event.EAT
         self._maybeUpdateWindow()
 
     def _onWin(self):
         self._reward += self._rewards[Rewards.WIN]
         self._done = True
+        self._event = Event.EAT
         self._maybeUpdateWindow()
 
     def _onSnakeMove(self):
         self._reward += self._rewards[Rewards.MOVE]
+        self._event = Event.MOVE
         self._maybeUpdateWindow()

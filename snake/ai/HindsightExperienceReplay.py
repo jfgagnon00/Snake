@@ -29,44 +29,23 @@ class _HindsightExperienceReplay():
         self._episode = []
 
     def replay(self):
-        # for t in range( len(self._episode) ):
-        #     startState, startInfo, action, endState = self._episode[t]
+        if True:
+            be = len(self._episode)
+            bi = be // 2 + 1
 
-        #     observations, _ = self._env.reset(options={
-        #         "score": startState["score"],
-        #         "food_position": endState["head_position"],
-        #         "head_direction": startState["head_direction"],
-        #         "snake_bodyparts": startInfo["snake_bodyparts"],
-        #     })
-
-        #     newObservations, reward, terminated, truncated, _ = self._env.step(action)
-        #     done = terminated or truncated
-
-        #     self._env.render()
-
-        #     yield observations, action, newObservations, reward, done
-
-        for s in range(len(self._episode)):
-            goalState, goalInfo, action, _, _, goalDone = self._episode[s]
-            if goalDone:
-                continue
-
-            transitions = self._sampleTransitions(s + 1)
-            for t in transitions:
-                _, _, _, newGoalState, _, newGoalDone = self._episode[t]
-                if newGoalDone:
+            for t in range(bi, be):
+                startState, startInfo, action, endState, _, episodeDone = self._episode[t]
+                if episodeDone:
                     continue
 
                 try:
                     observations, _ = self._env.reset(options={
-                        "score": goalState["score"],
-                        "food_position": newGoalState["head_position"],
-                        "head_direction": goalState["head_direction"],
-                        "snake_bodyparts": goalInfo["snake_bodyparts"],
+                        "score": startState["score"],
+                        "food_position": endState["head_position"],
+                        "head_direction": startState["head_direction"],
+                        "snake_bodyparts": startInfo["snake_bodyparts"],
                     })
-                except ResetException:
-                    # certaines combinaisons ne sont pas valide
-                    # reset() lance une exception; simplement ignorer
+                except ResetException as e:
                     continue
 
                 newObservations, reward, terminated, truncated, _ = self._env.step(action)
@@ -75,6 +54,36 @@ class _HindsightExperienceReplay():
                 self._env.render()
 
                 yield observations, action, newObservations, reward, done
+        else:
+            for s in range(len(self._episode)):
+                goalState, goalInfo, action, _, _, goalDone = self._episode[s]
+                if goalDone:
+                    continue
+
+                transitions = self._sampleTransitions(s + 1)
+                for t in transitions:
+                    _, _, _, newGoalState, _, newGoalDone = self._episode[t]
+                    if newGoalDone:
+                        continue
+
+                    try:
+                        observations, _ = self._env.reset(options={
+                            "score": goalState["score"],
+                            "food_position": newGoalState["head_position"],
+                            "head_direction": goalState["head_direction"],
+                            "snake_bodyparts": goalInfo["snake_bodyparts"],
+                        })
+                    except ResetException:
+                        # certaines combinaisons ne sont pas valide
+                        # reset() lance une exception; simplement ignorer
+                        continue
+
+                    newObservations, reward, terminated, truncated, _ = self._env.step(action)
+                    done = terminated or truncated
+
+                    self._env.render()
+
+                    yield observations, action, newObservations, reward, done
 
     def _sampleTransitions(self, start):
         stop = len(self._episode)

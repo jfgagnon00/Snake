@@ -10,6 +10,9 @@ class Vector(object):
         self.x = x
         self.y = y
 
+    def copy(self):
+        return Vector(self.x, self.y)
+
     def __add__(self, other):
         return Vector(self.x + other.x, self.y + other.y)
 

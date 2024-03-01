@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import time
 
 from torch import from_numpy, \
                 no_grad, \
@@ -63,8 +62,9 @@ class AgentClippedDQN(AgentBase):
         self._stateProcessor = _StateProcessor()
 
         if False:
-            summary(self._models[0][0], \
-                    (1, 1, simulationConfig.gridHeight, simulationConfig.gridWidth))
+            summary(self._models[0][0],
+                    (3, simulationConfig.gridHeight + 2, simulationConfig.gridWidth + 2),
+                    None)
             exit(-1)
 
     @property
@@ -131,7 +131,6 @@ class AgentClippedDQN(AgentBase):
     def onEpisodeDone(self, episode, frameStats):
         for state, action, newState, reward, done in self._hindsightReplay.replay():
             self._trainInternal(state, action, newState, reward, done)
-            time.sleep(1)
 
         self._epsilon *= self._epsilonDecay
         self._epsilon = max(self._epsilon, self._epsilonMin)
@@ -252,13 +251,14 @@ class AgentClippedDQN(AgentBase):
         return loss
 
     def _buildModel(self, trainConfig, width, height, optimizer=True):
-        numImputs = 4
+        numInputs = 0
+        numChannels = 3
 
         if self._useConv:
-            model = _ConvNet(width + 2, height + 2, 1, numImputs, len(self._gameActions))
-            # model = _DuelingConvNet(width, height, 3, numImputs, len(self._gameActions))
+            model = _ConvNet(width + 2, height + 2, numChannels, numInputs, len(self._gameActions))
+            # model = _DuelingConvNet(width, height, numChannels, numInputs, len(self._gameActions))
         else:
-            model = _LinearNet(width * height * 3 + numImputs, [256, 256], len(self._gameActions))
+            model = _LinearNet(width * height * numChannels + numInputs, [256, 256], len(self._gameActions))
 
         model.eval()
         optimizer = Adam(model.parameters(), lr=trainConfig.lr) if optimizer else None
