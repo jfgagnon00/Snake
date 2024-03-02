@@ -39,7 +39,7 @@ class AgentInteractive(AgentBase):
         """
         self._lastKeyDown = key
 
-    def getAction(self, observations):
+    def getAction(self, observations, *args):
         """
         Obtenir action a partir de l'etat.
         """

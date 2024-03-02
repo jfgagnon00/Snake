@@ -8,15 +8,13 @@ from torch import from_numpy, \
                 save, \
                 load, \
                 unsqueeze, \
-                vstack, \
-                int64 as torch_int64, \
-                float32 as torch_float32
+                vstack
 from torch.optim import Adam
 from torchsummary import summary
 
-from snake.core import Vector
 from snake.game import GameAction
 from snake.ai.agents.AgentBase import AgentBase
+from snake.ai.mcts import _Mcts
 from snake.ai.nets import _ConvNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
 from snake.ai.StateProcessor import _StateProcessor
@@ -35,16 +33,16 @@ class AgentAlphaGoZero(AgentBase):
         # misc parameters
         self._numGameActions = len(GameAction)
         self._gameActions = list(GameAction)
+        self._stateProcessor = _StateProcessor()
 
         # replay buffer
         self._replayBuffer = _ReplayBuffer(AgentAlphaGoZero.MEMORY_SIZE)
 
-        # clipped DQN
+        # AlphaGo Zero
+        self._mcts = _Mcts(trainConfig)
         self._model, self._optimizer = self._buildModel(trainConfig,
                                                         simulationConfig.gridWidth,
                                                         simulationConfig.gridHeight)
-
-        self._stateProcessor = _StateProcessor()
 
         if False:
             summary(self._model,
@@ -52,28 +50,44 @@ class AgentAlphaGoZero(AgentBase):
                     None)
             exit(-1)
 
-    def getAction(self, state):
-        _, _, actionFlags = self._stateProcessing(state)
+    @property
+    def env(self):
+        return self._env
 
-        actionFlags = np.array(actionFlags, dtype=np.float32)
-        actionsAvailable = np.nonzero(actionFlags)[0]
+    @env.setter
+    def env(self, value):
+        self._env = value
 
-        intAction = np.random.choice(actionsAvailable)
-        return self._gameActions[intAction]
+    def reset(self):
+        pass
+
+    def getAction(self, state, info):
+        pass
+        # self._mcts.getAction(state, info)
+
+
+        # newNode, \
+        # intAction, \
+        # newPolicy, \
+        # value = _mcts(self._node,
+        #               self._env,
+        #               state,
+        #               info,
+        #               self._model)
+
+        # self._node = newNode
+        # # sample = (self._stateProcessing(state),
+        # #           newPolicy.copy(),
+        # #           value.copy())
+        # # self._replayBuffer.append(sample)
+
+        # return self._gameActions[intAction]
 
     def onEpisodeBegin(self, episode, frameStats):
-        pass
+        self._node = None
+        self._z = 0
 
     def onEpisodeDone(self, episode, frameStats):
-        pass
-
-    def train(self, state, info, action, newState, newInfo, reward, done):
-        # self._replayBuffer.append(self._stateProcessing(state),
-        #                           self._gameActions.index(action),
-        #                           self._stateProcessing(newState),
-        #                           reward,
-        #                           done)
-        # self._trainFromReplayBuffer()
         pass
 
     def save(self, *args):

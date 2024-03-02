@@ -61,8 +61,7 @@ class AgentClippedDQN(AgentBase):
                     None)
             exit(-1)
 
-
-    def getAction(self, state):
+    def getAction(self, state, *args):
         self._NumActions += 1
 
         x0, x1, actionFlags = self._stateProcessing(state)
@@ -133,11 +132,12 @@ class AgentClippedDQN(AgentBase):
         frameStats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
 
     def train(self, state, info, action, newState, newInfo, reward, done):
-        self._replayBuffer.append(self._stateProcessing(state),
-                                  self._gameActions.index(action),
-                                  self._stateProcessing(newState),
-                                  reward,
-                                  done)
+        sample = (self._stateProcessing(state),
+                  self._gameActions.index(action),
+                  self._stateProcessing(newState),
+                  reward,
+                  done)
+        self._replayBuffer.append(sample)
         self._trainFromReplayBuffer()
 
     def save(self, *args):

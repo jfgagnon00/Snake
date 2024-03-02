@@ -1,3 +1,6 @@
+from .ConfigMcts import ConfigMcts
+
+
 class ConfigTrain(object):
     def __init__(self):
         self.gamma = 0.0
@@ -11,3 +14,4 @@ class ConfigTrain(object):
         self.episodes = 1
         self.maxVisitCount = 0
         self.showStats = True
+        self.mcts = ConfigMcts()

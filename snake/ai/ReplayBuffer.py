@@ -6,8 +6,11 @@ class _ReplayBuffer(object):
     def __init__(self, maxlen):
         self._buffer = deque(maxlen=maxlen)
 
-    def append(self, state, action, newState, reward, done):
-        self._buffer.append((state, action, newState, reward, done))
+    def clear(self):
+        self._buffer.clear()
+
+    def append(self, sample):
+        self._buffer.append(sample)
 
     def sample(self, count):
         indices = choice(len(self), count)

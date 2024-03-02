@@ -1,15 +1,19 @@
 {
     "train": {
+        "agent": "AgentAlphaGoZero",
         "gamma": 0.98,
         "epsilon": 0.8,
         "epsilonDecay": 0.995,
         "epsilonMin": 0.01,
         "tau": 0.001,
         "lr": 0.001,
-        "agent": "AgentClippedDQN",
         "episodes": 30000,
         "maxVisitCount": 8,
-        "showStats": true
+        "showStats": true,
+        "mcts": {
+            "puct": 1.0,
+            "numIterations": 10
+        }
     },
 
     "environment": {

@@ -4,7 +4,7 @@ from snake.core import Vector
 from snake.game import GameDirection, GridOccupancy
 
 
-class _StateProcessor():
+class _StateProcessor(object):
     """
     Encapsule la conversion des observations vers numpy arrays
     """

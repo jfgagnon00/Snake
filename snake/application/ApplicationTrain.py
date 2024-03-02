@@ -50,7 +50,7 @@ class ApplicationTrain(object):
             start = datetime.now()
 
             while not done:
-                action = self._agent.getAction(observations)
+                action = self._agent.getAction(observations, info)
 
                 newObservations, reward, terminated, truncated, newInfo = self._env.step(action)
                 done = terminated or truncated
