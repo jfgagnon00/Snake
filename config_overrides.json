@@ -11,7 +11,7 @@
         "maxVisitCount": 8,
         "showStats": true,
         "mcts": {
-            "puct": 1.0,
+            "cpuct": 1.0,
             "numIterations": 10
         }
     },

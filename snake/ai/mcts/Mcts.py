@@ -6,7 +6,7 @@ from .NodeException import _NodeException
 class _Mcts(object):
     def __init__(self, trainConfig):
         self._cpuct = trainConfig.mcts.cpuct
-        self._numIterations = trainConfig.mcts._numIterations
+        self._numIterations = trainConfig.mcts.numIterations
         self._maxVisitCount = trainConfig.maxVisitCount
 
     def _select(self, node):

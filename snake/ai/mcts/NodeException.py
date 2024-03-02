@@ -2,7 +2,7 @@ from io import StringIO
 from pprint import pprint
 
 
-class _MctsNodeException(Exception):
+class _NodeException(Exception):
     def __init__(self, message, state=None, info=None, nodeState=None):
         super().__init__(message)
         self._state = state

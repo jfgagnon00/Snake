@@ -72,7 +72,7 @@ class _Node(object):
         x0, x1, flags = stateProcessingCallable(self._state)
         model(self._state)
 
-        self._P =
+        self._P = None
         self._V = None
 
         self._done = False
