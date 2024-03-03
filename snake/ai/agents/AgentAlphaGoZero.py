@@ -40,8 +40,7 @@ class AgentAlphaGoZero(AgentBase):
 
         # AlphaGo Zero
         self._env = None
-        self._mctsRoot = None
-        self._mcts = _Mcts(self._evalModelForMcts, trainConfig)
+        self._mcts = _Mcts(self._evalModelForMcts, trainConfig.mcts)
         self._model, self._optimizer = self._buildModel(trainConfig,
                                                         simulationConfig.gridWidth,
                                                         simulationConfig.gridHeight)
@@ -62,21 +61,17 @@ class AgentAlphaGoZero(AgentBase):
         self._mcts.initEnv(value)
 
     def getAction(self, state, info):
-        self._mctsRoot, \
-        intAction, \
-        targetPolicy, \
-        targetValue = self._mcts.search(self._mctsRoot, state, info)
+        targetPolicy, intAction = self._mcts.search(state, info)
 
         sample = (self._stateProcessing(state),
                   intAction,
                   targetPolicy,
-                  targetValue)
+                  0)
         self._replayBuffer.append(sample)
 
         return self._gameActions[intAction]
 
     def reset(self):
-        self._mctsRoot = None
         self._mcts.reset()
 
     def onEpisodeBegin(self, episode, frameStats):
@@ -155,8 +150,11 @@ class AgentAlphaGoZero(AgentBase):
         return model, optimizer
 
     def _evalModelForMcts(self, state):
-        modelArgs = self._stateProcessing(state)
-        return self._model(*modelArgs)
+        with no_grad():
+            modelArgs = self._stateProcessing(state)
+            outputs = self._model(*modelArgs)
+
+        return [o.numpy() for o in outputs]
 
     def _stateProcessing(self, state):
         stateProcessed = self._stateProcessor(state)

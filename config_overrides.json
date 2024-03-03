@@ -9,10 +9,11 @@
         "lr": 0.001,
         "episodes": 30000,
         "maxVisitCount": 8,
-        "showStats": true,
+        "showStats": false,
         "mcts": {
             "cpuct": 1.0,
-            "numIterations": 10
+            "numSimulations": 3,
+            "temperature": 1
         }
     },
 
@@ -28,8 +29,8 @@
     },
 
     "simulation": {
-        "gridWidth": 8,
-        "gridHeight": 8
+        "gridWidth": 4,
+        "gridHeight": 4
     },
 
     "graphics": {

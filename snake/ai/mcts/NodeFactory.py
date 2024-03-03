@@ -10,25 +10,29 @@ class _NodeFactory(object):
     def __init__(self):
         self._stateToNode = {}
 
-    def getOrCreate(self, state, info, done):
-        h = _NodeFactory._hash(state, info, done)
-        if h in self._stateToNode:
-            return self._stateToNode[h]
+    def clear(self):
+        self._stateToNode.clear()
 
-        node = _Node(state, info, done)
-        self._stateToNode[h] = node
+    def getOrCreate(self, state, info, done, won):
+        h = _NodeFactory._hash(state, info)
+        node = self._stateToNode.get(h, None)
+        if node is None:
+            node = _Node(state, info, done, won)
+            self._stateToNode[h] = node
+        else:
+            pass
 
         return node
 
+    def validateVisitCount(self):
+        for n in self._stateToNode.values():
+            assert n.vistCount == 0
+
     @staticmethod
-    def _hash(state, info, done):
+    def _hash(state, info):
         with BytesIO() as stream:
-            for k in _Node.stateKeys():
-                dump(state[k], file=stream)
-
-            for k in _Node.infoKeys():
-                dump(info[k], file=stream)
-
-            dump(done, file=stream)
+            # state est completement defini par les positions du serpent et de la pomme
+            dump(state["food_position"], file=stream)
+            dump(info["snake_bodyparts"], file=stream)
 
             return hashlib.md5(stream.getbuffer()).hexdigest()

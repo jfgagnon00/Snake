@@ -34,8 +34,8 @@ class GameSimulation(object):
     La simulation evolue sur une grille discrete.
     """
     def __init__(self, simulationConfig):
-        self._occupancyGridWidth = max(6, simulationConfig.gridWidth)
-        self._occupancyGridHeight = max(6, simulationConfig.gridHeight)
+        self._occupancyGridWidth = max(4, simulationConfig.gridWidth)
+        self._occupancyGridHeight = max(4, simulationConfig.gridHeight)
 
         self._outOfBoundsDelegate = Delegate()
         self._collisionDelegate = Delegate()

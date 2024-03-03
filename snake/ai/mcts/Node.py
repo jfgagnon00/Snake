@@ -5,16 +5,24 @@ from .NodeException import _NodeException
 
 
 class _Node(object):
-    def __init__(self, state, info, done):
-        self._state = deepcopy(state)
-        self._state["snake_bodyparts"] = deepcopy(info["snake_bodyparts"])
+    def __init__(self, state, info, done, won):
+        self._state = {}
+
+        # dupliquer les clef necessaire seulement
+        for k in _Node.stateKeys():
+            self._state[k] = deepcopy(state[k])
+
+        for k in _Node.infoKeys():
+            self._state[k] = deepcopy(info[k])
+
         self._done = done
+        self._won = won
 
         # 1 element par action
         self.P = None
         self.Q = None
         self.N = None
-        self.V = None  # array de numpy array; V de chaque simulation pour chaque action
+        self.W = None  # somme de tous les V pour chaque action
         self.child = None
 
         # internal management pour Mcts.getAction()
@@ -47,6 +55,10 @@ class _Node(object):
     def done(self):
         return self._done
 
+    @property
+    def won(self):
+        return self._won
+
     def validate(self, state, info):
         for k in _Node.stateKeys():
             if not k in state:
@@ -66,7 +78,3 @@ class _Node(object):
 
             if not np.array_equal(self._state[k], info[k]):
                 raise _NodeException(f"Clef '{k}' differente", state, info, self._state)
-
-    def ucb(self, cpuct):
-        assert not self.isLeaf
-        return self._Q + cpuct * self._P * np.sqrt(self._N.sum()) / (1 + self._N)

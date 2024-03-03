@@ -42,7 +42,7 @@ class _AlphaGoZeroConvNet(Module):
 
         self._p = Sequential(
             Linear(128, numOutputs),
-            Softmax(),
+            Softmax(dim=1),
         )
 
         self._v = Linear(128, 1)

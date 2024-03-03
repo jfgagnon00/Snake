@@ -1,6 +1,7 @@
 import numpy as np
 
 from snake.core import Vector
+from snake.configs import Rewards
 from snake.game import GameDirection, GridOccupancy
 
 
@@ -12,7 +13,8 @@ class _StateProcessor(object):
     def __call__(self, state):
         grid, food_flags = self._applySymmetry(state)
 
-        showFood = state["reward_type"] > 0
+        # showFood = info["reward_type"] > Rewards.EAT
+        showFood = True
         grid = self._splitOccupancyGrid(grid, pad=False, showFood=showFood)
 
         if False:

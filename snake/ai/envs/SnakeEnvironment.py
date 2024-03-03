@@ -41,6 +41,12 @@ class SnakeEnvironment(Env):
         numActions = len(GameAction)
 
         self.action_space = spaces.Discrete(numActions)
+
+        # Note:
+        # L'etat du jeu est completement defini par les positions du serpent et de la pomme.
+        # Les autres champs pourraient etre recalcules a partir de ces dernieres. Cependant,
+        # il est tres commode de les avoir et c'est pour cette raison qu'ils
+        # sont listes.
         self.observation_space = spaces.Dict({
                 "occupancy_grid": spaces.Box(low=0,
                                              high=255,
@@ -64,7 +70,6 @@ class SnakeEnvironment(Env):
                                                 dtype=np_int32),
                 "length": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
                 "score": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
-                "reward_type": spaces.Discrete(len(Rewards)),
             })
 
         self._renderMode = renderMode
@@ -84,7 +89,6 @@ class SnakeEnvironment(Env):
 
         self._rewards = deepcopy(environmentConfig.rewards)
         self._rewardType = Rewards.UNKNOWN
-        self._rewardTypes = list(Rewards)
         self._done = False
         self._maxVisitCount = 2 if trainConfig is None else trainConfig.maxVisitCount
 
@@ -139,11 +143,10 @@ class SnakeEnvironment(Env):
         if observations["available_actions"].sum() == 0:
             self._done = True
             self._rewardType = Rewards.TRAPPED
-            observations["reward_type"] = self._rewardTypes.index(self._rewardType)
             self._trappedDelegate()
 
         return observations, \
-               self._rewards[self._rewardType], \
+               self._rewards[self._rewardType.name], \
                self._done, \
                truncated, \
                self._getInfo()
@@ -157,12 +160,12 @@ class SnakeEnvironment(Env):
             gfxQuit()
 
     def _getObservations(self):
-        observations = self._simulation.getObservations()
-        observations["reward_type"] = self._rewardTypes.index(self._rewardType)
-        return observations
+        return self._simulation.getObservations()
 
     def _getInfo(self):
-        return self._simulation.getInfo()
+        infos = self._simulation.getInfo()
+        infos["reward_type"] = self._rewardType
+        return infos
 
     def _renderInternal(self):
         pumpEvents()
