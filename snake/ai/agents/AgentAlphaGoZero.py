@@ -15,7 +15,7 @@ from torchsummary import summary
 from snake.game import GameAction
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.mcts import _Mcts
-from snake.ai.nets import _ConvNet
+from snake.ai.nets import _AlphaGoZeroConvNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
 from snake.ai.StateProcessor import _StateProcessor
 
@@ -41,7 +41,7 @@ class AgentAlphaGoZero(AgentBase):
         # AlphaGo Zero
         self._env = None
         self._mctsRoot = None
-        self._mcts = _Mcts(trainConfig)
+        self._mcts = _Mcts(self._evalModelForMcts, trainConfig)
         self._model, self._optimizer = self._buildModel(trainConfig,
                                                         simulationConfig.gridWidth,
                                                         simulationConfig.gridHeight)
@@ -65,10 +65,7 @@ class AgentAlphaGoZero(AgentBase):
         self._mctsRoot, \
         intAction, \
         targetPolicy, \
-        targetValue = self._mcts.search(self._mctsRoot,
-                                        state,
-                                        info,
-                                        self._model)
+        targetValue = self._mcts.search(self._mctsRoot, state, info)
 
         sample = (self._stateProcessing(state),
                   intAction,
@@ -150,19 +147,22 @@ class AgentAlphaGoZero(AgentBase):
         numInputs = 0
         numChannels = 3
 
-        model = _ConvNet(width, height, numChannels, numInputs, len(self._gameActions))
-        # model = _DuelingConvNet(width, height, numChannels, numInputs, len(self._gameActions))
+        model = _AlphaGoZeroConvNet(width, height, numChannels, numInputs, self._numGameActions)
 
         model.eval()
         optimizer = Adam(model.parameters(), lr=trainConfig.lr)
 
         return model, optimizer
 
+    def _evalModelForMcts(self, state):
+        modelArgs = self._stateProcessing(state)
+        return self._model(*modelArgs)
+
     def _stateProcessing(self, state):
         stateProcessed = self._stateProcessor(state)
         return self._stateToTorch(*stateProcessed)
 
-    def _stateToTorch(self, x0, x1, head_flags):
+    def _stateToTorch(self, x0, x1):
         x0 = from_numpy(x0.astype(np.float32))
         x0 = unsqueeze(x0, 0)
 
@@ -170,4 +170,4 @@ class AgentAlphaGoZero(AgentBase):
             x1 = from_numpy(x1.astype(np.float32))
             x1 = unsqueeze(x1, 0)
 
-        return x0, x1, head_flags
+        return x0, x1

@@ -13,7 +13,16 @@ class ApplicationTrain(object):
     """
     def __init__(self, configs, agent, statsFilename=None):
         self._episodes = configs.train.episodes
+
         self._agent = agent
+        # workaround probleme avec copie environment
+        # en creer un completement neuf
+        self._agent.env = gym_Make("snake/SnakeEnvironment-v0",
+                                   renderMode = None,
+                                   environmentConfig=configs.environment,
+                                   simulationConfig=configs.simulation,
+                                   graphicsConfig=configs.graphics,
+                                   trainConfig=configs.train)
 
         self._env = gym_Make("snake/SnakeEnvironment-v0",
                             renderMode = None if configs.train.unattended else "human",
@@ -21,7 +30,6 @@ class ApplicationTrain(object):
                             simulationConfig=configs.simulation,
                             graphicsConfig=configs.graphics,
                             trainConfig=configs.train)
-        self._agent.env = self._env
         self._envStats = EnvironmentStats(self._env,
                                           1,
                                           0,

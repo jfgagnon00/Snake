@@ -12,78 +12,62 @@ class _Node(object):
         self._done = done
 
         # 1 element par action
-        self._P = None
-        self._Q = None
-        self._N = None
-        self._V = None  # array de numpy array; V de chaque simulation pour chaque action
-        self._child = None
+        self.P = None
+        self.Q = None
+        self.N = None
+        self.V = None  # array de numpy array; V de chaque simulation pour chaque action
+        self.child = None
 
         # internal management pour Mcts.getAction()
-        self._vistCount = 0
+        self.vistCount = 0
+
+    @staticmethod
+    def stateKeys():
+        return [
+            "occupancy_grid",
+            "head_direction",
+            "head_position",
+            "food_position",
+            "score",
+            "available_actions",
+        ]
+
+    @staticmethod
+    def infoKeys():
+        return ["snake_bodyparts"]
 
     @property
     def isLeaf(self):
         return self._child is None
 
     @property
-    def child(self):
-        return self._child
+    def state(self):
+        return self._state
 
     @property
     def done(self):
         return self._done
 
-    @property
-    def V(self):
-        return self._V
-
     def validate(self, state, info):
-        stateKeys = [
-            "occupancy_grid",
-            "head_direction",
-            "head_position",
-            "food_position",
-            "score",
-        ]
-        for k in stateKeys:
+        for k in _Node.stateKeys():
             if not k in state:
                 raise _NodeException("Clef manquante dans state", state, info, self._state)
 
-            if self._state[k] != state[k]:
+            if k == "score":
+                equal_ = self._state[k] == state[k]
+            else:
+                equal_ = np.array_equal(self._state[k], state[k])
+
+            if not equal_:
                 raise _NodeException(f"Clef '{k}' differente", state, info, self._state)
 
-        infoKeys = ["snake_bodyparts"]
-        for k in infoKeys:
+        for k in _Node.infoKeys():
             if not k in info:
                 raise _NodeException("Clef manquante dans info", state, info, self._state)
 
-            if self._state[k] != info[k]:
+            if not np.array_equal(self._state[k], info[k]):
                 raise _NodeException(f"Clef '{k}' differente", state, info, self._state)
 
     def ucb(self, cpuct):
         assert not self.isLeaf
         return self._Q + cpuct * self._P * np.sqrt(self._N.sum()) / (1 + self._N)
-
-    def expand(self, nodeFactory, env, modelCallable):
-        actions = list(GameAction)
-        numActions = len(actions)
-
-        self._Q = np.zeros(numActions, dtype=np.float32)
-        self._N = np.zeros(numActions, dtype=np.float32)
-        self._V = [np.empty(1, dtype=np.float32) for _ in actions]
-
-        p, v, actionFlags = modelCallable(self._state)
-        self._P = p.detach().numpy()
-
-        self._child = []
-        for action in actions:
-            env.reset(options=self._state)
-
-            state, _, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-
-            node = nodeFactory.getOrCreate(state, info, done)
-
-            self._child.append(node)
-
-        return v.detach().value()

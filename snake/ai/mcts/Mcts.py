@@ -1,28 +1,33 @@
 import numpy as np
 
-from copy import deepcopy
-from .Node import _Node
-from .NodeException import _NodeException
+from snake.game import GameAction
+
 from .NodeFactory import _NodeFactory
 
+
 class _Mcts(object):
-    def __init__(self, trainConfig):
+    def __init__(self, model, trainConfig):
+        self._model = model
+        self._actions = list(GameAction)
+        self._numActions = len(GameAction)
+
         self._cpuct = trainConfig.mcts.cpuct
         self._numIterations = trainConfig.mcts.numIterations
         self._maxVisitCount = trainConfig.maxVisitCount
-        self._nodeFactory = _NodeFactory()
+
+        self.reset()
 
     def initEnv(self, env):
-        self._env = deepcopy(env)
+        self._env = env
 
     def reset(self):
-        pass
+        self._nodeFactory = _NodeFactory()
 
-    def search(root, env, state, info, model):
-        # if root is None:
-        #     raise _NodeException("None root")
+    def search(self, root, state, info):
+        if root is None:
+            root = self._nodeFactory.getOrCreate(state, info, False)
 
-        # root.valiate(state, info)
+        root.validate(state, info)
 
         # while root.N.sum() < 100:
         #     node = select(root)
@@ -50,6 +55,27 @@ class _Mcts(object):
             node = node.child[index]
 
         return node
+
+    def _expand(self, node):
+        node.Q = np.zeros(self._numActions, dtype=np.float32)
+        node.N = np.zeros(self._numActions, dtype=np.float32)
+        node.V = [np.empty(1, dtype=np.float32) for _ in self._actions]
+
+        p, v = self._model(node.state)
+        self.P = p.detach().numpy()
+
+        self._child = []
+        for action in self._actions:
+            self._env.reset(options=self.state)
+
+            state, _, terminated, truncated, info = self._env.step(action)
+            done = terminated or truncated
+
+            node = self._nodeFactory.getOrCreate(state, info, done)
+
+            self._child.append(node)
+
+        return v.detach().value()
 
     def _backpropagation(self, node):
         pass
