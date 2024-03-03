@@ -1,7 +1,6 @@
 import numpy as np
 
 from copy import deepcopy
-from snake.game import GameAction
 from .NodeException import _NodeException
 
 
@@ -38,7 +37,7 @@ class _Node(object):
 
     @property
     def isLeaf(self):
-        return self._child is None
+        return self.child is None
 
     @property
     def state(self):
