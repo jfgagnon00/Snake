@@ -10,21 +10,17 @@ class _StateProcessor(object):
     """
 
     def __call__(self, state):
-        grid, food_flags, head_flags = self._applySymmetry(state)
+        grid, food_flags = self._applySymmetry(state)
 
-        showFood = state["event"] > 0
+        showFood = state["reward_type"] > 0
         grid = self._splitOccupancyGrid(grid, pad=False, showFood=showFood)
 
         if False:
-            flags = np.array([*food_flags, *head_flags])
-        elif False:
             flags = np.array(food_flags)
-        elif False:
-            flags = np.array(head_flags)
         else:
             flags = None
 
-        return grid, flags, head_flags
+        return grid, flags
 
     def _applySymmetry(self, state):
         # simplifier state: toujours mettre par rapport a NORTH
@@ -33,8 +29,7 @@ class _StateProcessor(object):
         grid = np.rot90(grid, k=k, axes=(1, 2))
 
         return grid.copy(), \
-               self._foodFlags(state), \
-               self._headFlags(state)
+               self._foodFlags(state)
 
     def _rot90WithNorth(self, state):
         head_d = state["head_direction"]
@@ -61,45 +56,6 @@ class _StateProcessor(object):
             v += self._gridCenter
             v  = v.toInt()
         return v
-
-    def _isAvailable(self, grid, p):
-        h, w = grid.shape[-2:]
-
-        if p.x < 0 or p.x >= w:
-            return False
-
-        if p.y < 0 or p.y >= h:
-            return False
-
-        occupancy = grid[0, p.y, p.x]
-
-        return occupancy == GridOccupancy.EMPTY or \
-               occupancy == GridOccupancy.FOOD or \
-               occupancy == GridOccupancy.SNAKE_TAIL
-
-    def _headFlags(self, state):
-        grid = state["occupancy_grid"]
-
-        head_p = state["head_position"]
-        head_p = Vector.fromNumpy(head_p)
-
-        head_d = state["head_direction"]
-        f = Vector.fromNumpy(head_d)
-        cw = Vector.rot90(f, -1)
-        ccw = Vector.rot90(f, 1)
-        head_cw = head_ccw = head_f = 0
-
-        if self._isAvailable(grid, head_p + f):
-            head_f = 1
-
-        if self._isAvailable(grid, head_p + cw):
-            head_cw = 1
-
-        if self._isAvailable(grid, head_p + ccw):
-            head_ccw = 1
-
-        # doit suivre l'ordre de GameAction
-        return head_cw, head_ccw, head_f
 
     def _foodFlags(self, state):
         food_cw = food_ccw = food_f = food_b = 0

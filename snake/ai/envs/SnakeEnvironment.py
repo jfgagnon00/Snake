@@ -1,18 +1,13 @@
-import numpy as np
-from enum import IntEnum
+from numpy import int32 as np_int32
 
 from copy import deepcopy
 from gymnasium import Env, spaces
 from snake.configs import Rewards
+from snake.core import Delegate
 from snake.game import GameAction
 from snake.game import GameSimulation
 from snake.graphics import GraphicWindow, init as gfxInit, quit as gfxQuit, pumpEvents
 
-class Event(IntEnum):
-    EAT = 0
-    MOVE = 1
-    DEATH = 2
-    UNKNOWN = 3
 
 class SnakeEnvironment(Env):
     """
@@ -43,31 +38,33 @@ class SnakeEnvironment(Env):
         if graphicsConfig is None or environmentConfig.renderFps <= 0:
             renderMode = None
 
-        self.action_space = spaces.Discrete(len(GameAction))
+        numActions = len(GameAction)
+
+        self.action_space = spaces.Discrete(numActions)
         self.observation_space = spaces.Dict({
                 "occupancy_grid": spaces.Box(low=0,
                                              high=255,
                                              shape=(1, simulationConfig.gridHeight, simulationConfig.gridWidth),
-                                             dtype=np.int32),
-                "occupancy_heatmap": spaces.Box(low=0,
-                                                high=65535,
-                                                shape=(1, simulationConfig.gridHeight, simulationConfig.gridWidth),
-                                                dtype=np.int32),
+                                             dtype=np_int32),
                 "head_direction": spaces.Box(low=-1,
                                              high=1,
                                              shape=(2,),
                                              dtype=int),
-                "head_position": spaces.Box(low=np.array([0, 0]),
-                                            high=np.array([simulationConfig.gridHeight - 1, simulationConfig.gridWidth - 1]),
+                "head_position": spaces.Box(low=0,
+                                            high=simulationConfig.gridHeight - 1,
                                             shape=(2,),
                                             dtype=int),
-                "food_position": spaces.Box(low=np.array([0, 0]),
-                                            high=np.array([simulationConfig.gridHeight - 1, simulationConfig.gridWidth - 1]),
+                "food_position": spaces.Box(low=0,
+                                            high=simulationConfig.gridHeight - 1,
                                             shape=(2,),
                                             dtype=int),
+                "available_actions": spaces.Box(low=0,
+                                                high=numActions - 1,
+                                                shape=(numActions,),
+                                                dtype=np_int32),
                 "length": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
                 "score": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
-                "event": spaces.Discrete(len(Event)),
+                "reward_type": spaces.Discrete(len(Rewards)),
             })
 
         self._renderMode = renderMode
@@ -86,25 +83,21 @@ class SnakeEnvironment(Env):
                                          graphicsConfig)
 
         self._rewards = deepcopy(environmentConfig.rewards)
-        self._reward = 0
+        self._rewardType = Rewards.UNKNOWN
+        self._rewardTypes = list(Rewards)
         self._done = False
-        self._event = Event.UNKNOWN
         self._maxVisitCount = 2 if trainConfig is None else trainConfig.maxVisitCount
 
+        self._trappedDelegate = Delegate()
+
         # configuer les delegates pour gerer les recompenses
-        self._simulation.outOfBoundsDelegate.register(self._onSnakeOutOfBounds)
-        self._simulation.collisionDelegate.register(self._onSnakeCollision)
         self._simulation.eatDelegate.register(self._onSnakeEat)
         self._simulation.winDelegate.register(self._onWin)
         self._simulation.moveDelegate.register(self._onSnakeMove)
 
     @property
-    def outOfBoundsDelegate(self):
-        return self._simulation.outOfBoundsDelegate
-
-    @property
-    def collisionDelegate(self):
-        return self._simulation.collisionDelegate
+    def trappedDelegate(self):
+        return self._trappedDelegate
 
     @property
     def winDelegate(self):
@@ -120,27 +113,37 @@ class SnakeEnvironment(Env):
 
     def step(self, action):
         # reset recompense (les delegates vont le mettre la jour)
-        self._reward = 0
+        self._rewardType = Rewards.UNKNOWN
         self._done = False
-        self._event = Event.UNKNOWN
 
         # simulation:
         # les evenements appropries seront lances par les delegates et feront avancer les etats
         self._simulation.apply(action)
+
+        # faire affichage si besoin
+        if self._renderMode == SnakeEnvironment._HUMAN:
+            self._renderInternal()
 
         # detection de boucle infinie: empecher serpent de passer plus de
         # self._maxVisitCount fois au meme endroit. Moins restrictif que
         # longueur d'episode et plus efficace
         truncated = self._simulation.occupancyGridCount.max() > self._maxVisitCount
         if truncated and self._maxVisitCount > 0:
-            self._reward = self._rewards[Rewards.TRUNCATED]
+            self._rewardType = Rewards.TRUNCATED
 
-        # faire affichage si besoin
-        if self._renderMode == SnakeEnvironment._HUMAN:
-            self._renderInternal()
+        observations = self._getObservations()
 
-        return self._getObservations(), \
-               self._reward, \
+        # la simulation a besoin d'une action supplementaire dans certains cas pour
+        # signaler les etats terminaux; en tenir compte immediatement pour faciliter
+        # les etapes ulterieurs
+        if observations["available_actions"].sum() == 0:
+            self._done = True
+            self._rewardType = Rewards.TRAPPED
+            observations["reward_type"] = self._rewardTypes.index(self._rewardType)
+            self._trappedDelegate()
+
+        return observations, \
+               self._rewards[self._rewardType], \
                self._done, \
                truncated, \
                self._getInfo()
@@ -155,7 +158,7 @@ class SnakeEnvironment(Env):
 
     def _getObservations(self):
         observations = self._simulation.getObservations()
-        observations["event"] = self._event
+        observations["reward_type"] = self._rewardTypes.index(self._rewardType)
         return observations
 
     def _getInfo(self):
@@ -172,28 +175,15 @@ class SnakeEnvironment(Env):
                 self._window.reset()
             self._window.update(self._simulation)
 
-    def _onSnakeOutOfBounds(self):
-        self._reward += self._rewards[Rewards.OUT_OF_BOUNDS]
-        self._done = True
-        self._event = Event.DEATH
-
-    def _onSnakeCollision(self):
-        self._reward += self._rewards[Rewards.COLLISION]
-        self._done = True
-        self._event = Event.DEATH
-
     def _onSnakeEat(self):
-        self._reward += self._rewards[Rewards.EAT]
-        self._event = Event.EAT
-        self._maybeUpdateWindow()
-
-    def _onWin(self):
-        self._reward += self._rewards[Rewards.WIN]
-        self._done = True
-        self._event = Event.EAT
+        self._rewardType = Rewards.EAT
         self._maybeUpdateWindow()
 
     def _onSnakeMove(self):
-        self._reward += self._rewards[Rewards.MOVE]
-        self._event = Event.MOVE
+        self._rewardType = Rewards.MOVE
+        self._maybeUpdateWindow()
+
+    def _onWin(self):
+        self._done = True
+        self._rewardType = Rewards.WIN
         self._maybeUpdateWindow()

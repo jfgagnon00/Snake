@@ -39,6 +39,8 @@ class AgentAlphaGoZero(AgentBase):
         self._replayBuffer = _ReplayBuffer(AgentAlphaGoZero.MEMORY_SIZE)
 
         # AlphaGo Zero
+        self._env = None
+        self._mctsRoot = None
         self._mcts = _Mcts(trainConfig)
         self._model, self._optimizer = self._buildModel(trainConfig,
                                                         simulationConfig.gridWidth,
@@ -57,35 +59,31 @@ class AgentAlphaGoZero(AgentBase):
     @env.setter
     def env(self, value):
         self._env = value
-
-    def reset(self):
-        pass
+        self._mcts.initEnv(value)
 
     def getAction(self, state, info):
-        pass
-        # self._mcts.getAction(state, info)
+        self._mctsRoot, \
+        intAction, \
+        targetPolicy, \
+        targetValue = self._mcts.search(self._mctsRoot,
+                                        state,
+                                        info,
+                                        self._model)
 
+        sample = (self._stateProcessing(state),
+                  intAction,
+                  targetPolicy,
+                  targetValue)
+        self._replayBuffer.append(sample)
 
-        # newNode, \
-        # intAction, \
-        # newPolicy, \
-        # value = _mcts(self._node,
-        #               self._env,
-        #               state,
-        #               info,
-        #               self._model)
+        return self._gameActions[intAction]
 
-        # self._node = newNode
-        # # sample = (self._stateProcessing(state),
-        # #           newPolicy.copy(),
-        # #           value.copy())
-        # # self._replayBuffer.append(sample)
-
-        # return self._gameActions[intAction]
+    def reset(self):
+        self._mctsRoot = None
+        self._mcts.reset()
 
     def onEpisodeBegin(self, episode, frameStats):
-        self._node = None
-        self._z = 0
+        pass
 
     def onEpisodeDone(self, episode, frameStats):
         pass
@@ -148,7 +146,7 @@ class AgentAlphaGoZero(AgentBase):
     def _trainBatch(self, states, intActions, newStates, rewards, dones, weights=None):
         pass
 
-    def _buildModel(self, trainConfig, width, height, optimizer=True):
+    def _buildModel(self, trainConfig, width, height):
         numInputs = 0
         numChannels = 3
 
@@ -156,7 +154,7 @@ class AgentAlphaGoZero(AgentBase):
         # model = _DuelingConvNet(width, height, numChannels, numInputs, len(self._gameActions))
 
         model.eval()
-        optimizer = Adam(model.parameters(), lr=trainConfig.lr) if optimizer else None
+        optimizer = Adam(model.parameters(), lr=trainConfig.lr)
 
         return model, optimizer
 

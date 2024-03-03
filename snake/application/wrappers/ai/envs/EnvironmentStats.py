@@ -42,8 +42,7 @@ class EnvironmentStats(gym.ObservationWrapper):
 
         self.observation_space = env.observation_space
 
-        env.unwrapped.outOfBoundsDelegate.register(lambda: self._onTermination("OutOfBound"))
-        env.unwrapped.collisionDelegate.register(lambda: self._onTermination("Collision"))
+        env.unwrapped.trappedDelegate.register(lambda: self._onTermination("Trapped"))
         env.unwrapped.winDelegate.register(lambda: self._onTermination("Win"))
 
     @property

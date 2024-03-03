@@ -195,10 +195,10 @@ class GameSimulation(object):
         return {
             # shape est (Channel, Height, Width)
             "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=0).copy(),
-            "occupancy_heatmap": np.expand_dims(self._occupancyGridCount, axis=0).copy(),
             "head_direction": self.snake.direction.toNumpy(),
             "head_position": self.snake.head.toNumpy(),
             "food_position": None if self.food is None else self.food.toNumpy(),
+            "available_actions": self._getAvailableActions(),
             "length": self.snake.length,
             "score": self.score,
         }
@@ -280,3 +280,38 @@ class GameSimulation(object):
 
         self._food = Vector(x, y)
         self._setFoodInGrid(True)
+
+    def _getAvailableActions(self):
+        head_p = self._snake.head
+
+        f = self._snake.direction
+        cw = Vector.rot90(f, -1)
+        ccw = Vector.rot90(f, 1)
+        head_cw = head_ccw = head_f = 0
+
+        if self._isAvailable(head_p + f):
+            head_f = 1
+
+        if self._isAvailable(head_p + cw):
+            head_cw = 1
+
+        if self._isAvailable(head_p + ccw):
+            head_ccw = 1
+
+        # doit suivre l'ordre de GameAction
+        return np.array((head_cw, head_ccw, head_f), dtype=np.int32)
+
+    def _isAvailable(self, p):
+        h, w = self._occupancyGrid.shape
+
+        if p.x < 0 or p.x >= w:
+            return False
+
+        if p.y < 0 or p.y >= h:
+            return False
+
+        occupancy = self._occupancyGrid[p.y, p.x]
+
+        return occupancy == GridOccupancy.EMPTY or \
+               occupancy == GridOccupancy.FOOD or \
+               occupancy == GridOccupancy.SNAKE_TAIL

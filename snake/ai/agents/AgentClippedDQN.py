@@ -64,10 +64,10 @@ class AgentClippedDQN(AgentBase):
     def getAction(self, state, *args):
         self._NumActions += 1
 
-        x0, x1, actionFlags = self._stateProcessing(state)
+        x0, x1 = self._stateProcessing(state)
 
-        self._lastActionFlags = actionFlags
-        actionFlags = np.array(actionFlags, dtype=np.float32)
+        actionFlags = state["available_actions"]
+        self._lastActionFlags = actionFlags.copy()
         actionsAvailable = np.nonzero(actionFlags)[0]
 
         if np.random.uniform() < self._epsilon:
@@ -269,7 +269,7 @@ class AgentClippedDQN(AgentBase):
         tensors = self._stateProcessor(state)
         return self._stateToTorch(*tensors)
 
-    def _stateToTorch(self, x0, x1, head_flags):
+    def _stateToTorch(self, x0, x1):
         x0 = from_numpy(x0.astype(np.float32))
         x0 = unsqueeze(x0, 0)
 
@@ -277,5 +277,5 @@ class AgentClippedDQN(AgentBase):
             x1 = from_numpy(x1.astype(np.float32))
             x1 = unsqueeze(x1, 0)
 
-        return x0, x1, head_flags
+        return x0, x1
 
