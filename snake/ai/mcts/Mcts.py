@@ -83,6 +83,7 @@ class _Mcts(object):
 
         # evaluer P et V
         p, v = self._modelEvalCallable(node.state)
+        v = v.item()
 
         # s'assurer que P n'a que les actions permises
         availableActions = node.state["available_actions"]
@@ -113,7 +114,7 @@ class _Mcts(object):
 
             node.child.append(newNode)
 
-        return v.item()
+        return v
 
     def _backpropagation(self, trajectory, v):
         for node, action in reversed(trajectory):

@@ -9,28 +9,28 @@
         "lr": 0.001,
         "episodes": 30000,
         "maxVisitCount": 8,
-        "showStats": false,
+        "showStats": true,
         "mcts": {
             "cpuct": 1.0,
             "numSimulations": 3,
-            "temperature": 1
+            "temperature": 1.0
         }
     },
 
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "eat": 1,
-            "move": -0.1,
-            "trapped": -1,
-            "win": 5,
-            "truncated": 0
+            "EAT": 0,
+            "MOVE": 0,
+            "TRAPPED": -1,
+            "WIN": 1,
+            "TRUNCATED": -1
         }
     },
 
     "simulation": {
-        "gridWidth": 4,
-        "gridHeight": 4
+        "gridWidth": 6,
+        "gridHeight": 6
     },
 
     "graphics": {

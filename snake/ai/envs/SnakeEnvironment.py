@@ -87,6 +87,10 @@ class SnakeEnvironment(Env):
             self._window = GraphicWindow((simulationConfig.gridWidth, simulationConfig.gridHeight),
                                          graphicsConfig)
 
+        # valider que les fichiers de configs ont bien
+        # override les valeurs par defauts
+        assert len(environmentConfig.rewards) == len(Rewards)
+
         self._rewards = deepcopy(environmentConfig.rewards)
         self._rewardType = Rewards.UNKNOWN
         self._done = False

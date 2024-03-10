@@ -1,14 +1,17 @@
 import numpy as np
 import os
 
+from itertools import islice
 from torch import from_numpy, \
                 no_grad, \
-                min as torch_min, \
                 tensor, \
                 save, \
                 load, \
                 unsqueeze, \
-                vstack
+                vstack, \
+                int64 as torch_int64, \
+                float32 as torch_float32
+from torch.nn import CrossEntropyLoss, MSELoss
 from torch.optim import Adam
 from torchsummary import summary
 
@@ -21,7 +24,7 @@ from snake.ai.StateProcessor import _StateProcessor
 
 
 class AgentAlphaGoZero(AgentBase):
-    MEMORY_SIZE = 8_192
+    MEMORY_SIZE = 8_192 * 5
     BATCH_SIZE = 64
 
     def __init__(self, configs):
@@ -40,10 +43,15 @@ class AgentAlphaGoZero(AgentBase):
 
         # AlphaGo Zero
         self._env = None
+        self._trajectory = None
+        self._lastReward = 0
         self._mcts = _Mcts(self._evalModelForMcts, trainConfig.mcts)
         self._model, self._optimizer = self._buildModel(trainConfig,
                                                         simulationConfig.gridWidth,
                                                         simulationConfig.gridHeight)
+        self._lossP = CrossEntropyLoss()
+        self._lossV = MSELoss()
+        self._trainLoss = np.zeros((1), dtype=np.float32)
 
         if False:
             summary(self._model,
@@ -60,25 +68,35 @@ class AgentAlphaGoZero(AgentBase):
         self._env = value
         self._mcts.initEnv(value)
 
-    def getAction(self, state, info):
-        targetPolicy, intAction = self._mcts.search(state, info)
+    def getAction(self, observations, info):
+        targetPolicy, intAction = self._mcts.search(observations, info)
 
-        sample = (self._stateProcessing(state),
+        sample = (self._stateProcessing(observations),
                   intAction,
-                  targetPolicy,
-                  0)
-        self._replayBuffer.append(sample)
+                  targetPolicy) # c'est pas bon; quand on EAT, la position de la pomme dans application est != pomme dans
+                                # mcts simule!
+        self._trajectory.append(sample)
 
         return self._gameActions[intAction]
 
-    def reset(self):
-        self._mcts.reset()
+    def train(self, observations, info, action, newObservations, newInfo, reward, done):
+        self._lastReward = reward
 
     def onEpisodeBegin(self, episode, frameStats):
-        pass
+        self._trajectory = []
 
     def onEpisodeDone(self, episode, frameStats):
-        pass
+        for s in self._trajectory:
+            self._replayBuffer.append((*s, self._lastReward))
+
+        if len(self._replayBuffer) > AgentAlphaGoZero.BATCH_SIZE * 3:
+            self._trainLoss = np.zeros((1), dtype=np.float32)
+            self._trainFromReplayBuffer()
+            self._mcts.reset()
+
+        frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
+        frameStats.loc[0, "TrainLossMax"] = self._trainLoss.max()
+        frameStats.loc[0, "TrainLossMean"] = self._trainLoss.mean()
 
     def save(self, *args):
         if len(args) > 0:
@@ -107,36 +125,62 @@ class AgentAlphaGoZero(AgentBase):
         self._optimizer.load_state_dict(states["optimizer"])
 
     def _trainFromReplayBuffer(self):
-        # replaySize = len(self._replayBuffer)
+        numSamples = len(self._replayBuffer)
+        sampleIndices = np.arange(numSamples)
 
-        # if replaySize >= AgentAlphaGoZero.BATCH_SIZE:
-        #     samples = self._replayBuffer.sample(AgentAlphaGoZero.BATCH_SIZE)
-        #     states, intActions, newStates, rewards, dones = samples
+        def batchify(iterable):
+            it = iter(iterable)
+            yield from iter(lambda: list(islice(it, AgentAlphaGoZero.BATCH_SIZE)), [])
 
-        #     def unpack(states):
-        #         x0 = []
-        #         x1 = []
-        #         for s in states:
-        #             x0.append(s[0])
+        def unpack(states):
+            x0 = []
+            x1 = []
+            for s in states:
+                x0.append(s[0])
 
-        #             if not s[1] is None:
-        #                 x1.append(s[1])
+                if not s[1] is None:
+                    x1.append(s[1])
 
-        #         x0 = vstack(x0)
-        #         x1 = None if len(x1) == 0 else vstack(x1)
+            x0 = vstack(x0)
+            x1 = None if len(x1) == 0 else vstack(x1)
 
-        #         return x0, x1
+            return x0, x1
 
-        #     loss = self._trainBatch(unpack(states),
-        #                             tensor(intActions, dtype=torch_int64).view(-1, 1),
-        #                             unpack(newStates),
-        #                             tensor(rewards, dtype=torch_float32),
-        #                             tensor(dones, dtype=torch_float32))
-        #     self._trainLoss = np.append(self._trainLoss, loss)
-        pass
+        # epochs
+        for _ in range(5):
 
-    def _trainBatch(self, states, intActions, newStates, rewards, dones, weights=None):
-        pass
+            # all samples
+            np.random.shuffle(sampleIndices)
+            for batchIndices in batchify(sampleIndices):
+                samples = self._replayBuffer.getitems(batchIndices)
+                states, _, targetPolicies, targetValues = samples
+
+                targetPolicies = np.vstack(targetPolicies)
+                targetValues = np.array(targetValues, dtype=np.float32)
+
+                loss = self._trainBatch(unpack(states),
+                                        from_numpy(targetPolicies),
+                                        from_numpy(targetValues).view(-1, 1))
+                self._trainLoss = np.append(self._trainLoss, loss)
+
+    def _trainBatch(self, states, targetPolicies, targetValues):
+        self._model.train()
+
+        # gather fait un lookup, donc enleve les dimensions
+        p, v = self._model(*states)
+
+        lossP = self._lossP(p, targetPolicies)
+        lossV = self._lossV(v, targetValues)
+        loss = lossV + lossP
+
+        # gradient descent
+        self._optimizer.zero_grad()
+        loss.backward()
+        self._optimizer.step()
+
+        self._model.eval()
+
+        return loss.detach().numpy()
 
     def _buildModel(self, trainConfig, width, height):
         numInputs = 0

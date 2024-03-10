@@ -14,9 +14,9 @@ class _ReplayBuffer(object):
 
     def sample(self, count):
         indices = choice(len(self), count)
-        return self._getitems(indices)
+        return self.getitems(indices)
 
-    def _getitems(self, indices):
+    def getitems(self, indices):
         elements = [self._buffer[i] for i in indices]
         return zip(*elements)
 
