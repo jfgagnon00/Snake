@@ -1,6 +1,6 @@
 {
     "train": {
-        "agent": "AgentAlphaGoZero",
+        "agent": "AgentClippedDQN",
         "gamma": 0.98,
         "epsilon": 0.8,
         "epsilonDecay": 0.995,
@@ -20,11 +20,11 @@
     "environment": {
         "renderFps": 200,
         "rewards": {
-            "EAT": 0,
-            "MOVE": 0,
+            "EAT": 1,
+            "MOVE": -0.1,
             "TRAPPED": -1,
             "WIN": 1,
-            "TRUNCATED": -1
+            "TRUNCATED": 0
         }
     },
 
