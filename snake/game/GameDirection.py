@@ -1,8 +1,6 @@
 from enum import Enum
 from snake.core import Vector
 
-from .GameAction import GameAction
-
 
 class GameDirection(Enum):
     """

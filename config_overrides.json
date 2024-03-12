@@ -1,14 +1,15 @@
 {
     "train": {
         "agent": "AgentClippedDQN",
-        "gamma": 0.98,
+        "gamma": 0.99,
         "epsilon": 0.8,
         "epsilonDecay": 0.995,
-        "epsilonMin": 0.01,
+        "epsilonMin": 0.02,
         "tau": 0.001,
         "lr": 0.001,
         "episodes": 30000,
         "maxVisitCount": 8,
+        "frameStack": 0,
         "showStats": true,
         "mcts": {
             "cpuct": 1.0,
@@ -29,8 +30,8 @@
     },
 
     "simulation": {
-        "gridWidth": 6,
-        "gridHeight": 6
+        "gridWidth": 4,
+        "gridHeight": 4
     },
 
     "graphics": {

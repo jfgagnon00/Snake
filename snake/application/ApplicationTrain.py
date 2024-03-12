@@ -38,9 +38,9 @@ class ApplicationTrain(object):
         self._envStats.newMaxStatsDelegate.register(self._onNewMaxStats)
         self._env = self._envStats
 
-        # if configs.train.useFrameStack:
-        #     self._env = EnvironmentStackedOccupancyGrid(self._env,
-        #                                                 configs.train.frameStack)
+        if configs.train.frameStack > 1:
+            self._env = EnvironmentStackedOccupancyGrid(self._env,
+                                                        configs.train.frameStack)
 
     @property
     def envStats(self):

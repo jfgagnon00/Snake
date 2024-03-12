@@ -31,8 +31,8 @@ class _NodeFactory(object):
     @staticmethod
     def _hash(state, info):
         with BytesIO() as stream:
-            # state est completement defini par les positions du serpent et de la pomme
-            dump(state["food_position"], file=stream)
-            dump(info["snake_bodyparts"], file=stream)
+            # state est completement defini par les positions du serpent et la direction de la tete
+            dump(state["occupancy_grid"], file=stream)
+            dump(state["head_direction"], file=stream)
 
             return hashlib.md5(stream.getbuffer()).hexdigest()

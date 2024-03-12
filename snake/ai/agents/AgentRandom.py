@@ -15,8 +15,8 @@ class AgentRandom(AgentBase):
         self._gameActions = list(GameAction)
         self._stateProcessor = _StateProcessor()
 
-    def getAction(self, state, *args):
-        _, _, actionFlags = self._stateProcessor(state)
+    def getAction(self, state, info):
+        _, _, actionFlags = self._stateProcessor(state, info)
 
         actionFlags = np.array(actionFlags, dtype=np.float32)
         actionsAvailable = np.nonzero(actionFlags)[0]

@@ -1,6 +1,7 @@
 import numpy as np
 import os
 
+from pprint import pprint
 from torch import from_numpy, \
                 no_grad, \
                 min as torch_min, \
@@ -9,12 +10,15 @@ from torch import from_numpy, \
                 load, \
                 unsqueeze, \
                 vstack, \
+                randn, \
                 int64 as torch_int64, \
                 float32 as torch_float32
+from torch.distributions.categorical import Categorical
 from torch.optim import Adam
 from torchsummary import summary
 
 from snake.game import GameAction
+from snake.configs import Rewards
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.nets import _ConvNet, _DuelingConvNet
 from snake.ai.ReplayBuffer import _ReplayBuffer
@@ -57,84 +61,65 @@ class AgentClippedDQN(AgentBase):
 
         if False:
             summary(self._models[0][0],
-                    (3, simulationConfig.gridHeight + 2, simulationConfig.gridWidth + 2),
-                    None)
+                    randn(1, 1, simulationConfig.gridHeight, simulationConfig.gridWidth),
+                    randn(1, 5),
+                    batch_dim=0)
             exit(-1)
 
-    def getAction(self, state, *args):
-        self._NumActions += 1
+    def getAction(self, state, info):
+        self._numActions += 1
 
-        x0, x1 = self._stateProcessing(state)
-
-        actionFlags = state["available_actions"]
-        self._lastActionFlags = actionFlags.copy()
-        actionsAvailable = np.nonzero(actionFlags)[0]
+        x0, x1 = self._stateProcessing(state, info)
+        actionFlags = info["available_actions"]
 
         if np.random.uniform() < self._epsilon:
-            self._NumRandomActions += 1
+            self._numRandomActions += 1
             self._lastActionRandom = 1
-            self._lastQvalues = actionFlags.copy()
-            lastActionProbs = actionFlags.copy()
+            actionsLogit = actionFlags.copy()
         else:
             self._lastActionRandom = 0
             with no_grad():
                 q = self._evalModel(0, x0, x1)
-                self._lastQvalues = q.numpy().flatten().copy()
-                lastActionProbs = self._lastQvalues.copy()
+                actionsLogit = q.numpy().flatten().copy()
 
-        # transformer valeurs en probabilites
-        sum_ = 0
+        actionsAvailable = actionFlags.nonzero()[0]
         if len(actionsAvailable) > 0:
-            lastActionProbs = lastActionProbs[actionsAvailable]
-            lastActionProbs -= lastActionProbs.max()
-            lastActionProbs = np.exp(lastActionProbs)
-            lastActionProbs = np.nan_to_num(lastActionProbs)
-            sum_ = lastActionProbs.sum()
+            assert info["reward_type"] != Rewards.TRAPPED
 
-        if sum_ < 1e-6:
-            actionsAvailable = np.arange(self._numGameActions)
-            lastActionProbs = np.ones(self._numGameActions, dtype=np.float32)
-            sum_ = lastActionProbs.sum()
+            # convertir Q values en probabilites
+            actionsLogit = actionsLogit[actionsAvailable]
+            actionsDistribution = Categorical(logits=from_numpy(actionsLogit))
 
-        lastActionProbs /= sum_
-
-        self._lastActionProbs = np.ones(self._numGameActions, dtype=np.float32)
-        self._lastActionProbs[actionsAvailable] = lastActionProbs
-
-        intAction = np.random.choice(actionsAvailable, p=lastActionProbs)
-        return self._gameActions[intAction]
+            # prendre action
+            intAction = actionsDistribution.sample()
+            intAction = actionsAvailable[intAction]
+            return self._gameActions[intAction]
+        else:
+            assert info["reward_type"] == Rewards.TRAPPED
+            return GameAction.FORWARD
 
     def onEpisodeBegin(self, episode, frameStats):
         frameStats.loc[0, "Epsilon"] = self._epsilon
         self._trainLoss = np.zeros((1), dtype=np.float32)
-        self._NumRandomActions = 0
-        self._NumActions = 0
-        self._lastActionFlags = [9, 9, 9]
         self._lastActionRandom = 0
+        self._numRandomActions = 0
+        self._numActions = 0
 
     def onEpisodeDone(self, episode, frameStats):
         self._epsilon *= self._epsilonDecay
         self._epsilon = max(self._epsilon, self._epsilonMin)
+
         frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
         frameStats.loc[0, "TrainLossMax"] = self._trainLoss.max()
         frameStats.loc[0, "TrainLossMean"] = self._trainLoss.mean()
 
-        for i, a in enumerate(self._gameActions):
-            frameStats.loc[0, f"Q_{a.name}"] = self._lastQvalues[i]
-
-        for i, a in enumerate(self._gameActions):
-            frameStats.loc[0, f"P_{a.name}"] = self._lastActionProbs[i]
-
-        for i, a in enumerate(self._gameActions):
-            frameStats.loc[0, f"Flag_{a.name}"] = self._lastActionFlags[i]
-
         frameStats.loc[0, f"LastActionRandom"] = self._lastActionRandom
-        frameStats.loc[0, f"RandomActionsRatio"] = self._NumRandomActions / self._NumActions
+        frameStats.loc[0, f"RandomActionsRatio"] = self._numRandomActions / self._numActions
 
     def train(self, state, info, action, newState, newInfo, reward, done):
-        sample = (self._stateProcessing(state),
+        sample = (self._stateProcessing(state, info),
                   self._gameActions.index(action),
-                  self._stateProcessing(newState),
+                  self._stateProcessing(newState, newInfo),
                   reward,
                   done)
         self._replayBuffer.append(sample)
@@ -229,7 +214,7 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height, optimizer=True):
         numInputs = 0
-        numChannels = 3
+        numChannels = 4 if trainConfig.frameStack > 1 else 4
 
         model = _ConvNet(width, height, numChannels, numInputs, len(self._gameActions))
         # model = _DuelingConvNet(width, height, numChannels, numInputs, len(self._gameActions))
@@ -265,8 +250,8 @@ class AgentClippedDQN(AgentBase):
                 p1[key] = tau * p0[key] + (1 - tau) * p1[key]
             self._models[1][0].load_state_dict(p1)
 
-    def _stateProcessing(self, state):
-        tensors = self._stateProcessor(state)
+    def _stateProcessing(self, state, info):
+        tensors = self._stateProcessor(state, info)
         return self._stateToTorch(*tensors)
 
     def _stateToTorch(self, x0, x1):

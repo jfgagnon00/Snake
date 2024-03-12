@@ -13,5 +13,6 @@ class ConfigTrain(object):
         self.unattended = False
         self.episodes = 1
         self.maxVisitCount = 0
+        self.frameStack = 0
         self.showStats = True
         self.mcts = ConfigMcts()

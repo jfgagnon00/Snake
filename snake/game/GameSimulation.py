@@ -196,19 +196,19 @@ class GameSimulation(object):
             # shape est (Channel, Height, Width)
             "occupancy_grid": np.expand_dims(self.occupancyGrid, axis=0).copy(),
             "head_direction": self.snake.direction.toNumpy(),
-            "head_position": self.snake.head.toNumpy(),
-            "food_position": None if self.food is None else self.food.toNumpy(),
-            "available_actions": self._getAvailableActions(),
-            "length": self.snake.length,
-            "score": self.score,
         }
 
-    def getInfo(self):
+    def getInfos(self):
         """
         Retourne informations supplementaires
         """
         return {
             "snake_bodyparts": self.snake.bodyPartsToNumpy(),
+            "head_position": self.snake.head.toNumpy(),
+            "food_position": None if self.food is None else self.food.toNumpy(),
+            "length": self.snake.length,
+            "score": self.score,
+            "available_actions": self._getAvailableActions(),
         }
 
     def _setFoodInGrid(self, show):

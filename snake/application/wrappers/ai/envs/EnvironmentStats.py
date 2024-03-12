@@ -78,13 +78,13 @@ class EnvironmentStats(gym.ObservationWrapper):
         return self.env.reset(*args, seed=seed, options=options)
 
     def step(self, *args):
-        observations, reward, terinated, truncated, info = self.env.step(*args)
+        observations, reward, terinated, truncated, infos = self.env.step(*args)
 
         if truncated:
             self._onTermination("EpisodeTruncated")
 
         self._currentEpisodeStats.loc[0, _EPISODE_LENGTH] += 1
-        self._currentEpisodeStats.loc[0, _SCORE] = observations["score"]
+        self._currentEpisodeStats.loc[0, _SCORE] = infos["score"]
         self._currentEpisodeStats.loc[0, _CUM_REWARD] += reward
 
         forceUpdate = False
@@ -103,7 +103,7 @@ class EnvironmentStats(gym.ObservationWrapper):
         if greater.loc[0, _CUM_REWARD]:
             self._newMaxStatsDelegate()
 
-        return observations, reward, terinated, truncated, info
+        return observations, reward, terinated, truncated, infos
 
     def observation(self, observation):
         return observation

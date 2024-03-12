@@ -23,6 +23,9 @@ class _Mcts(object):
     def reset(self):
         self._nodeFactory.clear()
 
+        self._temperature *= 0.995
+        self._temperature = max(self._temperature, 1)
+
     def search(self, state, info):
         # done et won peuvent etre inconsistent avec state/info; a valider?
         root = self._nodeFactory.getOrCreate(state, info, False, False)

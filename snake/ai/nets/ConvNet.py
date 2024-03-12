@@ -4,6 +4,7 @@ from torch.nn import Linear, \
                     Sequential, \
                     Conv2d, \
                     Flatten, \
+                    ReLU, \
                     LeakyReLU, \
                     MaxPool2d
 from torch.nn.functional import leaky_relu
@@ -14,13 +15,13 @@ class _ConvNet(Module):
         super().__init__()
 
         self._convs = Sequential(
-            Conv2d(numChannels, 16, 5, padding="same"),
+            Conv2d(numChannels, 16, 3, padding="same"),
+            LeakyReLU(),
+
+            Conv2d(16, 16, 3, padding="same"),
             LeakyReLU(),
 
             MaxPool2d(2, stride=2),
-
-            Conv2d(16, 32, 3, padding="same"),
-            LeakyReLU(),
 
             Flatten()
         )
@@ -29,7 +30,7 @@ class _ConvNet(Module):
         h2 = height // 2
 
         size = 0
-        size += w2 * h2 * 32
+        size += w2 * h2 * 16
         size += numInputs
 
         self._linear = Sequential(

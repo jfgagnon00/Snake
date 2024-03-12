@@ -68,10 +68,10 @@ class AgentAlphaGoZero(AgentBase):
         self._env = value
         self._mcts.initEnv(value)
 
-    def getAction(self, observations, info):
-        targetPolicy, intAction = self._mcts.search(observations, info)
+    def getAction(self, observations, infos):
+        targetPolicy, intAction = self._mcts.search(observations, infos)
 
-        sample = (self._stateProcessing(observations),
+        sample = (self._stateProcessing(observations, infos),
                   intAction,
                   targetPolicy) # c'est pas bon; quand on EAT, la position de la pomme dans application est != pomme dans
                                 # mcts simule!
@@ -89,10 +89,9 @@ class AgentAlphaGoZero(AgentBase):
         for s in self._trajectory:
             self._replayBuffer.append((*s, self._lastReward))
 
-        if len(self._replayBuffer) > AgentAlphaGoZero.BATCH_SIZE * 3:
-            self._trainLoss = np.zeros((1), dtype=np.float32)
-            self._trainFromReplayBuffer()
-            self._mcts.reset()
+        self._trainLoss = np.zeros((1), dtype=np.float32)
+        self._trainFromReplayBuffer()
+        self._mcts.reset()
 
         frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
         frameStats.loc[0, "TrainLossMax"] = self._trainLoss.max()
@@ -146,22 +145,19 @@ class AgentAlphaGoZero(AgentBase):
 
             return x0, x1
 
-        # epochs
-        for _ in range(5):
+        # all samples
+        np.random.shuffle(sampleIndices)
+        for batchIndices in batchify(sampleIndices):
+            samples = self._replayBuffer.getitems(batchIndices)
+            states, _, targetPolicies, targetValues = samples
 
-            # all samples
-            np.random.shuffle(sampleIndices)
-            for batchIndices in batchify(sampleIndices):
-                samples = self._replayBuffer.getitems(batchIndices)
-                states, _, targetPolicies, targetValues = samples
+            targetPolicies = np.vstack(targetPolicies)
+            targetValues = np.array(targetValues, dtype=np.float32)
 
-                targetPolicies = np.vstack(targetPolicies)
-                targetValues = np.array(targetValues, dtype=np.float32)
-
-                loss = self._trainBatch(unpack(states),
-                                        from_numpy(targetPolicies),
-                                        from_numpy(targetValues).view(-1, 1))
-                self._trainLoss = np.append(self._trainLoss, loss)
+            loss = self._trainBatch(unpack(states),
+                                    from_numpy(targetPolicies),
+                                    from_numpy(targetValues).view(-1, 1))
+            self._trainLoss = np.append(self._trainLoss, loss)
 
     def _trainBatch(self, states, targetPolicies, targetValues):
         self._model.train()
@@ -184,7 +180,7 @@ class AgentAlphaGoZero(AgentBase):
 
     def _buildModel(self, trainConfig, width, height):
         numInputs = 0
-        numChannels = 3
+        numChannels = 4 if trainConfig.frameStack > 1 else 4
 
         model = _AlphaGoZeroConvNet(width, height, numChannels, numInputs, self._numGameActions)
 
@@ -195,13 +191,13 @@ class AgentAlphaGoZero(AgentBase):
 
     def _evalModelForMcts(self, state):
         with no_grad():
-            modelArgs = self._stateProcessing(state)
+            modelArgs = self._stateProcessing(state, state)
             outputs = self._model(*modelArgs)
 
         return [o.numpy() for o in outputs]
 
-    def _stateProcessing(self, state):
-        stateProcessed = self._stateProcessor(state)
+    def _stateProcessing(self, state, info):
+        stateProcessed = self._stateProcessor(state, info)
         return self._stateToTorch(*stateProcessed)
 
     def _stateToTorch(self, x0, x1):

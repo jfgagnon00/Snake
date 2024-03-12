@@ -1,5 +1,7 @@
 import numpy as np
 
+from collections import deque
+from pprint import pprint
 from snake.core import Vector
 from snake.configs import Rewards
 from snake.game import GameDirection, GridOccupancy
@@ -10,19 +12,18 @@ class _StateProcessor(object):
     Encapsule la conversion des observations vers numpy arrays
     """
 
-    def __call__(self, state):
-        grid, food_flags = self._applySymmetry(state)
+    def __call__(self, state, info):
+        # grid = self._applySymmetry(state)
+        # grid = state["occupancy_grid"].squeeze() / 255.0
+        # grid = state["occupancy_grid"].squeeze()
 
         # showFood = info["reward_type"] > Rewards.EAT
-        showFood = True
-        grid = self._splitOccupancyGrid(grid, pad=False, showFood=showFood)
+        occupancyGrid = self._splitOccupancyGrid(state["occupancy_grid"], pad=False, showFood=True)
+        distanceGrid = self._distanceGrid(state, info)
 
-        if False:
-            flags = np.array(food_flags)
-        else:
-            flags = None
-
-        return grid, flags
+        return np.vstack((occupancyGrid, distanceGrid), dtype=np.float32), None
+            #    info["available_actions"].copy()
+            #    np.concatenate((state["head_direction"], info["available_actions"]))
 
     def _applySymmetry(self, state):
         # simplifier state: toujours mettre par rapport a NORTH
@@ -30,8 +31,7 @@ class _StateProcessor(object):
         grid = state["occupancy_grid"]
         grid = np.rot90(grid, k=k, axes=(1, 2))
 
-        return grid.copy(), \
-               self._foodFlags(state)
+        return grid.copy()
 
     def _rot90WithNorth(self, state):
         head_d = state["head_direction"]
@@ -59,39 +59,6 @@ class _StateProcessor(object):
             v  = v.toInt()
         return v
 
-    def _foodFlags(self, state):
-        food_cw = food_ccw = food_f = food_b = 0
-
-        food_p = state["food_position"]
-        if not food_p is None:
-            food_p = Vector.fromNumpy(food_p)
-
-            head_p = state["head_position"]
-            head_p = Vector.fromNumpy(head_p)
-
-            food_d = food_p - head_p
-
-            head_d = state["head_direction"]
-            head_d = Vector.fromNumpy(head_d)
-
-            dot_ = Vector.dot(head_d, food_d)
-
-            if dot_ > 0:
-                food_f = 1
-
-            if dot_ < 0:
-                food_b = 1
-
-            w = Vector.winding(head_d, food_d)
-
-            if w == -1:
-                food_cw = 1
-
-            if w == 1:
-                food_ccw = 1
-
-        return food_cw, food_ccw, food_f, food_b
-
     def _splitOccupancyGrid(self, occupancyGrid, pad=False, showFood=True):
         if pad:
             # pad le pourtour pour avoir obstacle
@@ -109,3 +76,43 @@ class _StateProcessor(object):
             occupancyStack[2] = np.where(occupancyGrid[0,:,:] == GridOccupancy.FOOD, 1, 0)
 
         return occupancyStack
+
+    def _distanceGrid(self, state, info):
+        stack = deque()
+
+        occupancyGrid = state["occupancy_grid"]
+        G = np.zeros_like(occupancyGrid, dtype=np.float32)
+
+        food = info["food_position"]
+        if not food is None:
+            food = Vector.fromNumpy(food)
+
+            G[0, food.y, food.x] = 1
+            stack.append(food)
+
+            while len(stack) > 0:
+                p = stack.pop()
+                r = -0.1 + 0.99 * G[0, p.y, p.x]
+                r = max(r, 1e-4)
+
+                for v in list(GameDirection):
+                    q = p + v.value
+                    if self._isEmpty(occupancyGrid, q) and G[0, q.y, q.x] == 0:
+                        G[0, q.y, q.x] = r
+                        stack.append(q)
+
+        return G
+
+    def _isEmpty(self, occupancyGrid, p):
+        _, h, w = occupancyGrid.shape
+
+        if p.x < 0 or p.x >= w:
+            return False
+
+        if p.y < 0 or p.y >= h:
+            return False
+
+        occupancy = occupancyGrid[0, p.y, p.x]
+
+        return occupancy == GridOccupancy.EMPTY
+

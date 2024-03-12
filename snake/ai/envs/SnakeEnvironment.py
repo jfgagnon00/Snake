@@ -43,10 +43,9 @@ class SnakeEnvironment(Env):
         self.action_space = spaces.Discrete(numActions)
 
         # Note:
-        # L'etat du jeu est completement defini par les positions du serpent et de la pomme.
-        # Les autres champs pourraient etre recalcules a partir de ces dernieres. Cependant,
-        # il est tres commode de les avoir et c'est pour cette raison qu'ils
-        # sont listes.
+        # L'etat du jeu est completement defini par occupancy_grid. Cependant,
+        # il est tres commode d'avoir plus de details sur la simulation. Elles
+        # seront dans info.
         self.observation_space = spaces.Dict({
                 "occupancy_grid": spaces.Box(low=0,
                                              high=255,
@@ -56,20 +55,6 @@ class SnakeEnvironment(Env):
                                              high=1,
                                              shape=(2,),
                                              dtype=int),
-                "head_position": spaces.Box(low=0,
-                                            high=simulationConfig.gridHeight - 1,
-                                            shape=(2,),
-                                            dtype=int),
-                "food_position": spaces.Box(low=0,
-                                            high=simulationConfig.gridHeight - 1,
-                                            shape=(2,),
-                                            dtype=int),
-                "available_actions": spaces.Box(low=0,
-                                                high=numActions - 1,
-                                                shape=(numActions,),
-                                                dtype=np_int32),
-                "length": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
-                "score": spaces.Discrete(simulationConfig.gridHeight * simulationConfig.gridWidth),
             })
 
         self._renderMode = renderMode
@@ -114,10 +99,12 @@ class SnakeEnvironment(Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
+        self._rewardType = Rewards.UNKNOWN
+        self._done = False
         self._simulation.reset(options=options)
         self._maybeUpdateWindow(reset=True)
 
-        return self._getObservations(), self._getInfo()
+        return self._getObservations(), self._getInfos()
 
     def step(self, action):
         # reset recompense (les delegates vont le mettre la jour)
@@ -134,26 +121,25 @@ class SnakeEnvironment(Env):
 
         # detection de boucle infinie: empecher serpent de passer plus de
         # self._maxVisitCount fois au meme endroit. Moins restrictif que
-        # longueur d'episode et plus efficace
+        # longueur d'episode
         truncated = self._simulation.occupancyGridCount.max() > self._maxVisitCount
         if truncated and self._maxVisitCount > 0:
             self._rewardType = Rewards.TRUNCATED
 
-        observations = self._getObservations()
-
         # la simulation a besoin d'une action supplementaire dans certains cas pour
         # signaler les etats terminaux; en tenir compte immediatement pour faciliter
-        # les etapes ulterieurs
-        if observations["available_actions"].sum() == 0:
+        # les etapes ulterieures
+        simulationInfos = self._simulation.getInfos()
+        if simulationInfos["available_actions"].sum() == 0:
             self._done = True
             self._rewardType = Rewards.TRAPPED
             self._trappedDelegate()
 
-        return observations, \
+        return self._getObservations(), \
                self._rewards[self._rewardType.name], \
                self._done, \
                truncated, \
-               self._getInfo()
+               self._getInfos(simulationInfos=simulationInfos)
 
     def render(self):
         if self._renderMode == SnakeEnvironment._HUMAN:
@@ -166,8 +152,8 @@ class SnakeEnvironment(Env):
     def _getObservations(self):
         return self._simulation.getObservations()
 
-    def _getInfo(self):
-        infos = self._simulation.getInfo()
+    def _getInfos(self, simulationInfos=None):
+        infos = self._simulation.getInfos() if simulationInfos is None else simulationInfos
         infos["reward_type"] = self._rewardType
         return infos
 
