@@ -1,0 +1,349 @@
+{
+    "timedActions": [
+        {
+            "time": 0,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 1,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 2,
+            "action": "FORWARD"
+        },
+        {
+            "time": 3,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 4,
+            "action": "FORWARD"
+        },
+        {
+            "time": 5,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 6,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 7,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 8,
+            "action": "FORWARD"
+        },
+        {
+            "time": 9,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 10,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 11,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 12,
+            "action": "FORWARD"
+        },
+        {
+            "time": 13,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 14,
+            "action": "FORWARD"
+        },
+        {
+            "time": 15,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 16,
+            "action": "FORWARD"
+        },
+        {
+            "time": 17,
+            "action": "FORWARD"
+        },
+        {
+            "time": 18,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 19,
+            "action": "FORWARD"
+        },
+        {
+            "time": 20,
+            "action": "FORWARD"
+        },
+        {
+            "time": 21,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 22,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 23,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 24,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 25,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 26,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 27,
+            "action": "FORWARD"
+        },
+        {
+            "time": 28,
+            "action": "FORWARD"
+        },
+        {
+            "time": 29,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 30,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 31,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 32,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 33,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 34,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 35,
+            "action": "FORWARD"
+        },
+        {
+            "time": 36,
+            "action": "FORWARD"
+        },
+        {
+            "time": 37,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 38,
+            "action": "TURN_CW"
+        },
+        {
+            "time": 39,
+            "action": "TURN_CCW"
+        },
+        {
+            "time": 40,
+            "action": "TURN_CCW"
+        }
+    ],
+    "random_choices": [
+        10,
+        9,
+        4,
+        4,
+        8,
+        11,
+        15,
+        0,
+        3,
+        12,
+        5,
+        2,
+        15,
+        13,
+        15,
+        4,
+        8,
+        0,
+        5,
+        3,
+        5,
+        4,
+        3,
+        10,
+        10,
+        11,
+        15,
+        12,
+        15,
+        10,
+        7,
+        6,
+        15,
+        12,
+        13,
+        0,
+        12,
+        0,
+        14,
+        7,
+        3,
+        15,
+        12,
+        15,
+        0,
+        8,
+        5,
+        4,
+        6,
+        2,
+        7,
+        3,
+        0,
+        3,
+        0,
+        1,
+        6,
+        14,
+        10,
+        6,
+        0,
+        2,
+        1,
+        0,
+        4,
+        0,
+        12,
+        6,
+        7,
+        11,
+        2,
+        12,
+        1,
+        8,
+        4,
+        1,
+        0,
+        15,
+        10,
+        0,
+        0,
+        10,
+        6,
+        15,
+        15,
+        3,
+        7,
+        15,
+        4,
+        12,
+        8,
+        2,
+        4,
+        7,
+        11,
+        9,
+        3,
+        13,
+        10,
+        11,
+        10,
+        5,
+        0,
+        10,
+        7,
+        15,
+        12,
+        12,
+        1,
+        5,
+        1,
+        1,
+        2,
+        7,
+        3,
+        10,
+        6,
+        10,
+        7,
+        6,
+        10,
+        4,
+        1,
+        12,
+        3,
+        2,
+        3,
+        7,
+        11,
+        0,
+        8,
+        8,
+        8,
+        10,
+        13,
+        12,
+        0,
+        9,
+        0,
+        10,
+        15,
+        3,
+        14,
+        11,
+        9,
+        5,
+        8,
+        0,
+        12,
+        12,
+        0,
+        1,
+        2,
+        6,
+        2,
+        0,
+        15,
+        10,
+        10,
+        12,
+        15,
+        8,
+        0,
+        1,
+        2,
+        4,
+        9,
+        0,
+        14,
+        12,
+        8,
+        4,
+        9,
+        5,
+        9,
+        5,
+        4,
+        5,
+        4
+    ]
+}

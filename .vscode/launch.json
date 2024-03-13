@@ -1,0 +1,31 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Render",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "snake",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "render",
+                "render models/agent_47_4x4_AlphaGoZeroNet/best/train_700.json"
+            ]
+        },
+        {
+            "name": "Python Debugger: Train",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "snake",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "train"
+            ]
+        }
+    ]
+}
