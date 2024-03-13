@@ -23,8 +23,8 @@ class _Mcts(object):
     def reset(self):
         self._nodeFactory.clear()
 
-        self._temperature *= 0.995
-        self._temperature = max(self._temperature, 1)
+        # self._temperature *= 0.995
+        # self._temperature = max(self._temperature, 1)
 
     def search(self, state, info):
         # done et won peuvent etre inconsistent avec state/info; a valider?
@@ -85,13 +85,14 @@ class _Mcts(object):
         node.W = np.zeros(self._numActions, dtype=np.float32)
 
         # evaluer P et V
-        p, v = self._modelEvalCallable(node.state)
+        logit_, v = self._modelEvalCallable(node.state)
         v = v.item()
 
         # s'assurer que P n'a que les actions permises
         availableActions = node.state["available_actions"]
-        node.P = p.squeeze() * availableActions
-        node.P = node.P / node.P.sum()
+        logit_ = logit_.squeeze()
+        logit_ = np.exp(logit_) * availableActions
+        node.P = logit_ / logit_.sum()
 
         # s'assurer que v est [-1, 1]; papier origine veut -1 == partie perdue et 1 == partie gagnee
         # important que ce soit ce range pour que la partie de _ucb() traitant du # de visites des nodes
@@ -148,7 +149,7 @@ class _Mcts(object):
         return newPolicy, intAction
 
     def _ucb(self, node):
-        return node.Q + self._cpuct * node.P * np.sqrt(node.N.sum()) / (1 + node.N)
+        return node.Q + (self._cpuct * node.P * np.sqrt(node.N.sum()) / (1 + node.N))
 
     @staticmethod
     def _limitArgmax(values, node):

@@ -4,6 +4,7 @@ from torch.nn import Linear, \
                     Sequential, \
                     Conv2d, \
                     Flatten, \
+                    ReLU, \
                     LeakyReLU, \
                     MaxPool2d, \
                     Softmax
@@ -14,13 +15,13 @@ class _AlphaGoZeroConvNet(Module):
         super().__init__()
 
         self._convs = Sequential(
-            Conv2d(numChannels, 16, 5, padding="same"),
+            Conv2d(numChannels, 16, 3, padding="same"),
+            LeakyReLU(),
+
+            Conv2d(16, 16, 3, padding="same"),
             LeakyReLU(),
 
             MaxPool2d(2, stride=2),
-
-            Conv2d(16, 32, 3, padding="same"),
-            LeakyReLU(),
 
             Flatten()
         )
@@ -29,23 +30,28 @@ class _AlphaGoZeroConvNet(Module):
         h2 = height // 2
 
         size = 0
-        size += w2 * h2 * 32
+        size += w2 * h2 * 16
         size += numInputs
 
-        self._linear = Sequential(
-            Linear(size, 128),
-            LeakyReLU(),
-
-            Linear(128, 128),
-            LeakyReLU(),
-        )
-
         self._p = Sequential(
-            Linear(128, numOutputs),
-            Softmax(dim=1),
+            Linear(size, 200),
+            LeakyReLU(),
+
+            Linear(200, 100),
+            ReLU(),
+
+            Linear(100, numOutputs),
         )
 
-        self._v = Linear(128, 1)
+        self._v = Sequential(
+            Linear(size, 200),
+            LeakyReLU(),
+
+            Linear(200, 100),
+            LeakyReLU(),
+
+            Linear(100, 1),
+        )
 
     def forward(self, x0, x1):
         features = self._convs(x0)
@@ -53,9 +59,7 @@ class _AlphaGoZeroConvNet(Module):
         if not x1 is None:
             features = concatenate((features, x1), dim=1)
 
-        features = self._linear(features)
-
-        p = self._p(features)
+        logits_ = self._p(features)
         v = self._v(features)
 
-        return p, v
+        return logits_, v

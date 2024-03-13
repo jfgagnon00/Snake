@@ -16,6 +16,7 @@ from torch.optim import Adam
 from torchsummary import summary
 
 from snake.game import GameAction
+from snake.configs import Rewards
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.mcts import _Mcts
 from snake.ai.nets import _AlphaGoZeroConvNet
@@ -24,8 +25,9 @@ from snake.ai.StateProcessor import _StateProcessor
 
 
 class AgentAlphaGoZero(AgentBase):
-    MEMORY_SIZE = 8_192 * 5
-    BATCH_SIZE = 64
+    MEMORY_SIZE = 8192
+    BATCH_SIZE = 100
+    BATCH_COUNT = 30
 
     def __init__(self, configs):
         super().__init__()
@@ -49,8 +51,8 @@ class AgentAlphaGoZero(AgentBase):
         self._model, self._optimizer = self._buildModel(trainConfig,
                                                         simulationConfig.gridWidth,
                                                         simulationConfig.gridHeight)
-        self._lossP = CrossEntropyLoss()
-        self._lossV = MSELoss()
+        self._lossP = CrossEntropyLoss(reduction="none")
+        self._lossV = MSELoss(reduction="none")
         self._trainLoss = np.zeros((1), dtype=np.float32)
 
         if False:
@@ -69,18 +71,23 @@ class AgentAlphaGoZero(AgentBase):
         self._mcts.initEnv(value)
 
     def getAction(self, observations, infos):
-        targetPolicy, intAction = self._mcts.search(observations, infos)
+        targetLogit, intAction = self._mcts.search(observations, infos)
 
         sample = (self._stateProcessing(observations, infos),
                   intAction,
-                  targetPolicy) # c'est pas bon; quand on EAT, la position de la pomme dans application est != pomme dans
-                                # mcts simule!
+                  targetLogit) # c'est pas bon; quand on EAT, la position de la pomme dans application est != pomme dans
+                               # mcts simule!
         self._trajectory.append(sample)
 
         return self._gameActions[intAction]
 
     def train(self, observations, info, action, newObservations, newInfo, reward, done):
-        self._lastReward = reward
+        if newInfo["reward_type"] == Rewards.WIN:
+            self._lastReward = 1
+        elif newInfo["reward_type"] == Rewards.TRUNCATED:
+            self._lastReward = 0
+        else:
+            self._lastReward = -1
 
     def onEpisodeBegin(self, episode, frameStats):
         self._trajectory = []
@@ -89,8 +96,11 @@ class AgentAlphaGoZero(AgentBase):
         for s in self._trajectory:
             self._replayBuffer.append((*s, self._lastReward))
 
-        self._trainLoss = np.zeros((1), dtype=np.float32)
-        self._trainFromReplayBuffer()
+        count = AgentAlphaGoZero.BATCH_COUNT * AgentAlphaGoZero.BATCH_SIZE
+        if len(self._replayBuffer) > count:
+            self._trainLoss = np.zeros((1), dtype=np.float32)
+            self._trainFromReplayBuffer()
+
         self._mcts.reset()
 
         frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
@@ -149,25 +159,25 @@ class AgentAlphaGoZero(AgentBase):
         np.random.shuffle(sampleIndices)
         for batchIndices in batchify(sampleIndices):
             samples = self._replayBuffer.getitems(batchIndices)
-            states, _, targetPolicies, targetValues = samples
+            states, _, targetLogits, targetValues = samples
 
-            targetPolicies = np.vstack(targetPolicies)
+            targetLogits = np.vstack(targetLogits)
             targetValues = np.array(targetValues, dtype=np.float32)
 
             loss = self._trainBatch(unpack(states),
-                                    from_numpy(targetPolicies),
+                                    from_numpy(targetLogits),
                                     from_numpy(targetValues).view(-1, 1))
             self._trainLoss = np.append(self._trainLoss, loss)
 
-    def _trainBatch(self, states, targetPolicies, targetValues):
+    def _trainBatch(self, states, targetLogits, targetValues):
         self._model.train()
 
         # gather fait un lookup, donc enleve les dimensions
-        p, v = self._model(*states)
+        logits_, v = self._model(*states)
 
-        lossP = self._lossP(p, targetPolicies)
+        lossP = self._lossP(logits_, targetLogits)
         lossV = self._lossV(v, targetValues)
-        loss = lossV + lossP
+        loss = (lossV + lossP).mean()
 
         # gradient descent
         self._optimizer.zero_grad()
@@ -180,7 +190,7 @@ class AgentAlphaGoZero(AgentBase):
 
     def _buildModel(self, trainConfig, width, height):
         numInputs = 0
-        numChannels = 4 if trainConfig.frameStack > 1 else 4
+        numChannels = 4 if trainConfig.frameStack > 1 else 3
 
         model = _AlphaGoZeroConvNet(width, height, numChannels, numInputs, self._numGameActions)
 

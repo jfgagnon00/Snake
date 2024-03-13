@@ -214,7 +214,7 @@ class AgentClippedDQN(AgentBase):
 
     def _buildModel(self, trainConfig, width, height, optimizer=True):
         numInputs = 0
-        numChannels = 4 if trainConfig.frameStack > 1 else 4
+        numChannels = 4 if trainConfig.frameStack > 1 else 3
 
         model = _ConvNet(width, height, numChannels, numInputs, len(self._gameActions))
         # model = _DuelingConvNet(width, height, numChannels, numInputs, len(self._gameActions))
