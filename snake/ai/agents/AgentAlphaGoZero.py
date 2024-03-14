@@ -4,7 +4,6 @@ import os
 from itertools import islice
 from torch import from_numpy, \
                 no_grad, \
-                tensor, \
                 save, \
                 load, \
                 unsqueeze, \
@@ -26,8 +25,9 @@ from snake.ai.StateProcessor import _StateProcessor
 
 class AgentAlphaGoZero(AgentBase):
     MEMORY_SIZE = 8192
-    BATCH_SIZE = 100
-    BATCH_COUNT = 30
+    BATCH_SIZE = 64
+    BATCH_COUNT = 16
+    TRAIN_EPOCH = 5
 
     def __init__(self, configs):
         super().__init__()
@@ -98,10 +98,11 @@ class AgentAlphaGoZero(AgentBase):
 
         count = AgentAlphaGoZero.BATCH_COUNT * AgentAlphaGoZero.BATCH_SIZE
         if len(self._replayBuffer) > count:
+            print("Training")
             self._trainLoss = np.zeros((1), dtype=np.float32)
             self._trainFromReplayBuffer()
-
-        self._mcts.reset()
+            self._mcts.reset()
+            self._replayBuffer.clear()
 
         frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
         frameStats.loc[0, "TrainLossMax"] = self._trainLoss.max()
@@ -155,19 +156,19 @@ class AgentAlphaGoZero(AgentBase):
 
             return x0, x1
 
-        # all samples
-        np.random.shuffle(sampleIndices)
-        for batchIndices in batchify(sampleIndices):
-            samples = self._replayBuffer.getitems(batchIndices)
-            states, _, targetLogits, targetValues = samples
+        for _ in range(AgentAlphaGoZero.TRAIN_EPOCH):
+            np.random.shuffle(sampleIndices)
+            for batchIndices in batchify(sampleIndices):
+                samples = self._replayBuffer.getitems(batchIndices)
+                states, _, targetLogits, targetValues = samples
 
-            targetLogits = np.vstack(targetLogits)
-            targetValues = np.array(targetValues, dtype=np.float32)
+                targetLogits = np.vstack(targetLogits)
+                targetValues = np.array(targetValues, dtype=np.float32)
 
-            loss = self._trainBatch(unpack(states),
-                                    from_numpy(targetLogits),
-                                    from_numpy(targetValues).view(-1, 1))
-            self._trainLoss = np.append(self._trainLoss, loss)
+                loss = self._trainBatch(unpack(states),
+                                        from_numpy(targetLogits),
+                                        from_numpy(targetValues).view(-1, 1))
+                self._trainLoss = np.append(self._trainLoss, loss)
 
     def _trainBatch(self, states, targetLogits, targetValues):
         self._model.train()

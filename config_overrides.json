@@ -13,7 +13,7 @@
         "showStats": true,
         "mcts": {
             "cpuct": 0.5,
-            "numSimulations": 5,
+            "numSimulations": 8,
             "temperature": 0.5
         }
     },

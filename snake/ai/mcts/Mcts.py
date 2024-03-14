@@ -89,10 +89,10 @@ class _Mcts(object):
         v = v.item()
 
         # s'assurer que P n'a que les actions permises
-        availableActions = node.state["available_actions"]
+        actionsAvailable = node.state["available_actions"]
         logit_ = logit_.squeeze()
-        logit_ = np.exp(logit_) * availableActions
-        node.P = logit_ / logit_.sum()
+        logit_ = np.exp(logit_)
+        node.P = np.zeros_like(actionsAvailable, dtype=np.float32)
 
         # s'assurer que v est [-1, 1]; papier origine veut -1 == partie perdue et 1 == partie gagnee
         # important que ce soit ce range pour que la partie de _ucb() traitant du # de visites des nodes
@@ -101,7 +101,7 @@ class _Mcts(object):
 
         # construire les nodes pour chaque actions debutant a node.state
         node.child = []
-        for action, available in zip(self._actions, availableActions):
+        for i, (action, available) in enumerate(zip(self._actions, actionsAvailable)):
             if available == 0:
                 # action non permise, mettre None dans cette branche
                 newNode = None
@@ -116,7 +116,11 @@ class _Mcts(object):
                 won = newInfos["reward_type"] == Rewards.WIN
                 newNode = self._nodeFactory.getOrCreate(newObservations, newInfos, done, won)
 
+                node.P[i] = logit_[i]
+
             node.child.append(newNode)
+
+        node.P = node.P / node.P.sum()
 
         return v
 

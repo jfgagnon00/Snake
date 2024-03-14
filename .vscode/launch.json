@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Render",
+            "name": "Render",
             "type": "debugpy",
             "request": "launch",
             "module": "snake",
@@ -13,11 +13,11 @@
             "justMyCode": true,
             "args": [
                 "render",
-                "render models/agent_47_4x4_AlphaGoZeroNet/best/train_700.json"
+                "models/agent_47_4x4_AlphaGoZeroNet/best/train_700.json"
             ]
         },
         {
-            "name": "Python Debugger: Train",
+            "name": "Train",
             "type": "debugpy",
             "request": "launch",
             "module": "snake",

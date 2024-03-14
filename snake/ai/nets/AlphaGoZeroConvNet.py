@@ -6,8 +6,7 @@ from torch.nn import Linear, \
                     Flatten, \
                     ReLU, \
                     LeakyReLU, \
-                    MaxPool2d, \
-                    Softmax
+                    MaxPool2d
 
 
 class _AlphaGoZeroConvNet(Module):
