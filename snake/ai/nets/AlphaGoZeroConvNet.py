@@ -6,7 +6,8 @@ from torch.nn import Linear, \
                     Flatten, \
                     ReLU, \
                     LeakyReLU, \
-                    MaxPool2d
+                    MaxPool2d, \
+                    Softmax
 
 
 class _AlphaGoZeroConvNet(Module):
@@ -40,6 +41,8 @@ class _AlphaGoZeroConvNet(Module):
             ReLU(),
 
             Linear(100, numOutputs),
+
+            Softmax(dim=1)
         )
 
         self._v = Sequential(

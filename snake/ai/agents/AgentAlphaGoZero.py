@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import time
 
 from itertools import islice
 from torch import from_numpy, \
@@ -26,8 +27,8 @@ from snake.ai.StateProcessor import _StateProcessor
 class AgentAlphaGoZero(AgentBase):
     MEMORY_SIZE = 8192
     BATCH_SIZE = 64
-    BATCH_COUNT = 16
-    TRAIN_EPOCH = 5
+    BATCH_COUNT = 30
+    TRAIN_EPOCH = 8
 
     def __init__(self, configs):
         super().__init__()
@@ -47,13 +48,14 @@ class AgentAlphaGoZero(AgentBase):
         self._env = None
         self._trajectory = None
         self._lastReward = 0
-        self._mcts = _Mcts(self._evalModelForMcts, trainConfig.mcts)
+        self._mcts = _Mcts(self._evalModelForMcts, trainConfig)
         self._model, self._optimizer = self._buildModel(trainConfig,
                                                         simulationConfig.gridWidth,
                                                         simulationConfig.gridHeight)
         self._lossP = CrossEntropyLoss(reduction="none")
         self._lossV = MSELoss(reduction="none")
         self._trainLoss = np.zeros((1), dtype=np.float32)
+        self._numTrain = 0
 
         if False:
             summary(self._model,
@@ -71,11 +73,11 @@ class AgentAlphaGoZero(AgentBase):
         self._mcts.initEnv(value)
 
     def getAction(self, observations, infos):
-        targetLogit, intAction = self._mcts.search(observations, infos)
+        targetPolicy, intAction = self._mcts.search(observations, infos)
 
         sample = (self._stateProcessing(observations, infos),
                   intAction,
-                  targetLogit) # c'est pas bon; quand on EAT, la position de la pomme dans application est != pomme dans
+                  targetPolicy) # c'est pas bon; quand on EAT, la position de la pomme dans application est != pomme dans
                                # mcts simule!
         self._trajectory.append(sample)
 
@@ -96,8 +98,24 @@ class AgentAlphaGoZero(AgentBase):
         for s in self._trajectory:
             self._replayBuffer.append((*s, self._lastReward))
 
+
+        # print("getAction stats")
+        # print("    getOrCreateTotal:", self._mcts.getOrCreateTotal)
+        # print("    selectTotal:", self._mcts.selectTotal)
+        # print("    backPropagationTotal:", self._mcts.backPropagationTotal)
+        # print("    expandTotal:", self._mcts.expandTotal)
+        # print("    numTrain:", self._numTrain)
+        # print("    len replay:", len(self._replayBuffer))
+        # print("    num nodes", len(self._mcts._nodeFactory._stateToNode))
+        # print("    modelEvalTotal:", self._mcts.modelEvalTotal)
+        # print("    simResetTotal:", self._mcts.simResetTotal)
+        # print("    simApplyTotal:", self._mcts.simApplyTotal)
+        # print()
+
+
         count = AgentAlphaGoZero.BATCH_COUNT * AgentAlphaGoZero.BATCH_SIZE
         if len(self._replayBuffer) > count:
+            self._numTrain += 1
             print("Training")
             self._trainLoss = np.zeros((1), dtype=np.float32)
             self._trainFromReplayBuffer()
@@ -160,23 +178,23 @@ class AgentAlphaGoZero(AgentBase):
             np.random.shuffle(sampleIndices)
             for batchIndices in batchify(sampleIndices):
                 samples = self._replayBuffer.getitems(batchIndices)
-                states, _, targetLogits, targetValues = samples
+                states, _, targetPolicies, targetValues = samples
 
-                targetLogits = np.vstack(targetLogits)
+                targetPolicies = np.vstack(targetPolicies)
                 targetValues = np.array(targetValues, dtype=np.float32)
 
                 loss = self._trainBatch(unpack(states),
-                                        from_numpy(targetLogits),
+                                        from_numpy(targetPolicies),
                                         from_numpy(targetValues).view(-1, 1))
                 self._trainLoss = np.append(self._trainLoss, loss)
 
-    def _trainBatch(self, states, targetLogits, targetValues):
+    def _trainBatch(self, states, targetPolicies, targetValues):
         self._model.train()
 
         # gather fait un lookup, donc enleve les dimensions
-        logits_, v = self._model(*states)
+        p, v = self._model(*states)
 
-        lossP = self._lossP(logits_, targetLogits)
+        lossP = self._lossP(p, targetPolicies)
         lossV = self._lossV(v, targetValues)
         loss = (lossV + lossP).mean()
 

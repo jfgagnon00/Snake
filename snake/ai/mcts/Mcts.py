@@ -1,27 +1,39 @@
 import numpy as np
 
+from snake.core import Profile
 from snake.game import GameAction
 from snake.configs import Rewards
 from .NodeFactory import _NodeFactory
 
 
 class _Mcts(object):
-    def __init__(self, modelEvalCallable, mctsConfig):
+    def __init__(self, modelEvalCallable, trainConfig):
         self._modelEvalCallable = modelEvalCallable
         self._nodeFactory = _NodeFactory()
 
         self._actions = list(GameAction)
         self._numActions = len(GameAction)
+        self._maxVisitCount = trainConfig.maxVisitCount
 
-        self._cpuct = mctsConfig.cpuct
-        self._numSimulations = mctsConfig.numSimulations
-        self._temperature = mctsConfig.temperature
+        self._cpuct = trainConfig.mcts.cpuct
+        self._numSimulations = trainConfig.mcts.numSimulations
+        self._temperature = trainConfig.mcts.temperature
+
+        self.reset()
 
     def initEnv(self, env):
         self._env = env
 
     def reset(self):
         self._nodeFactory.clear()
+
+        self.getOrCreateTotal = 0
+        self.selectTotal = 0
+        self.backPropagationTotal = 0
+        self.expandTotal = 0
+        self.modelEvalTotal = 0
+        self.simResetTotal = 0
+        self.simApplyTotal = 0
 
         # self._temperature *= 0.995
         # self._temperature = max(self._temperature, 1)
@@ -31,9 +43,13 @@ class _Mcts(object):
         root = self._nodeFactory.getOrCreate(state, info, False, False)
         root.validate(state, info)
 
+        self.getOrCreateTotal += self._nodeFactory.getOrCreateDuration
+
         simulation = 0
         while simulation < self._numSimulations:
-            node, truncated, trajectory = self._select(root)
+            with Profile() as selP:
+                node, truncated, trajectory = self._select(root)
+            self.selectTotal += selP.duration
 
             if truncated:
                 v = 0
@@ -42,9 +58,14 @@ class _Mcts(object):
                 v = 1 if node.won else -1
                 simulation += 1
             else:
-                v = self._expand(node)
+                with Profile() as expP:
+                    v = self._expand(node)
+                self.expandTotal += expP.duration
 
-            self._backpropagation(trajectory, v)
+            with Profile() as backP:
+                self._backpropagation(trajectory, v)
+            self.backPropagationTotal += backP.duration
+
             self._nodeFactory.validateVisitCount()
 
         return self._choice(root)
@@ -57,7 +78,7 @@ class _Mcts(object):
             assert not node is None
 
             # arreter sur etat terminal, node non explore ou cycle detecte
-            truncated = node.vistCount >= 1
+            truncated = node.vistCount >= self._maxVisitCount
             if node.done or node.isLeaf or truncated:
                 break
 
@@ -84,14 +105,17 @@ class _Mcts(object):
         node.N = np.zeros(self._numActions, dtype=np.float32)
         node.W = np.zeros(self._numActions, dtype=np.float32)
 
-        # evaluer P et V
-        logit_, v = self._modelEvalCallable(node.state)
+
+        with Profile() as modelP:
+            # evaluer P et V
+            p, v = self._modelEvalCallable(node.state)
+        self.modelEvalTotal += modelP.duration
+
+        p = p.squeeze()
         v = v.item()
 
         # s'assurer que P n'a que les actions permises
         actionsAvailable = node.state["available_actions"]
-        logit_ = logit_.squeeze()
-        logit_ = np.exp(logit_)
         node.P = np.zeros_like(actionsAvailable, dtype=np.float32)
 
         # s'assurer que v est [-1, 1]; papier origine veut -1 == partie perdue et 1 == partie gagnee
@@ -106,17 +130,25 @@ class _Mcts(object):
                 # action non permise, mettre None dans cette branche
                 newNode = None
             else:
-                # trouver l'etat correspondand a l'action desiree
-                self._env.reset(options=node.state)
-                newObservations, _, terminated, truncated, newInfos = self._env.step(action)
-                done = terminated or truncated
+                with Profile() as resetP:
+                    # trouver l'etat correspondand a l'action desiree
+                    self._env.reset(options=node.state)
+
+                self.simResetTotal += resetP.duration
+
+                with Profile() as stepP:
+                    newObservations, _, terminated, truncated, newInfos = self._env.step(action)
+                    done = terminated or truncated
+                self.simApplyTotal += stepP.duration
 
                 # si l'etat a deja ete visite, le partager
                 # sinon en creer un nouveau
                 won = newInfos["reward_type"] == Rewards.WIN
                 newNode = self._nodeFactory.getOrCreate(newObservations, newInfos, done, won)
 
-                node.P[i] = logit_[i]
+                self.getOrCreateTotal += self._nodeFactory.getOrCreateDuration
+
+                node.P[i] = p[i]
 
             node.child.append(newNode)
 
