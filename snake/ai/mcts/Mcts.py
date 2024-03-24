@@ -1,8 +1,7 @@
 import numpy as np
 
 from snake.core import Profile
-from snake.game import GameAction
-from snake.configs import Rewards
+from snake.game import GameAction, GameSimulation
 from .NodeFactory import _NodeFactory
 
 
@@ -11,18 +10,18 @@ class _Mcts(object):
         self._modelEvalCallable = modelEvalCallable
         self._nodeFactory = _NodeFactory()
 
+        self._simulation = GameSimulation()
+        self._simulation.winDelegate.register(self._onWin)
+        self._simulation.loseDelegate.register(self._onLose)
+
         self._actions = list(GameAction)
         self._numActions = len(GameAction)
-        self._maxVisitCount = trainConfig.maxVisitCount
 
         self._cpuct = trainConfig.mcts.cpuct
         self._numSimulations = trainConfig.mcts.numSimulations
         self._temperature = trainConfig.mcts.temperature
 
         self.reset()
-
-    def initEnv(self, env):
-        self._env = env
 
     def reset(self):
         self._nodeFactory.clear()
@@ -31,8 +30,8 @@ class _Mcts(object):
         self.selectTotal = 0
         self.backPropagationTotal = 0
         self.expandTotal = 0
+        self.expandCount = 0
         self.modelEvalTotal = 0
-        self.simResetTotal = 0
         self.simApplyTotal = 0
 
         # self._temperature *= 0.995
@@ -61,12 +60,13 @@ class _Mcts(object):
                 with Profile() as expP:
                     v = self._expand(node)
                 self.expandTotal += expP.duration
+                self.expandCount += 1
 
             with Profile() as backP:
                 self._backpropagation(trajectory, v)
             self.backPropagationTotal += backP.duration
 
-            self._nodeFactory.validateVisitCount()
+            # self._nodeFactory.validateVisitCount()
 
         return self._choice(root)
 
@@ -78,7 +78,7 @@ class _Mcts(object):
             assert not node is None
 
             # arreter sur etat terminal, node non explore ou cycle detecte
-            truncated = node.vistCount >= self._maxVisitCount
+            truncated = node.vistCount >= 1
             if node.done or node.isLeaf or truncated:
                 break
 
@@ -100,11 +100,12 @@ class _Mcts(object):
         return node, truncated, trajectory
 
     def _expand(self, node):
+        assert not node.done
+
         # initialize les informations pour les 'edges'
         node.Q = np.zeros(self._numActions, dtype=np.float32)
         node.N = np.zeros(self._numActions, dtype=np.float32)
         node.W = np.zeros(self._numActions, dtype=np.float32)
-
 
         with Profile() as modelP:
             # evaluer P et V
@@ -112,10 +113,10 @@ class _Mcts(object):
         self.modelEvalTotal += modelP.duration
 
         p = p.squeeze()
-        v = v.item()
 
         # s'assurer que P n'a que les actions permises
         actionsAvailable = node.state["available_actions"]
+        assert sum(actionsAvailable) > 0
         node.P = np.zeros_like(actionsAvailable, dtype=np.float32)
 
         # s'assurer que v est [-1, 1]; papier origine veut -1 == partie perdue et 1 == partie gagnee
@@ -125,26 +126,28 @@ class _Mcts(object):
 
         # construire les nodes pour chaque actions debutant a node.state
         node.child = []
+        state = node.state["simulation_state"]
         for i, (action, available) in enumerate(zip(self._actions, actionsAvailable)):
             if available == 0:
                 # action non permise, mettre None dans cette branche
                 newNode = None
             else:
-                with Profile() as resetP:
-                    # trouver l'etat correspondand a l'action desiree
-                    self._env.reset(options=node.state)
-
-                self.simResetTotal += resetP.duration
-
                 with Profile() as stepP:
-                    newObservations, _, terminated, truncated, newInfos = self._env.step(action)
-                    done = terminated or truncated
+                    self._done = False
+                    self._won = False
+
+                    newState = self._simulation.apply(action, state, inplace=False)
+                    newObservations = self._simulation.getObservations(newState)
+                    newInfos = self._simulation.getInfos(newState, copy=False)
+                    newActionsAvailable = newState.availableActions()
+                    self._done = self._done or sum(newActionsAvailable) == 0
+                    newInfos["available_actions"] = newActionsAvailable
+
                 self.simApplyTotal += stepP.duration
 
                 # si l'etat a deja ete visite, le partager
                 # sinon en creer un nouveau
-                won = newInfos["reward_type"] == Rewards.WIN
-                newNode = self._nodeFactory.getOrCreate(newObservations, newInfos, done, won)
+                newNode = self._nodeFactory.getOrCreate(newObservations, newInfos, self._done, self._won)
 
                 self.getOrCreateTotal += self._nodeFactory.getOrCreateDuration
 
@@ -199,3 +202,11 @@ class _Mcts(object):
         # remapper action vers le bon index
         intAction = availableActions[intAction]
         return intAction
+
+    def _onWin(self):
+        self._done = True
+        self._won = True
+
+    def _onLose(self):
+        self._done = True
+        self._won = False

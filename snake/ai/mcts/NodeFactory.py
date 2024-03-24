@@ -23,9 +23,10 @@ class _NodeFactory(object):
                 node = _Node(state, info, done, won)
                 self._stateToNode[h] = node
             else:
-                pass
+                # validation collision dans le hash
+                node.validate(state, info)
 
-        self.getOrCreateTime = p.duration
+        self.getOrCreateDuration = p.duration
 
         return node
 
@@ -36,8 +37,7 @@ class _NodeFactory(object):
     @staticmethod
     def _hash(state, info):
         with BytesIO() as stream:
-            # state est completement defini par les positions du serpent et la direction de la tete
-            dump(state["occupancy_grid"], file=stream)
-            dump(state["head_direction"], file=stream)
+            dump(info["simulation_state"].snake.bodyParts, file=stream)
+            dump(info["simulation_state"].food, file=stream)
 
             return hashlib.md5(stream.getbuffer()).hexdigest()

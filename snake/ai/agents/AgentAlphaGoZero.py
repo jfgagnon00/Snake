@@ -45,7 +45,6 @@ class AgentAlphaGoZero(AgentBase):
         self._replayBuffer = _ReplayBuffer(AgentAlphaGoZero.MEMORY_SIZE)
 
         # AlphaGo Zero
-        self._env = None
         self._trajectory = None
         self._lastReward = 0
         self._mcts = _Mcts(self._evalModelForMcts, trainConfig)
@@ -62,15 +61,6 @@ class AgentAlphaGoZero(AgentBase):
                     (3, simulationConfig.gridHeight + 2, simulationConfig.gridWidth + 2),
                     None)
             exit(-1)
-
-    @property
-    def env(self):
-        return self._env
-
-    @env.setter
-    def env(self, value):
-        self._env = value
-        self._mcts.initEnv(value)
 
     def getAction(self, observations, infos):
         targetPolicy, intAction = self._mcts.search(observations, infos)
@@ -98,29 +88,28 @@ class AgentAlphaGoZero(AgentBase):
         for s in self._trajectory:
             self._replayBuffer.append((*s, self._lastReward))
 
-
-        # print("getAction stats")
-        # print("    getOrCreateTotal:", self._mcts.getOrCreateTotal)
-        # print("    selectTotal:", self._mcts.selectTotal)
-        # print("    backPropagationTotal:", self._mcts.backPropagationTotal)
-        # print("    expandTotal:", self._mcts.expandTotal)
-        # print("    numTrain:", self._numTrain)
-        # print("    len replay:", len(self._replayBuffer))
-        # print("    num nodes", len(self._mcts._nodeFactory._stateToNode))
-        # print("    modelEvalTotal:", self._mcts.modelEvalTotal)
-        # print("    simResetTotal:", self._mcts.simResetTotal)
-        # print("    simApplyTotal:", self._mcts.simApplyTotal)
-        # print()
-
-
         count = AgentAlphaGoZero.BATCH_COUNT * AgentAlphaGoZero.BATCH_SIZE
         if len(self._replayBuffer) > count:
+            print("mcts stats")
+            print("    getOrCreateTotal:", self._mcts.getOrCreateTotal)
+            print("    selectTotal:", self._mcts.selectTotal)
+            print("    backPropagationTotal:", self._mcts.backPropagationTotal)
+            print("    expandTotal:", self._mcts.expandTotal)
+            print("    expandCount:", self._mcts.expandCount)
+            print("    expand:", self._mcts.expandTotal / self._mcts.expandCount)
+            print("    numTrain:", self._numTrain)
+            print("    len replay:", len(self._replayBuffer))
+            print("    num nodes", len(self._mcts._nodeFactory._stateToNode))
+            print("    modelEvalTotal:", self._mcts.modelEvalTotal)
+            print("    simApplyTotal:", self._mcts.simApplyTotal)
+            print()
+
             self._numTrain += 1
-            print("Training")
             self._trainLoss = np.zeros((1), dtype=np.float32)
             self._trainFromReplayBuffer()
             self._mcts.reset()
             self._replayBuffer.clear()
+
 
         frameStats.loc[0, "TrainLossMin"] = self._trainLoss.min()
         frameStats.loc[0, "TrainLossMax"] = self._trainLoss.max()

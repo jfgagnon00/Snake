@@ -31,18 +31,13 @@ class _Node(object):
     @staticmethod
     def stateKeys():
         return [
-            "occupancy_grid",
-            "head_direction",
         ]
 
     @staticmethod
     def infoKeys():
         return [
-            "snake_bodyparts",
-            "head_position",
-            "food_position",
-            "score",
-			"available_actions",
+            "simulation_state",
+            "available_actions",
         ]
 
     @property
@@ -66,22 +61,12 @@ class _Node(object):
             if not k in state:
                 raise _NodeException("Clef manquante dans state", state, info, self._state)
 
-            if not np.array_equal(self._state[k], state[k]):
+            if self._state[k] != state[k]:
                 raise _NodeException(f"Clef '{k}' differente", state, info, self._state)
 
         for k in _Node.infoKeys():
             if not k in info:
                 raise _NodeException("Clef manquante dans info", state, info, self._state)
 
-            if k == "snake_bodyparts":
-                # ces clefs ne sont pas tres importantes
-                # necessaire seulement pour reset()
-                continue
-
-            if k == "score":
-                equal_ = self._state[k] == info[k]
-            else:
-                equal_ = np.array_equal(self._state[k], info[k])
-
-            if not equal_:
+            if self._state[k] != info[k]:
                 raise _NodeException(f"Clef '{k}' differente", state, info, self._state)

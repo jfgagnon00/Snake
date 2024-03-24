@@ -77,21 +77,21 @@ class GraphicWindow(object):
     def reset(self):
         self._frame = -1
 
-    def update(self, gameEnvironment):
+    def update(self, simulationState):
         self._frame += 1
         fps = int(self._clock.get_fps())
-        score = gameEnvironment.score
+        score = simulationState.score
         self._message = f"Score: {score:03d} FPS: {fps:2d} Frame: {self._frame}"
 
-        if gameEnvironment.food is None:
+        if simulationState.food is None:
             self._food.enable = False
         else:
-            food = self._environmentToWindow(gameEnvironment.food)
+            food = self._environmentToWindow(simulationState.food)
             self._food.rect.x = food.x
             self._food.rect.y = food.y
             self._food.enable = True
 
-        self._snake.update(gameEnvironment.snake)
+        self._snake.update(simulationState.snake)
 
     def render(self, message=None):
         self._window.fill(self._clearColor)

@@ -1,7 +1,8 @@
 import numpy as np
 
 from snake.core import Vector
-from snake.game import GameDirection, GridOccupancy
+from snake.game import GameDirection
+from .GridOccupancy import GridOccupancy
 
 
 class _StateProcessor(object):
@@ -11,23 +12,27 @@ class _StateProcessor(object):
 
     def __call__(self, state, info):
         # ne supporte pas frameStack pour le moment
-        grid = self._applySymmetry(state)
+
+        state = info["simulation_state"]
+        grid = np.full(state.gridShape, GridOccupancy.EMPTY, dtype=np.int32)
+        for p in state.snake.bodyParts:
+            grid[p.y, p.x] = GridOccupancy.SNAKE_BODY
+        grid[state.snake.head.y, state.snake.head.x] = GridOccupancy.SNAKE_HEAD
+        grid[state.snake.tail.y, state.snake.tail.x] = GridOccupancy.SNAKE_TAIL
+        grid[state.food.y, state.food.x] = GridOccupancy.FOOD
+        grid = np.expand_dims(grid, 0)
+
+        grid = self._applySymmetry(grid, state.snake.direction)
         grid = self._splitOccupancyGrid(grid, pad=False, showFood=True)
 
         return grid, None
 
-    def _applySymmetry(self, state):
+    def _applySymmetry(self, grid, direction):
         # simplifier state: toujours mettre par rapport a NORTH
-        k = self._rot90WithNorth(state)
-        grid = state["occupancy_grid"]
-        grid = np.rot90(grid, k=k, axes=(1, 2))
+        k = self._rot90WithNorth(direction)
+        return np.rot90(grid, k=k, axes=(1, 2))
 
-        return grid.copy()
-
-    def _rot90WithNorth(self, state):
-        head_d = state["head_direction"]
-        head_d = Vector.fromNumpy(head_d)
-
+    def _rot90WithNorth(self, head_d):
         head_d = GameDirection(head_d)
         if head_d == GameDirection.EAST:
             # CCW
@@ -40,15 +45,6 @@ class _StateProcessor(object):
             return 2
         else:
             return 0
-
-    def _rot90Vector(self, v, k):
-        if not v is None:
-            v  = Vector.fromNumpy(v)
-            v -= self._gridCenter
-            v  = v.rot90(k)
-            v += self._gridCenter
-            v  = v.toInt()
-        return v
 
     def _splitOccupancyGrid(self, occupancyGrid, pad=False, showFood=True):
         if pad:

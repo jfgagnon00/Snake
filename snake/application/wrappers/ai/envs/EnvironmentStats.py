@@ -80,28 +80,28 @@ class EnvironmentStats(gym.ObservationWrapper):
     def step(self, *args):
         observations, reward, terinated, truncated, infos = self.env.step(*args)
 
-        if truncated:
-            self._onTermination("EpisodeTruncated")
+        # if truncated:
+        #     self._onTermination("EpisodeTruncated")
 
-        self._currentEpisodeStats.loc[0, _EPISODE_LENGTH] += 1
-        self._currentEpisodeStats.loc[0, _SCORE] = infos["score"]
-        self._currentEpisodeStats.loc[0, _CUM_REWARD] += reward
+        # self._currentEpisodeStats.loc[0, _EPISODE_LENGTH] += 1
+        # self._currentEpisodeStats.loc[0, _SCORE] = infos["score"]
+        # self._currentEpisodeStats.loc[0, _CUM_REWARD] += reward
 
-        forceUpdate = False
-        if self._maxStats is None:
-            self._maxStats = self._currentEpisodeStats.copy()
-            self._maxEpisode = self._newDataFrame()
-            self._maxEpisode.iloc[:,:] = self._episode
-            forceUpdate = True
+        # forceUpdate = False
+        # if self._maxStats is None:
+        #     self._maxStats = self._currentEpisodeStats.copy()
+        #     self._maxEpisode = self._newDataFrame()
+        #     self._maxEpisode.iloc[:,:] = self._episode
+        #     forceUpdate = True
 
-        greater = self._currentEpisodeStats > self._maxStats
-        greaterEqual = self._currentEpisodeStats >= self._maxStats
+        # greater = self._currentEpisodeStats > self._maxStats
+        # greaterEqual = self._currentEpisodeStats >= self._maxStats
 
-        self._maxStats[greaterEqual] = self._currentEpisodeStats[greaterEqual]
-        self._maxEpisode[greaterEqual] = self._episode
+        # self._maxStats[greaterEqual] = self._currentEpisodeStats[greaterEqual]
+        # self._maxEpisode[greaterEqual] = self._episode
 
-        if greater.loc[0, _CUM_REWARD]:
-            self._newMaxStatsDelegate()
+        # if greater.loc[0, _CUM_REWARD]:
+        #     self._newMaxStatsDelegate()
 
         return observations, reward, terinated, truncated, infos
 

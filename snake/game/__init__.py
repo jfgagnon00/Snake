@@ -5,6 +5,7 @@ Gere la simulation d'un jeu de serpent
 
 from .GameAction import GameAction
 from .GameDirection import GameDirection
-from .GameSimulation import GameSimulation, ResetException
+from .GameResetException import GameResetException
+from .GameSimulation import GameSimulation
+from .GameSimulationState import GameSimulationState
 from .GameSnake import GameSnake
-from .GridOccupancy import GridOccupancy

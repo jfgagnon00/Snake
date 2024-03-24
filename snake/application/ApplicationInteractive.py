@@ -1,7 +1,7 @@
 import numpy as np
 
 from snake.core import Delegate
-from snake.game import GameSimulation
+from snake.game import GameSimulation, GameSimulationState
 from snake.graphics import GraphicWindow, init as gfxInit, quit as gfxQuit
 
 from .InputManager import _InputManager
@@ -25,7 +25,8 @@ class ApplicationInteractive(object):
 
         self.agent = AgentInteractive()
 
-        self._simulation = GameSimulation(configs.simulation)
+        self._simulation = GameSimulation()
+        self._simulationState = GameSimulationState(configs.simulation)
         self._simulationFpsDivider = configs.graphics.simulationFpsDivider
         self._simulationCounter = 0
 
@@ -40,10 +41,9 @@ class ApplicationInteractive(object):
         self._inputManager.quitDelegate.register(self._onQuit)
         self._inputManager.keyDownDelegate.register(self.agent.onKeyDown)
 
-        self._simulation.outOfBoundsDelegate.register(self._onLose)
-        self._simulation.collisionDelegate.register(self._onLose)
         self._simulation.eatDelegate.register(self._onSnakeEat)
         self._simulation.winDelegate.register(self._onWin)
+        self._simulation.loseDelegate.register(self._onLose)
         self._simulation.turnDelegate.register(self._onSnakeTurn)
         self._simulation.moveDelegate.register(self._onSnakeMove)
 
@@ -91,20 +91,21 @@ class ApplicationInteractive(object):
         gfxQuit()
 
     def _reset(self):
+        GameSimulationState.initRandom(self._simulationState)
         self.agent.reset()
-        self._simulation.reset()
         self.window.reset()
-        self.window.update(self._simulation)
+        self.window.update(self._simulationState)
 
     def _update(self):
         self._simulationCounter -= 1
         if self._simulationCounter <= 0:
             self._simulationCounter = self._simulationFpsDivider
-            action = self.agent.getAction(self._simulation.getObservations())
+            action = self.agent.getAction(self._simulation.getObservations(self._simulationState),
+                                          self._simulation.getInfos(self._simulationState))
 
             # la simulation va lancer les evenements appropries
             # ceux-ci vont faire avancer les etats
-            self._simulation.apply(action)
+            self._simulation.apply(action, self._simulationState, inplace=True)
 
     def _setAnyKeyPressedState(self, newAnyKeyPressedCallable, message=None):
         self._importantMessage = message
@@ -152,18 +153,18 @@ class ApplicationInteractive(object):
         self.agent.onEpisodeDone(self._episode)
         self._setAnyKeyPressedState(self._onResetSimulation, "WINNER! - Pesez une touche pour redémarrer")
         self._setUpdateState(None)
-        self.window.update(self._simulation)
+        self.window.update(self._simulationState)
 
     def _onSnakeEat(self):
         # TODO: play sound
-        self.window.update(self._simulation)
+        self.window.update(self._simulationState)
 
     def _onSnakeTurn(self):
         # TODO: play sound
         pass
 
     def _onSnakeMove(self):
-        self.window.update(self._simulation)
+        self.window.update(self._simulationState)
 
     def _onQuit(self):
         self.agent.onEpisodeDone(self._episode)

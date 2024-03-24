@@ -28,8 +28,8 @@ class Vector(object):
     def __neg__(self):
         return Vector(-self.x, -self.y)
 
-    def __str__(self):
-        return f"x: {self.x}, y: {self.y}"
+    def __repr__(self):
+        return f"Vector({self.x}, {self.y})"
 
     def scale(self, s):
         return Vector(self.x * s, self.y * s)

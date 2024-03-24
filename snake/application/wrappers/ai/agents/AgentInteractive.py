@@ -39,12 +39,11 @@ class AgentInteractive(AgentBase):
         """
         self._lastKeyDown = key
 
-    def getAction(self, observations, *args):
+    def getAction(self, observations, infos):
         """
         Obtenir action a partir de l'etat.
         """
-        direction = observations["head_direction"]
-        direction = Vector.fromNumpy(direction)
+        direction = infos["simulation_state"].snake.direction
 
         if self._lastKeyDown in AgentInteractive._KEY_HANDLERS:
             handler = AgentInteractive._KEY_HANDLERS[self._lastKeyDown]
