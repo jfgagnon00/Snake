@@ -5,14 +5,8 @@ from snake.game import GameAction, GameDirection
 
 
 def _getAction(currentDirection, desirecDirection):
-    w = Vector.winding(currentDirection, desirecDirection)
-    if w == 0:
-        return GameAction.FORWARD
-
-    if w == 1:
-        return GameAction.TURN_CCW
-
-    return GameAction.TURN_CW
+    k = Vector.krot90(currentDirection, desirecDirection)
+    return GameAction.fromKRot90(k)
 
 class AgentInteractive(AgentBase):
     """

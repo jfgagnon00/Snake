@@ -1,72 +1,66 @@
 import numpy as np
 
 from copy import deepcopy
+from io import StringIO
+from pprint import pprint
+from snake.game import GameAction
+
 from .NodeException import _NodeException
 
 
 class _Node(object):
     def __init__(self, state, info, done, won):
-        self._state = {}
+        numActions = len(GameAction)
 
-        # dupliquer les clef necessaire seulement
-        for k in _Node.stateKeys():
-            self._state[k] = deepcopy(state[k])
-
-        for k in _Node.infoKeys():
-            self._state[k] = deepcopy(info[k])
-
-        self._done = done
+        self._simulationState = deepcopy(info["simulation_state"])
+        self._availableActions = deepcopy(info["available_actions"])
+        self.done = done
         self._won = won
 
+        self.visitCount = 0
+
+        assert len(self._availableActions) == numActions
+
         # 1 element par action
-        self.P = None
-        self.Q = None
-        self.N = None
-        self.W = None  # somme de tous les V pour chaque action
-        self.child = None
-
-        # internal management pour Mcts.getAction()
-        self.vistCount = 0
-
-    @staticmethod
-    def stateKeys():
-        return [
-        ]
-
-    @staticmethod
-    def infoKeys():
-        return [
-            "simulation_state",
-            "available_actions",
-        ]
+        self.Q = np.zeros(numActions, dtype=np.float32)
+        self.N = np.zeros(numActions, dtype=np.float32)
+        self.W = np.zeros(numActions, dtype=np.float32)
+        self.child = [None] * numActions
 
     @property
-    def isLeaf(self):
-        return self.child is None
+    def simulationState(self):
+        return self._simulationState
 
     @property
-    def state(self):
-        return self._state
-
-    @property
-    def done(self):
-        return self._done
+    def availableActions(self):
+        return self._availableActions
 
     @property
     def won(self):
         return self._won
 
     def validate(self, state, info):
-        for k in _Node.stateKeys():
-            if not k in state:
-                raise _NodeException("Clef manquante dans state", state, info, self._state)
+        if "simulation_state" not in info or \
+           "available_actions" not in info:
+            raise _NodeException("Clef manquante dans info", state, info, self)
 
-            if self._state[k] != state[k]:
-                raise _NodeException(f"Clef '{k}' differente", state, info, self._state)
+        # if info["simulation_state"] != self._simulationState or \
+        #    not np.array_equal(info["available_actions"], self._availableActions):
+        #     raise _NodeException(f"Clef differente", state, info, self)
 
-        for k in _Node.infoKeys():
-            if not k in info:
-                raise _NodeException("Clef manquante dans info", state, info, self._state)
+        availableActions = self.availableActions.sum()
+        if (self.done and availableActions != 0) or \
+           (not self.done and availableActions == 0):
+            raise _NodeException(f"Done inconsistant", state, info, self)
 
-            if self._state[k] != info[k]:
-                raise _NodeException(f"Clef '{k}' differente", state, info, self._state)
+        numCells = self.simulationState.gridWidth * self.simulationState.gridHeight
+        snakeLength = self.simulationState.snake.length
+
+        if self.won and not self.done or \
+           self.won and snakeLength != numCells:
+            raise _NodeException(f"Won inconsistant", state, info, self)
+
+    def __repr__(self):
+        with StringIO() as stream:
+            pprint(vars(self), stream=stream)
+            return stream.getvalue()

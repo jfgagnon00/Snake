@@ -1,13 +1,12 @@
 import numpy as np
 
-from snake.core import Profile
+from snake.core import Profile, Vector
 from snake.game import GameAction, GameSimulation
 from .NodeFactory import _NodeFactory
 
 
 class _Mcts(object):
-    def __init__(self, modelEvalCallable, trainConfig):
-        self._modelEvalCallable = modelEvalCallable
+    def __init__(self, trainConfig):
         self._nodeFactory = _NodeFactory()
 
         self._simulation = GameSimulation()
@@ -18,168 +17,225 @@ class _Mcts(object):
         self._numActions = len(GameAction)
 
         self._cpuct = trainConfig.mcts.cpuct
-        self._numSimulations = trainConfig.mcts.numSimulations
-        self._temperature = trainConfig.mcts.temperature
+        self._numExpands = trainConfig.mcts.numExpands
 
         self.reset()
 
     def reset(self):
-        self._nodeFactory.clear()
+        # self._nodeFactory.clear()
 
         self.getOrCreateTotal = 0
         self.selectTotal = 0
         self.backPropagationTotal = 0
         self.expandTotal = 0
         self.expandCount = 0
-        self.modelEvalTotal = 0
-        self.simApplyTotal = 0
-
-        # self._temperature *= 0.995
-        # self._temperature = max(self._temperature, 1)
 
     def search(self, state, info):
-        # done et won peuvent etre inconsistent avec state/info; a valider?
-        root = self._nodeFactory.getOrCreate(state, info, False, False)
-        root.validate(state, info)
+        root = self._getOrCreate(state, info, False, False)
 
-        self.getOrCreateTotal += self._nodeFactory.getOrCreateDuration
-
-        simulation = 0
-        while simulation < self._numSimulations:
-            with Profile() as selP:
-                node, truncated, trajectory = self._select(root)
-            self.selectTotal += selP.duration
+        for _ in range(self._numExpands):
+            trajectory, truncated = self._select(root)
+            assert len(trajectory) > 0
 
             if truncated:
                 v = 0
-                simulation += 1
-            elif node.done:
-                v = 1 if node.won else -1
-                simulation += 1
             else:
-                with Profile() as expP:
-                    v = self._expand(node)
-                self.expandTotal += expP.duration
-                self.expandCount += 1
+                node, intAction = trajectory[-1]
+                if intAction is None:
+                    v = 1 if node.won else -1
+                else:
+                    v = self._expand(trajectory)
 
-            with Profile() as backP:
-                self._backpropagation(trajectory, v)
-            self.backPropagationTotal += backP.duration
-
-            # self._nodeFactory.validateVisitCount()
+            self._backpropagation(trajectory, v)
 
         return self._choice(root)
 
     def _select(self, node):
-        trajectory = []
-
-        while True:
-            # sanity check
+        with Profile() as selP:
             assert not node is None
 
-            # arreter sur etat terminal, node non explore ou cycle detecte
-            truncated = node.vistCount >= 1
-            if node.done or node.isLeaf or truncated:
-                break
+            trajectory = []
+            truncated = False
 
-            node.vistCount += 1
+            while True:
+                if node == None:
+                    break
 
-            # selection action selon upper confidence bound
-            ucb = self._ucb(node)
+                if node.visitCount >= 1: #node.simulationState.snake.length:
+                    truncated = True
+                    break
 
-            # greedy selection d'action
-            # mais limiter aux choix valides
-            intAction = _Mcts._limitArgmax(ucb, node)
+                if node.done:
+                    trajectory.append((node, None))
+                    break
 
-            # ajouter choix a la trajectoire
-            trajectory.append((node, intAction))
+                node.visitCount += 1
 
-            # passer a la node suivante
-            node = node.child[intAction]
+                # selection action selon upper confidence bound
+                ucb = self._ucb(node)
 
-        return node, truncated, trajectory
+                # greedy selection d'action
+                # mais limiter aux choix valides
+                intAction = _Mcts._limitArgmax(ucb, node)
 
-    def _expand(self, node):
-        assert not node.done
+                # ajouter choix a la trajectoire
+                trajectory.append((node, intAction))
 
-        # initialize les informations pour les 'edges'
-        node.Q = np.zeros(self._numActions, dtype=np.float32)
-        node.N = np.zeros(self._numActions, dtype=np.float32)
-        node.W = np.zeros(self._numActions, dtype=np.float32)
+                # passer a la node suivante
+                node = node.child[intAction]
 
-        with Profile() as modelP:
-            # evaluer P et V
-            p, v = self._modelEvalCallable(node.state)
-        self.modelEvalTotal += modelP.duration
+        self.selectTotal += selP.duration
 
-        p = p.squeeze()
+        return trajectory, truncated
 
-        # s'assurer que P n'a que les actions permises
-        actionsAvailable = node.state["available_actions"]
-        assert sum(actionsAvailable) > 0
-        node.P = np.zeros_like(actionsAvailable, dtype=np.float32)
+    def _expand(self, trajectory):
+        with Profile() as expP:
+            assert not trajectory is None
+            assert len(trajectory) > 0
 
-        # s'assurer que v est [-1, 1]; papier origine veut -1 == partie perdue et 1 == partie gagnee
-        # important que ce soit ce range pour que la partie de _ucb() traitant du # de visites des nodes
-        # ait le meme poids relatif que Q(s, a)
-        v = max(min(v, 1), -1)
+            node, intAction = trajectory[-1]
 
-        # construire les nodes pour chaque actions debutant a node.state
-        node.child = []
-        state = node.state["simulation_state"]
-        for i, (action, available) in enumerate(zip(self._actions, actionsAvailable)):
-            if available == 0:
-                # action non permise, mettre None dans cette branche
-                newNode = None
-            else:
-                with Profile() as stepP:
-                    self._done = False
-                    self._won = False
+            # s'assurer que la node peut etre expanded
+            assert not node.done
 
-                    newState = self._simulation.apply(action, state, inplace=False)
-                    newObservations = self._simulation.getObservations(newState)
-                    newInfos = self._simulation.getInfos(newState, copy=False)
-                    newActionsAvailable = newState.availableActions()
-                    self._done = self._done or sum(newActionsAvailable) == 0
-                    newInfos["available_actions"] = newActionsAvailable
+            # s'assurer que la node enfant a expanded est valide
+            assert node.child[intAction] is None
+            assert node.availableActions[intAction] == 1
 
-                self.simApplyTotal += stepP.duration
+            playoutTrajectory, truncated = self._playout(node, intAction)
+            v = 0
 
-                # si l'etat a deja ete visite, le partager
-                # sinon en creer un nouveau
-                newNode = self._nodeFactory.getOrCreate(newObservations, newInfos, self._done, self._won)
+            # valider trajectoire
+            if len(playoutTrajectory) > 0:
+                node.child[intAction] = playoutTrajectory[0][0]
+                lastNode, lastAction = playoutTrajectory[-1]
 
-                self.getOrCreateTotal += self._nodeFactory.getOrCreateDuration
+                if not truncated:
+                    assert lastAction is None
+                    assert lastNode.done
 
-                node.P[i] = p[i]
+                    v = 1 if lastNode.won else -1
 
-            node.child.append(newNode)
+                # warmup des nodes pour le prochain playout
+                self._backpropagation(playoutTrajectory, v)
 
-        node.P = node.P / node.P.sum()
+                # tirer profit de la derniere action
+                # early out potentiel pour le prochain playout
+                self._backpropagateAvailableActions(playoutTrajectory)
+
+        self.expandTotal += expP.duration
+        self.expandCount += 1
 
         return v
 
+    def _playout(self, node, intAction):
+        trajectory = []
+        truncated = False
+        self._done = False
+        self._won = False
+
+        while True:
+            newObservations, newInfos = self._applyOneAction(node, intAction)
+            node = self._getOrCreate(newObservations, newInfos, self._done, self._won)
+
+            if node.visitCount > 0:
+                truncated = True
+                break
+
+            if node.done:
+                trajectory.append( (node, None) )
+                break
+
+            node.visitCount += 1
+            intAction = self._getIntAction(node)
+            trajectory.append( (node, intAction) )
+
+        return trajectory, truncated
+
+    def _getOrCreate(self, state, info, done, won):
+        with Profile() as getOrCreateP:
+            newNode = self._nodeFactory.getOrCreate(state, info, done, won)
+            newNode.validate(state, info)
+        self.getOrCreateTotal += getOrCreateP.duration
+        return newNode
+
+    def _applyOneAction(self, node, intAction):
+        assert node.availableActions[intAction] == 1
+
+        action = self._actions[intAction]
+        newState = self._simulation.apply(action, node.simulationState, inplace=False)
+        newObservations = self._simulation.getObservations(newState)
+        newInfos = self._simulation.getInfos(newState, copy=False)
+
+        newActionsAvailable = newState.availableActions()
+        self._done = self._done or newActionsAvailable.sum() == 0
+        newInfos["available_actions"] = newActionsAvailable
+
+        return newObservations, newInfos
+
+    def _getIntAction(self, node):
+        head = node.simulationState.snake.head
+        direction = node.simulationState.snake.direction
+        food = node.simulationState.food
+        head2food = food - head
+
+        # prendre action qui approche de la destination
+        # si elle est possible, sinon prendre au hasard
+        k = Vector.krot90(direction, head2food)
+        action = GameAction.fromKRot90(k)
+        intAction = self._actions.index(action)
+
+        if node.availableActions[intAction] == 1 and \
+           not (action == GameAction.FORWARD and Vector.dot(direction, head2food) < 0):
+            return intAction
+
+        availableActions = node.availableActions
+        p = availableActions / availableActions.sum()
+        intAction = np.random.choice(self._numActions, p=p)
+
+        assert availableActions[intAction] == 1
+
+        return intAction
+
+    def _backpropagateAvailableActions(self, trajectory):
+        lastNode = None
+
+        for node, intAction in reversed(trajectory):
+            if lastNode is None:
+                if node.won:
+                    break
+                lastNode = node
+                continue
+
+            if lastNode.done:
+                node.availableActions[intAction] = 0
+                node.done = node.availableActions.sum() == 0
+                lastNode = node
+            else:
+                break
+
     def _backpropagation(self, trajectory, v):
-        for node, action in reversed(trajectory):
-            # marquer node comme non visite
-            node.vistCount = 0
+        with Profile() as backP:
+            for node, intAction in reversed(trajectory):
+                node.visitCount = 0
 
-            # ajouter une visite
-            node.N[action] += 1
-            node.W[action] += v
+                if not intAction is None:
+                    # ajouter une visite
+                    node.N[intAction] += 1
+                    node.W[intAction] += v
 
-            # mettre a jour fonction valeur action
-            node.Q[action] = node.W[action] / node.N[action]
+                    # mettre a jour fonction valeur action
+                    node.Q[intAction] = node.W[intAction] / node.N[intAction]
+
+        self.backPropagationTotal += backP.duration
 
     def _choice(self, node):
         # obtenir policy amelioree
-        exponent = 1.0 / self._temperature
-        n = node.N ** exponent
-        newPolicy = n / n.sum()
-
         # limiter aux actions valides de node
-        availableActions = node.state["available_actions"]
-        newPolicy = newPolicy * availableActions
+        newPolicy = node.N * node.availableActions
+        if node.done:
+            return newPolicy, 2
+
         newPolicy = newPolicy / newPolicy.sum()
 
         # selection random
@@ -188,12 +244,12 @@ class _Mcts(object):
         return newPolicy, intAction
 
     def _ucb(self, node):
-        return node.Q + (self._cpuct * node.P * np.sqrt(node.N.sum()) / (1 + node.N))
+        return node.Q + (self._cpuct * node.availableActions * np.sqrt(node.N.sum()) / (1 + node.N))
 
     @staticmethod
     def _limitArgmax(values, node):
         # ne garder que les actions possibles (!= 0)
-        availableActions = node.state["available_actions"]
+        availableActions = node.availableActions
         availableActions = np.nonzero(availableActions)[0]
 
         possibleActions = values[availableActions]
@@ -201,7 +257,7 @@ class _Mcts(object):
 
         # remapper action vers le bon index
         intAction = availableActions[intAction]
-        return intAction
+        return intAction.item()
 
     def _onWin(self):
         self._done = True

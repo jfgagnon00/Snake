@@ -68,21 +68,13 @@ class Vector(object):
         raise ValueError("Vector::rot90, invalide k")
 
     @staticmethod
-    def fromNumpy(v):
-        return Vector(v[1], v[0])
-
-    @staticmethod
-    def dot(a, b):
-        return a.x * b.x + a.y * b.y
-
-    @staticmethod
-    def winding(a, b):
+    def krot90(from_, to_):
         """
-        Retourne -1 si a tourne vers b de maniere CW
-        Retourne  1 si a tourne vers b de maniere CCW
-        Retourne  0 si a et b sont paralleles
+        Retourne -1 si from_ tourne vers to_ de maniere CW
+        Retourne  1 si from_ tourne vers to_ de maniere CCW
+        Retourne  0 si from_ et to_ sont paralleles
         """
-        k = a.x * b.y - a.y * b.x
+        k = from_.x * to_.y - from_.y * to_.x
 
         if k > 0:
             return -1
@@ -91,3 +83,11 @@ class Vector(object):
             return 1
 
         return 0
+
+    @staticmethod
+    def fromNumpy(v):
+        return Vector(v[1], v[0])
+
+    @staticmethod
+    def dot(a, b):
+        return a.x * b.x + a.y * b.y

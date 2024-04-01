@@ -10,7 +10,7 @@ from torch.nn import Linear, \
                     Softmax
 
 
-class _AlphaGoZeroConvNet(Module):
+class _MctsNet(Module):
     def __init__(self, width, height, numChannels, numInputs, numOutputs):
         super().__init__()
 

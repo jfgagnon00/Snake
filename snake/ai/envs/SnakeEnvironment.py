@@ -130,7 +130,7 @@ class SnakeEnvironment(Env):
         # signaler les etats terminaux; en tenir compte immediatement pour faciliter
         # les etapes ulterieures
         availableActions = self._simulationState.availableActions()
-        if sum(availableActions) == 0:
+        if availableActions.sum() == 0:
             self._done = True
             self._rewardType = Rewards.TRAPPED
             self._trappedDelegate()
@@ -155,7 +155,7 @@ class SnakeEnvironment(Env):
     def _getInfos(self, availableActions=None):
         infos = self._simulation.getInfos(self._simulationState)
         infos["reward_type"] = self._rewardType
-        infos["available_actions"] = availableActions if availableActions else self._simulationState.availableActions()
+        infos["available_actions"] = self._simulationState.availableActions() if availableActions is None else availableActions
         return infos
 
     def _renderInternal(self):

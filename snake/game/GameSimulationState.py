@@ -57,6 +57,11 @@ class GameSimulationState(object):
     def collisonTest(self, position):
         # pas de collision possible avec la queue
         s = self._snake
+
+        numCells = self.gridHeight * self.gridHeight
+        if s.length == numCells:
+            return True
+
         for i in range(s.length - 1):
             if position == self.snake.bodyParts[i]:
                 return True
@@ -84,7 +89,7 @@ class GameSimulationState(object):
             head_ccw = 1
 
         # doit suivre l'ordre de GameAction
-        return (head_cw, head_ccw, head_f)
+        return np.array((head_cw, head_ccw, head_f), np.int32)
 
     @staticmethod
     def initRandom(simulationState):

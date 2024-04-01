@@ -3,11 +3,11 @@ from pprint import pprint
 
 
 class _NodeException(Exception):
-    def __init__(self, message, state=None, info=None, nodeState=None):
+    def __init__(self, message, state=None, info=None, node=None):
         super().__init__(message)
         self._state = state
         self._info = info
-        self._nodeState = nodeState
+        self._node = node
 
     def __str__(self):
         with StringIO() as stream:
@@ -26,10 +26,10 @@ class _NodeException(Exception):
                 print("Info", file=stream)
                 pprint(self._info, stream=stream)
 
-            if self._nodeState is None:
-                print("No node state", file=stream)
+            if self._node is None:
+                print("No node", file=stream)
             else:
-                print("Node State", file=stream)
-                pprint(self._nodeState, stream=stream)
+                print("Node", file=stream)
+                pprint(self._node, stream=stream)
 
             return stream.getvalue()

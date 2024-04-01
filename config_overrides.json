@@ -1,6 +1,6 @@
 {
     "train": {
-        "agent": "AgentAlphaGoZero",
+        "agent": "AgentMcts",
         "gamma": 0.99,
         "epsilon": 0.8,
         "epsilonDecay": 0.995,
@@ -10,11 +10,10 @@
         "episodes": 30000,
         "maxStepsWithoutFood": 72,
         "frameStack": 0,
-        "showStats": true,
+        "showStats": false,
         "mcts": {
             "cpuct": 0.5,
-            "numSimulations": 5,
-            "temperature": 1
+            "numExpands": 6
         }
     },
 

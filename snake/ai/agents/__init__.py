@@ -3,6 +3,6 @@ Regroupe tous les agents
 """
 
 from .AgentBase import AgentBase
-from .AgentAlphaGoZero import AgentAlphaGoZero
+from .AgentMcts import AgentMcts
 from .AgentClippedDQN import AgentClippedDQN
 from .AgentRandom import AgentRandom
