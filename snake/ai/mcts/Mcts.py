@@ -28,16 +28,17 @@ class _Mcts(object):
         root = self._nodeFactory.getOrCreate(state, info, False, False)
         root.validate(state, info)
 
-        simulation = 0
-        while simulation < self._numSimulations:
+        for _ in range(self._numSimulations):
             node, truncated, trajectory = self._select(root)
 
-            if truncated:
-                v = 0
-                simulation += 1
-            elif node.done:
-                v = 1 if node.won else -1
-                simulation += 1
+            if truncated or node.done:
+                v = node.state["score"] / 63
+
+                if truncated:
+                    v *= 0.25
+
+                if not node.won:
+                    v -= 1
             else:
                 v = self._expand(node)
 

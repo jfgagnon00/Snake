@@ -16,6 +16,7 @@ from torch.optim import Adam
 from torchsummary import summary
 
 from snake.game import GameAction
+from snake.configs import Rewards
 from snake.ai.agents.AgentBase import AgentBase
 from snake.ai.mcts import _Mcts
 from snake.ai.nets import _AlphaGoZeroConvNet
@@ -80,7 +81,22 @@ class AgentAlphaGoZero(AgentBase):
         return self._gameActions[intAction]
 
     def train(self, observations, info, action, newObservations, newInfo, reward, done):
-        self._lastReward = reward
+        if done:
+            r = newInfo["reward_type"]
+
+            assert r != Rewards.EAT
+            assert r != Rewards.MOVE
+            assert r != Rewards.UNKNOWN
+
+            reward = newObservations["score"] / 63
+
+            if r == Rewards.TRUNCATED:
+                reward *= 0.25
+
+            if r != Rewards.WIN:
+                reward -= 1
+
+            self._lastReward = reward
 
     def onEpisodeBegin(self, episode, frameStats):
         self._trajectory = []
