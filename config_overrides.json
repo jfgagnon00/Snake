@@ -11,7 +11,7 @@
         "maxVisitCount": 6,
         "showStats": true,
         "mcts": {
-            "cpuct": 0.85,
+            "cpuct": 0.95,
             "numSimulations": 64,
             "temperature": 1.0
         }
@@ -29,8 +29,8 @@
     },
 
     "simulation": {
-        "gridWidth": 6,
-        "gridHeight": 6
+        "gridWidth": 8,
+        "gridHeight": 8
     },
 
     "graphics": {
