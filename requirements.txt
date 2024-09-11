@@ -9,7 +9,8 @@ numpy==1.26.0
 packaging==23.1
 pandas==2.1.1
 pygame==2.5.2
-torch==2.0.1
+torch==2.3.0
 torch-summary==1.4.5
-torchvision==0.15.2
+torchvision==0.18.0
 tqdm==4.66.1
+StrEnum==0.4.15
