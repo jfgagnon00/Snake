@@ -1,6 +1,9 @@
-# Snake
+<div align="center">
+  <h1>Snake</h1>
+  <img src="screenshot.png" width="512">
+</div>
 
-Projet fait dans le cadre du cours 420-A59 Algorithmes d'apprentissage par renforcement au Collège Bois de Boulogne. Implémentation d'un agent pour le jeu de serpent.
+Projet fait dans le but d'explorer l'apprentissage par renforcement. Implémentation d'un agent pour le jeu de serpent.
 
 # Installation
 
